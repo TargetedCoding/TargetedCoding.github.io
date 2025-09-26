@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 102: Publishing to `crates.io` - The Rust Adventure</title>
+    <link rel="stylesheet" href="../style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <img src="https://www.rust-lang.org/static/images/rust-logo-blk.svg" alt="Rust Logo" class="logo">
+            <h1>Module 102: Publishing to `crates.io`</h1>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <article class="module-content">
+                <h2>Objective: To learn the complete process for publishing a Rust library to `crates.io`, including setting up metadata, versioning, and using the `cargo publish` command.</h2>
+                <p>You've designed and built a high-quality library. Now it's time to share it with the Rust community! The official package registry for Rust is <strong><a href="https://crates.io" target="_blank">crates.io</a></strong>. Publishing your crate allows anyone in the world to add it as a dependency in their `Cargo.toml` and use it in their own projects. The process is straightforward and managed entirely by Cargo.</p>
+                
+                <hr>
+
+                <h3>Step 1: Get a `crates.io` Account</h3>
+                <p>You only need to do this once. `crates.io` uses your GitHub account for authentication.</p>
+                <ol>
+                    <li>Visit <a href="https://crates.io" target="_blank">crates.io</a> and log in with your GitHub account.</li>
+                    <li>Navigate to your Account Settings page.</li>
+                    <li>Generate a new API token. You can give it a name like "dev-machine".</li>
+                    <li>Copy the token and run the following command in your terminal, pasting the token when prompted:</li>
+                </ol>
+                <pre><code>cargo login</code></pre>
+                <p>This command will save your API token securely on your local machine. You are now authenticated and ready to publish crates.</p>
+
+                <h3>Step 2: Add Metadata to `Cargo.toml`</h3>
+                <p>Before you can publish, `crates.io` requires your crate to have some essential metadata in its `Cargo.toml` file. This is crucial for helping other developers discover and trust your library.</p>
+                <pre><code># In simple_cache/Cargo.toml
+
+[package]
+name = "my_simple_cache_adventure" # IMPORTANT: This must be unique on crates.io!
+version = "0.1.0"
+edition = "2021"
+authors = ["Your Name <you@example.com>"]
+description = "A simple, ergonomic, in-memory key-value cache created for the Rust Adventure."
+license = "MIT" # Or another valid SPDX license identifier, e.g., "Apache-2.0"
+repository = "https://github.com/your-username/simple_cache" # Link to your source code
+readme = "README.md" # A file explaining how to use your crate
+keywords = ["cache", "key-value", "in-memory"]
+categories = ["caching"]
+</code></pre>
+                <ul>
+                    <li><strong><code>name</code></strong>: Must be unique across the entire registry. You will likely need to change this from `simple_cache` to something unique, like `your_username_simple_cache`.</li>
+                    <li><strong><code>version</code></strong>: Follows Semantic Versioning (SemVer). `0.1.0` is a good starting point.</li>
+                    <li><strong><code>license</code></strong>: You must provide a valid open-source license. `MIT` is a very common and permissive choice.</li>
+                    <li><strong><code>description</code></strong>, <strong><code>repository</code></strong>, <strong><code>readme</code></strong>, <strong><code>keywords</code></strong>, <strong><code>categories</code></strong>: This metadata is vital for making your crate discoverable and trustworthy.</li>
+                </ul>
+
+                <h3>Step 3: The Pre-Publish Checklist</h3>
+                <p>Before you hit publish, it's good practice to run through a final checklist:</p>
+                <ol>
+                    <li><strong>Does the code compile?</strong> (<code>cargo check</code>)</li>
+                    <li><strong>Do all the tests pass?</strong> (<code>cargo test</code>)</li>
+                    <li><strong>Is the documentation complete?</strong> (Run `cargo doc --open` and review it).</li>
+                    <li><strong>Is your API ergonomic?</strong> (Review the guidelines from the previous module).</li>
+                    <li><strong>Have you created a `README.md` file?</strong> This is your crate's front page.</li>
+                </ol>
+
+                <h3>Step 4: The `cargo publish` Command</h3>
+                <p>Once your metadata is complete and you're happy with your code, the process is incredibly simple.</p>
+                
+                <h4>1. Do a Dry Run</h4>
+                <p>First, it's always a good idea to do a "dry run." This command will go through all the steps of packaging your crate without actually uploading it, allowing you to catch any final errors.</p>
+                <pre><code>cargo publish --dry-run</code></pre>
+                <p>Cargo will package your files and print a list of what's being included. Make sure you don't see any temporary or secret files in this list!</p>
+                
+                <h4>2. Publish for Real!</h4>
+                <p>This is the final step. This command will package, upload, and publish your crate to `crates.io`. <strong>This action is permanent.</strong> While you can "yank" a version to prevent new projects from depending on it, you can never delete it or reuse the version number.</p>
+                <pre><code>cargo publish</code></pre>
+                
+                <h3>Step 5: Celebrate!</h3>
+                <p>If the command succeeds, congratulations! Your crate is now live on `crates.io`. It may take a few minutes for it to be fully indexed, but soon you will be able to see it on the website. Anyone in the world can now add your crate to their project:</p>
+                <pre><code># In someone else's Cargo.toml
+[dependencies]
+my_simple_cache_adventure = "0.1.0"
+</code></pre>
+
+                <h3>Versioning and Re-Publishing</h3>
+                <p>If you make changes and want to publish a new version, the process is:</p>
+                <ol>
+                    <li>Update the <code>version</code> number in your `Cargo.toml` according to SemVer rules (e.g., `0.1.1` for a bugfix, `0.2.0` for a non-breaking new feature).</li>
+                    <li>Run <code>cargo publish</code> again.</li>
+                </ol>
+                <p>You have now completed the full lifecycle of a Rust library: from design, to implementation, to documentation, and finally to a public release. You are not just a user of the Rust ecosystem; you are now a contributor.</p>
+
+                <a href="../index.html" class="back-link">&larr; Back to Curriculum Map</a>
+            </article>
+        </div>
+    </main>
+    
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 The Rust Adventure.</p>
+        </div>
+    </footer>
+
+</body>
+</html>

@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 104: The Capstone: Chart Your Own Adventure - The Rust Adventure</title>
+    <link rel="stylesheet" href="../style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        .finale-section h2 {
+            font-size: 2.5rem;
+            background: -webkit-linear-gradient(45deg, #E57324, #d39213);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            border-bottom-color: #E57324;
+        }
+        .slogan {
+            font-style: italic;
+            font-family: 'Source Code Pro', monospace;
+            font-size: 1.2rem;
+            text-align: center;
+            padding: 1rem;
+            border-left: 5px solid #E57324;
+            background-color: #fff3e0;
+            margin: 2rem 0;
+        }
+        .capstone-project {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        .capstone-project h3 {
+            color: #333;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 0.5rem;
+        }
+        .difficulty { font-weight: bold; }
+        .difficulty.easy { color: #4CAF50; }
+        .difficulty.medium { color: #FFC107; }
+        .difficulty.hard { color: #F44336; }
+        .difficulty.expert { color: #673AB7; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <img src="https://www.rust-lang.org/static/images/rust-logo-blk.svg" alt="Rust Logo" class="logo">
+            <h1>Module 104: The Capstone: Chart Your Own Adventure</h1>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <article class="module-content finale-section">
+                
+                <!-- ACT I: The Review -->
+                
+                <h2>Act I: The Summit - You are a Rustacean.</h2>
+                <p>Adventurer, you have arrived. Thirty-one days ago, you took your first step. You have wrestled with the borrow checker, tamed the chaos of concurrency, and bent the very syntax of the language to your will. You have built, tested, and deployed. Take a moment and look back at the path you have forged.</p>
+                <pre style="font-size: 0.8rem; text-align: center;">
+                       _~_
+                      (o o)
+                     /  V  \
+                    /(  _  )\
+                      ^^ ^^
+                </pre>
+                
+                <h4>Week 1: Forging the Tools (Days 1-9)</h4>
+                <p>You learned the fundamental laws of the Rust universe. You mastered ownership, borrowing, and the core data structures. You built your first complete application, moving from a blank file to a robust command-line tool, learning the entire software development lifecycle.</p>
+                <blockquote class="slogan">Ownership is not a restriction; it is a superpower.</blockquote>
+                
+                <h4>Week 2: Mastering the Craft (Days 10-16)</h4>
+                <p>You went deeper, exploring the very heart of the language. You mastered advanced error handling, built data structures from scratch, peered into the `unsafe` abyss, and bent the compiler to your will with asynchronous code and macros. You learned not just to use the language, but to extend it.</p>
+                <blockquote class="slogan">You don't just use the language; you extend it.</blockquote>
+                
+                <h4>Week 3: Architect of Worlds (Days 17-23)</h4>
+                <p>You conquered the web. You built a full-stack application, from the persistent PostgreSQL database to the high-performance Axum backend and all the way to a dynamic, interactive frontend running natively in the browser with WebAssembly. You learned to containerize and orchestrate, turning your code into a deployable reality.</p>
+                <blockquote class="slogan">From database to DOM, your domain is the full stack.</blockquote>
+                
+                <h4>Week 4: Explorer of the Frontier (Days 24-30)</h4>
+                <p>You pushed into the specialized domains where Rust shines. You built games with Bevy, desktop apps with Tauri, and trained neural networks with Candle. You wrangled massive datasets with Polars and touched bare metal with embedded systems. You learned that Rust is not just one tool, but a key that unlocks any door.</p>
+                <blockquote class="slogan">Performance is not an afterthought; it is the default.</blockquote>
+
+                <hr style="margin: 3rem 0;">
+
+                <!-- ACT II: The Path Forward -->
+
+                <h2>Act II: The Horizon - The Journey Never Ends</h2>
+                <p>You have finished the curriculum, but the adventure is just beginning. Being a proficient Rustacean is not a destination, but a mindset. Here is your compass for the path forward:</p>
+                <ul>
+                    <li><strong>Stay Curious. Read Voraciously.</strong> Follow the <a href="https://this-week-in-rust.org/" target="_blank">"This Week in Rust"</a> newsletter. Read the official Rust Blog. Most importantly, read the source code of the great crates: `ripgrep`, `tokio`, `clap`, `serde`. The masters have left their lessons for you to find.</li>
+                    <li><strong>Specialize. Find Your Niche.</strong> Do you love the web? Go deeper with Axum and Yew. Fascinated by game dev? Join the Bevy community. Intrigued by AI? Explore the Candle ecosystem. Find the area that sparks your passion and become an expert.</li>
+                    <li><strong>Embrace the Compiler as Your Partner.</strong> You have moved beyond fighting the borrow checker. You now understand it. Treat the compiler's errors not as failures, but as a conversation with a wise, if pedantic, partner who is dedicated to helping you write correct, fast, and beautiful code.</li>
+                    <li><strong>Teach Others.</strong> The best way to solidify your knowledge is to explain it to someone else. Answer questions on Discord or Stack Overflow. Write a blog post about a concept you found challenging. Mentor a newcomer. To teach is to learn twice.</li>
+                </ul>
+
+                <hr style="margin: 3rem 0;">
+
+                <!-- ACT III: The Capstone Projects -->
+
+                <h2>Act III: The Adventure Begins - Choose Your Capstone</h2>
+                <p>This curriculum has been your training. Now, it is time for your grand quest. Below are several large, open-ended project ideas. They are challenging. They will test everything you have learned. Choose one that inspires you, sketch out its architecture, and begin to build.</p>
+                
+                <div class="capstone-project">
+                    <h3>Project "Terminus": The In-Memory Datastore</h3>
+                    <p>Build a simplified, in-memory clone of Redis. Your server will listen on a TCP port and accept a simple text-based command protocol (e.g., `SET key value`, `GET key`, `DEL key`).</p>
+                    <ul>
+                        <li><strong>Core Concepts:</strong> Asynchronous Rust (`tokio`), networking (`TcpListener`), parsing (`nom` or manual), shared state concurrency (`Arc<Mutex<HashMap>>`), error handling (`anyhow`).</li>
+                        <li><strong>Recommended Crates:</strong> `tokio`, `anyhow`, `tracing`, `nom`.</li>
+                        <li><strong>Difficulty:</strong> <span class="difficulty medium">Medium</span></li>
+                    </ul>
+                </div>
+                
+                <div class="capstone-project">
+                    <h3>Project "Foundry": The 2D Game Engine</h3>
+                    <p>Build a small, reusable 2D game engine from a lower level than Bevy. You will be responsible for the game loop, rendering sprites, and a basic scene graph.</p>
+                    <ul>
+                        <li><strong>Core Concepts:</strong> Graphics programming (`wgpu`), the ECS pattern (implement your own or use `hecs`), linear algebra (`glam`), windowing (`winit`), API design.</li>
+                        <li><strong>Recommended Crates:</strong> `wgpu`, `winit`, `glam`, `hecs`.</li>
+                        <li><strong>Difficulty:</strong> <span class="difficulty hard">Hard</span></li>
+                    </ul>
+                </div>
+
+                <div class="capstone-project">
+                    <h3>Project "Orion": The Data Visualizer</h3>
+                    <p>Create a desktop application that can load a CSV file, display it in a table, and generate interactive plots and charts from the data.</p>
+                    <ul>
+                        <li><strong>Core Concepts:</strong> GUI development (`Tauri`), data analysis (`Polars`), frontend communication (Tauri commands/events), plotting libraries.</li>
+                        <li><strong>Recommended Crates:</strong> `Tauri`, `Polars`, `serde`, and a JS plotting library like `Chart.js` or a Rust-based one like `egui-plot`.</li>
+                        <li><strong>Difficulty:</strong> <span class="difficulty medium">Medium</span></li>
+                    </ul>
+                </div>
+
+                <div class="capstone-project">
+                    <h3>Project "Nexus": The Distributed Chat Server</h3>
+                    <p>Build a real-time chat application. The backend will manage user connections via WebSockets and broadcast messages to chat rooms. The frontend will be a full Wasm SPA.</p>
+                    <ul>
+                        <li><strong>Core Concepts:</strong> Full-stack development, WebSockets (`axum::extract::ws`), advanced state management, pub/sub patterns, message passing (`tokio::sync::broadcast`).</li>
+                        <li><strong>Recommended Crates:</strong> `Axum`, `Yew`, `sqlx`, `tokio`.</li>
+                        <li><strong>Difficulty:</strong> <span class="difficulty expert">Expert</span></li>
+                    </ul>
+                </div>
+
+                <p style="text-align: center; font-size: 1.5rem; margin-top: 3rem;">
+                    Good luck, Rustacean.<br>
+                    The adventure is never over. It just finds a new map.<br>
+                    <strong>Go build something fearless.</strong>
+                </p>
+
+                <a href="../index.html" class="back-link" style="margin-top: 3rem;">&larr; Back to the Main Map</a>
+            </article>
+        </div>
+    </main>
+    
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 The Rust Adventure.</p>
+        </div>
+    </footer>
+
+</body>
+</html>

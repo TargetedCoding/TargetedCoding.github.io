@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 103: Contributing to Open Source - The Rust Adventure</title>
+    <link rel="stylesheet" href="../style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <img src="https://www.rust-lang.org/static/images/rust-logo-blk.svg" alt="Rust Logo" class="logo">
+            <h1>Module 103: Contributing to Open Source</h1>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <article class="module-content">
+                <h2>Objective: To learn the workflow and etiquette for making a meaningful contribution to an open-source Rust project, from finding an issue to submitting a polished Pull Request.</h2>
+                <p>You have come an incredible distance, from writing your first "Hello, World!" to publishing your own library. The final step in your journey as a Rust developer is to give back to the community that provides the amazing tools and libraries you've been using. Contributing to open source is one of the best ways to improve your skills, learn from experts, and build your professional reputation.</p>
+                
+                <hr>
+
+                <h3>Step 1: Why Contribute?</h3>
+                <ul>
+                    <li><strong>Learn:</strong> You will learn a tremendous amount by reading professional, production-grade code and receiving feedback from experienced developers.</li>
+                    <li><strong>Build Your Portfolio:</strong> A public record of your contributions on platforms like GitHub is a powerful asset for your career.</li>
+                    <li><strong>Improve the Tools You Use:</strong> Found a bug or a missing feature in a crate you love? You have the power to fix it!</li>
+                    <li><strong>Join the Community:</strong> It's a great way to meet and collaborate with other passionate developers.</li>
+                </ul>
+
+                <h3>Step 2: Finding a Project and an Issue</h3>
+                <p>The first contribution is the hardest. The key is to start small!</p>
+                
+                <h4>Where to Look:</h4>
+                <ul>
+                    <li><strong>Projects You Already Use:</strong> The best place to start is with a library you are already familiar with. Did you find a typo in the documentation? Is there a small bug you've noticed?</li>
+                    <li><strong>"Good First Issue" Labels:</strong> Many projects on GitHub use the <a href="https://github.com/topics/good-first-issue" target="_blank">"good first issue"</a> or "help wanted" labels to mark tasks that are suitable for newcomers.</li>
+                    <li><strong>This Week in Rust:</strong> The official "This Week in Rust" newsletter often has a "Call for Participation" section listing projects that are actively looking for help.</li>
+                    <li><strong>The Rust Unofficial Discord:</strong> Many projects have dedicated channels for contributors where you can ask questions and find tasks.</li>
+                </ul>
+
+                <h4>What to Look For:</h4>
+                <ul>
+                    <li><strong>Documentation improvements:</strong> Adding examples, fixing typos, or clarifying explanations is one of the absolute best and most valuable ways to make your first contribution.</li>
+                    <li><strong>Adding a new test case:</strong> If you find an edge case that isn't tested, adding a test is a fantastic contribution.</li>
+                    <li><strong>Small, well-defined bugs:</strong> Look for issues that have a clear description of the problem and the expected outcome.</li>
+                </ul>
+
+                <h3>Step 3: The Contribution Workflow</h3>
+                <p>Once you've found an issue you want to work on, the process is generally the same across all projects.</p>
+                <ol>
+                    <li><strong>Read `CONTRIBUTING.md`:</strong> This is the most important step! Almost every project has a file named `CONTRIBUTING.md` in its root directory. This file contains the project's specific rules and guidelines for code style, testing, and how to submit changes. Read it carefully.</li>
+                    <li><strong>Claim the Issue:</strong> Leave a comment on the GitHub issue saying you'd like to work on it. This prevents multiple people from working on the same thing.</li>
+                    <li><strong>Fork and Clone:</strong> Fork the project's repository to your own GitHub account, then clone your fork to your local machine.</li>
+                    <li><strong>Create a New Branch:</strong> Create a new, descriptively named branch for your changes (e.g., `fix-doc-typo` or `add-user-endpoint`).</li>
+                    <li><strong>Make Your Changes:</strong> Write the code, add the tests, and fix the documentation! Make sure your code compiles and that all existing tests still pass (<code>cargo test --all-targets</code>).</li>
+                    <li><strong>Commit and Push:</strong> Commit your changes with a clear commit message and push your branch to your fork on GitHub.</li>
+                    <li><strong>Open a Pull Request (PR):</strong> From your fork on GitHub, open a Pull Request to the original project's `main` or `master` branch.
+                        <ul>
+                            <li>Write a clear title and description for your PR.</li>
+                            <li>Link to the original issue you are fixing (e.g., "Fixes #123").</li>
+                            <li>Follow any template the project provides.</li>
+                        </ul>
+                    </li>
+                    <li><strong>Engage with the Review:</strong> A project maintainer will review your code. They may ask for changes or suggest improvements. This is a normal and valuable part of the process! Be polite, be responsive, and learn from their feedback.</li>
+                    <li><strong>Merge!</strong> Once your PR is approved, a maintainer will merge it. Your code is now part of the project. Congratulations!</li>
+                </ol>
+
+                <h3>Your First Contribution Mission</h3>
+                <p>Here is your final, practical mission for this course:</p>
+                <ol>
+                    <li>Find a Rust project on GitHub. A great place to look is the list of libraries we have used: <code>clap</code>, <code>serde</code>, <code>axum</code>, <code>yew</code>, <code>bevy</code>, <code>polars</code>.</li>
+                    <li>Go to its "Issues" tab and look for a "good first issue" or a documentation-related task.</li>
+                    <li>Read their <code>CONTRIBUTING.md</code> file.</li>
+                    <li>Even if you don't write any code, simply reading the contribution guidelines and looking at open issues will give you a huge insight into how professional open-source software is made.</li>
+                </ol>
+                <p>The Rust community is famously welcoming and encouraging to newcomers. Don't be afraid to ask questions. Making your first contribution is a huge step, and it transforms you from a consumer of open source to a creator and a collaborator.</p>
+
+                <a href="../index.html" class="back-link">&larr; Back to Curriculum Map</a>
+            </article>
+        </div>
+    </main>
+    
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 The Rust Adventure.</p>
+        </div>
+    </footer>
+
+</body>
+</html>
