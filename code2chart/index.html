@@ -2,12 +2,13 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>Code2Chart Studio</title>
+  <title>Flowchart Studio</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link href="styles.css" rel="stylesheet" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%2313161d'/%3E%3Ctext x='50%25' y='55%25' text-anchor='middle' font-size='42' fill='%237dd3fc' font-family='Inter,Arial,sans-serif'%3E%E2%97%87%3C/text%3E%3C/svg%3E">
 
   <!-- Mermaid (v10+) -->
   <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
@@ -17,7 +18,7 @@
     <div class="brand">
       <div class="brand-mark">◇</div>
       <div class="brand-text">
-        <div class="title">Code2Chart Studio</div>
+        <div class="title">Flowchart Studio</div>
         <div class="subtitle">Design • Render • Export</div>
       </div>
     </div>
@@ -38,11 +39,6 @@
       </label>
 
       <button id="renderBtn" class="btn primary" title="Render (Ctrl/Cmd+Enter)">Render</button>
-
-      <!-- NEW: Templates trigger -->
-      <button id="templatesBtn" class="btn" title="Browse default charts (T)">
-        Templates
-      </button>
 
       <div class="export">
         <select id="exportType" class="select">
@@ -79,11 +75,7 @@
 
     <section class="right">
       <div class="panel-header">
-        <div>
-          Rendered Diagram
-          <!-- NEW: shows current template/type (set via JS later) -->
-          <span id="currentChartTag" class="chart-tag">Flowchart</span>
-        </div>
+        <div>Rendered Diagram</div>
         <div class="small" id="sizeInfo"></div>
       </div>
       <div id="stage" class="stage">
@@ -96,160 +88,6 @@
   <footer class="footer">
     <div>Tips: Use <kbd>Ctrl/Cmd</kbd> + <kbd>Enter</kbd> to render • Drag to pan (if diagram overflows) • Use the palette chips to recolor</div>
   </footer>
-
-  <!-- NEW: Templates Side Panel -->
-  <aside id="templatesPanel" class="templates-sheet" aria-hidden="true" aria-labelledby="templatesTitle" role="dialog">
-    <div class="templates-sheet__header">
-      <div>
-        <div id="templatesTitle" class="templates-title">Default Charts</div>
-        <div class="templates-subtitle">Pick a chart type to load its sample code</div>
-      </div>
-      <button id="templatesClose" class="btn ghost templates-close" aria-label="Close templates">✕</button>
-    </div>
-
-    <div class="templates-controls">
-      <input id="templatesSearch" class="input" type="search" placeholder="Search charts… (e.g., gantt, git, sankey)" aria-label="Search charts">
-      <div class="chip-row" role="group" aria-label="Quick filters">
-        <button class="chip" data-filter="all">All</button>
-        <button class="chip" data-filter="core">Mermaid Core</button>
-        <button class="chip" data-filter="experimental">Experimental</button>
-        <button class="chip" data-filter="advanced">Advanced</button>
-        <button class="chip" data-filter="hot">🔥 Hot</button>
-        <button class="chip" data-filter="caution">⚠️ Caution</button>
-      </div>
-    </div>
-
-    <div id="templatesGrid" class="templates-grid" role="list">
-      <!-- Core -->
-      <button class="template-card" role="listitem" data-chart="flowchart" data-tags="core">
-        <div class="template-card__title">Flowchart</div>
-        <div class="template-card__meta">Core</div>
-      </button>
-
-      <button class="template-card" role="listitem" data-chart="sequence" data-tags="core">
-        <div class="template-card__title">Sequence Diagram</div>
-        <div class="template-card__meta">Core</div>
-      </button>
-
-      <button class="template-card" role="listitem" data-chart="class" data-tags="core">
-        <div class="template-card__title">Class Diagram</div>
-        <div class="template-card__meta">Core</div>
-      </button>
-
-      <button class="template-card" role="listitem" data-chart="state" data-tags="core">
-        <div class="template-card__title">State Diagram</div>
-        <div class="template-card__meta">Core</div>
-      </button>
-
-      <button class="template-card" role="listitem" data-chart="er" data-tags="core">
-        <div class="template-card__title">Entity Relationship Diagram</div>
-        <div class="template-card__meta">Core</div>
-      </button>
-
-      <button class="template-card" role="listitem" data-chart="journey" data-tags="core">
-        <div class="template-card__title">User Journey</div>
-        <div class="template-card__meta">Core</div>
-      </button>
-
-      <button class="template-card" role="listitem" data-chart="gantt" data-tags="core">
-        <div class="template-card__title">Gantt</div>
-        <div class="template-card__meta">Core</div>
-      </button>
-
-      <button class="template-card" role="listitem" data-chart="pie" data-tags="core">
-        <div class="template-card__title">Pie Chart</div>
-        <div class="template-card__meta">Core</div>
-      </button>
-
-      <button class="template-card" role="listitem" data-chart="quadrant" data-tags="core advanced">
-        <div class="template-card__title">Quadrant Chart</div>
-        <div class="template-card__meta">Core • Advanced</div>
-      </button>
-
-      <button class="template-card" role="listitem" data-chart="requirement" data-tags="core">
-        <div class="template-card__title">Requirement Diagram</div>
-        <div class="template-card__meta">Core</div>
-      </button>
-
-      <button class="template-card" role="listitem" data-chart="gitgraph" data-tags="core">
-        <div class="template-card__title">GitGraph (Git) Diagram</div>
-        <div class="template-card__meta">Core</div>
-      </button>
-
-      <!-- Caution / Extended -->
-      <button class="template-card caution" role="listitem" data-chart="c4" data-tags="caution advanced">
-        <div class="template-card__title">C4 Diagram 🦺⚠️</div>
-        <div class="template-card__meta">Extended • Read notes</div>
-      </button>
-
-      <!-- Experimental/Hot (non-core or community plugins) -->
-      <button class="template-card hot" role="listitem" data-chart="mindmap" data-tags="experimental">
-        <div class="template-card__title">Mindmaps</div>
-        <div class="template-card__meta">Experimental</div>
-      </button>
-
-      <button class="template-card" role="listitem" data-chart="timeline" data-tags="experimental">
-        <div class="template-card__title">Timeline</div>
-        <div class="template-card__meta">Experimental</div>
-      </button>
-
-      <button class="template-card" role="listitem" data-chart="zenuml" data-tags="experimental">
-        <div class="template-card__title">ZenUML</div>
-        <div class="template-card__meta">Experimental</div>
-      </button>
-
-      <button class="template-card hot" role="listitem" data-chart="sankey" data-tags="experimental hot">
-        <div class="template-card__title">Sankey 🔥</div>
-        <div class="template-card__meta">Experimental • Hot</div>
-      </button>
-
-      <button class="template-card hot" role="listitem" data-chart="xychart" data-tags="experimental hot">
-        <div class="template-card__title">XY Chart 🔥</div>
-        <div class="template-card__meta">Experimental • Hot</div>
-      </button>
-
-      <button class="template-card hot" role="listitem" data-chart="block" data-tags="experimental hot">
-        <div class="template-card__title">Block Diagram 🔥</div>
-        <div class="template-card__meta">Experimental • Hot</div>
-      </button>
-
-      <button class="template-card hot" role="listitem" data-chart="packet" data-tags="experimental hot">
-        <div class="template-card__title">Packet 🔥</div>
-        <div class="template-card__meta">Experimental • Hot</div>
-      </button>
-
-      <button class="template-card hot" role="listitem" data-chart="kanban" data-tags="experimental hot">
-        <div class="template-card__title">Kanban 🔥</div>
-        <div class="template-card__meta">Experimental • Hot</div>
-      </button>
-
-      <button class="template-card hot" role="listitem" data-chart="architecture" data-tags="experimental hot">
-        <div class="template-card__title">Architecture 🔥</div>
-        <div class="template-card__meta">Experimental • Hot</div>
-      </button>
-
-      <button class="template-card hot" role="listitem" data-chart="radar" data-tags="experimental hot">
-        <div class="template-card__title">Radar 🔥</div>
-        <div class="template-card__meta">Experimental • Hot</div>
-      </button>
-
-      <button class="template-card hot" role="listitem" data-chart="treemap" data-tags="experimental hot">
-        <div class="template-card__title">Treemap 🔥</div>
-        <div class="template-card__meta">Experimental • Hot</div>
-      </button>
-    </div>
-
-    <div class="templates-footer">
-      <div class="small">
-        Tip: Click a template to load its sample into the editor. You can tweak code and re-render anytime.
-      </div>
-      <div class="spacer"></div>
-      <button id="templatesUse" class="btn primary" disabled>Use Selected</button>
-    </div>
-  </aside>
-
-  <!-- NEW: Overlay -->
-  <div id="templatesOverlay" class="templates-overlay" hidden></div>
 
   <script src="app.js" type="module"></script>
 </body>
