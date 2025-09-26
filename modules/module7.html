@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 7: The Wider World (Crates & Modules) - The Rust Adventure</title>
+    <link rel="stylesheet" href="../style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <img src="https://www.rust-lang.org/static/images/rust-logo-blk.svg" alt="Rust Logo" class="logo">
+            <h1>Module 7: The Wider World (Crates & Modules)</h1>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <article class="module-content">
+                <h2>Objective: To understand how to use code from the Rust community and organize larger projects.</h2>
+                <p>You don't have to build everything from scratch! The Rust community has created thousands of high-quality libraries, called "crates," that you can easily add to your project. We'll also learn how to organize our own code as it gets bigger.</p>
+                
+                <hr>
+
+                <h3>Step 1: Cargo, The Delivery Service</h3>
+                <p>Rust's ecosystem of libraries is hosted on <strong>crates.io</strong>. Your trusty tool, <code>cargo</code>, is what you use to download and manage these crates.</p>
+                <p><strong>Analogy:</strong> Think of <code>crates.io</code> as a giant online catalog of LEGO kits made by other people. Your <code>Cargo.toml</code> file is your shopping list. When you run <code>cargo build</code> or <code>cargo run</code>, Cargo acts as a delivery service that finds the kits on your list, downloads them, and makes them available for you to use.</p>
+
+                <h3>Step 2: Using an External Crate</h3>
+                <p>Let's add some color to our command-line application! We will use the popular <code>colored</code> crate.</p>
+                <ol>
+                    <li>
+                        <strong>Add the dependency:</strong> Open your <code>Cargo.toml</code> file. Under the <code>[dependencies]</code> section, add this line:
+                        <pre><code>[dependencies]
+colored = "2.0.0"</code></pre>
+                        <p>(Note: You can check crates.io for the latest version number.)</p>
+                    </li>
+                    <li>
+                        <strong>Use it in your code:</strong> The next time you run <code>cargo build</code>, Cargo will download and compile the `colored` crate for you. Then, you can use it in your code.
+                        <pre><code>// Bring the crate's functionality into scope
+use colored::*;
+
+// Now you can call color methods on strings!
+println!("{}", "This is blue text on a yellow background.".blue().on_yellow());
+println!("{}", "This is bold and green!".bold().green());</code></pre>
+                    </li>
+                </ol>
+
+                <h3>Step 3: Organizing Your Code with Modules</h3>
+                <p>As our <code>main.rs</code> file grows, it's a good idea to split it into smaller, more manageable pieces. We can do this with modules.</p>
+                <p>We will move our <code>Task</code> struct and related functions into a separate file. Create a new file: <code>src/task.rs</code>. Then, in <code>src/main.rs</code>, you declare that this module exists with the <code>mod</code> keyword.</p>
+
+                <h3>Let's Build Our Todo App (Part 7 - The Finale)</h3>
+                <p>This is our final upgrade. We will add color using the <code>colored</code> crate and refactor our code into a separate module. This is what a real, small Rust project looks like!</p>
+                
+                <h4>1. Update <code>Cargo.toml</code></h4>
+                <p>Add the <code>colored</code> crate to your dependencies:</p>
+                <pre><code>[dependencies]
+colored = "2.0.0"</code></pre>
+
+                <h4>2. Create <code>src/task.rs</code></h4>
+                <p>Create this new file and move the struct definition and the print function into it. Note the <code>pub</code> keyword, which makes the <code>Task</code> struct and <code>print_tasks</code> function public so they can be used from <code>main.rs</code>.</p>
+                <pre><code>// In src/task.rs
+
+use colored::*; // We can use the crate here too!
+
+// `pub` makes this struct visible outside this module.
+pub struct Task {
+    pub description: String,
+    pub completed: bool,
+}
+
+// `pub` makes this function visible.
+pub fn print_tasks(task_list: &Vec<Task>) {
+    println!("\n{}", "---- TODO LIST ----".yellow().bold());
+    for (index, task) in task_list.iter().enumerate() {
+        let status_symbol = if task.completed { "[x]".green() } else { "[ ]".red() };
+        println!("{}. {} {}", index + 1, status_symbol, task.description);
+    }
+    println!("{}", "-------------------".yellow().bold());
+}</code></pre>
+
+                <h4>3. Update <code>src/main.rs</code></h4>
+                <p>Our main file is now much cleaner! It's focused on the high-level logic of the application.</p>
+                <pre><code>// In src/main.rs
+
+// Declare that we have a module named `task` in a file named `task.rs`.
+mod task;
+
+// Bring our public items from the `task` module into scope.
+use task::{print_tasks, Task};
+
+fn main() {
+    let mut tasks = Vec::new();
+
+    tasks.push(Task {
+        description: "Master crates and modules".to_string(),
+        completed: false,
+    });
+    tasks.push(Task {
+        description: "Finish the Rust Adventure!".to_string(),
+        completed: true,
+    });
+    
+    // Our main logic is simple: create tasks and print them.
+    print_tasks(&tasks);
+}</code></pre>
+                
+                <p>Run <code>cargo run</code> one last time. Cargo will download <code>colored</code>, compile everything, and you'll see a beautiful, colorful, well-organized task list! You have successfully built a real Rust application from the ground up.</p>
+
+                <a href="../index.html" class="back-link">&larr; Back to Curriculum Map</a>
+            </article>
+        </div>
+    </main>
+    
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 The Rust Adventure.</p>
+        </div>
+    </footer>
+
+</body>
+</html>

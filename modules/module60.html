@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 60: Introduction to Procedural Macros - The Rust Adventure</title>
+    <link rel="stylesheet" href="../style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <img src="https://www.rust-lang.org/static/images/rust-logo-blk.svg" alt="Rust Logo" class="logo">
+            <h1>Module 60: Introduction to Procedural Macros</h1>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <article class="module-content">
+                <h2>Objective: To understand the three types of procedural macros (derive, attribute, and function-like) and the roles of the essential `syn` and `quote` crates.</h2>
+                <p>Declarative macros are powerful, but they are limited to "matching and replacing." They can't inspect or transform the code they are acting on in complex ways. For that, we need <strong>procedural macros</strong>. Procedural macros are not just patterns; they are actual Rust code that operates on other Rust code at compile time.</p>
+                
+                <hr>
+
+                <h3>Step 1: The Power of Procedural Macros</h3>
+                <p>A procedural macro is a function that receives a stream of Rust code "tokens" as input and produces a new stream of tokens as output. The compiler then replaces the original macro invocation with the output stream.</p>
+                <p>This is how some of the most powerful features in the Rust ecosystem are built. Crates like `serde` (`#[derive(Serialize)]`), `clap` (`#[derive(Parser)]`), and `tokio` (`#[tokio::main]`) are all powered by procedural macros.</p>
+                
+                <p><strong>Analogy: The Assembly-Line Robot Arm.</strong> A declarative macro is a rubber stamp. A procedural macro is a sophisticated, programmable robot arm on an assembly line. It can pick up a piece of code, inspect it from all angles, add new parts, remove old ones, and then place a completely transformed piece of code back on the line. It's a true code-generation engine.</p>
+
+                <h3>Step 2: The Three Types of Procedural Macros</h3>
+                <p>Procedural macros must be defined in their own special "proc-macro" crate type.</p>
+                <ol>
+                    <li>
+                        <strong>Custom `#[derive]` Macros:</strong> These are the most common. They can only be used on structs and enums and allow you to automatically implement traits. You've used this with `#[derive(Debug)]`, `#[derive(Clone)]`, etc.
+                        <pre><code>#[derive(MyCustomTrait)] // `MyCustomTrait` is the custom derive macro.
+struct MyStruct;
+</code></pre>
+                    </li>
+                    <li>
+                        <strong>Attribute-like Macros:</strong> These are more general. They can be attached to almost any item (like functions, modules, etc.). They can modify the item they are attached to. `#[tokio::main]` is a perfect example; it transforms an `async fn main` into a regular `fn main` that starts the runtime.
+                        <pre><code>#[my_attribute(some_argument)] // `my_attribute` is the macro.
+fn my_function() {}
+</code></pre>
+                    </li>
+                    <li>
+                        <strong>Function-like Macros:</strong> These look like regular function-call macros (e.g., `println!`), but they are far more powerful than `macro_rules!`. They get the raw tokens inside the parentheses and can parse them in complex, arbitrary ways.
+                        <pre><code>my_macro! { some { arbitrary(tokens) } }
+</code></pre>
+                    </li>
+                </ol>
+
+                <h3>Step 3: The Essential Crates: `syn` and `quote`</h3>
+                <p>Working directly with raw token streams is incredibly difficult. The ecosystem has standardized on two essential helper crates for writing procedural macros:</p>
+                <ul>
+                    <li><strong><code>syn</code></strong>: A crate for <strong>syn</strong>tax parsing. You feed it a stream of tokens, and it gives you back a structured Rust data type, called an Abstract Syntax Tree (AST), that represents that code. For example, it can turn the tokens for a struct definition into a `syn::ItemStruct`, which has fields you can inspect like `ident` (the name) and `fields`.</li>
+                    <li><strong><code>quote</code></strong>: A quasi-<strong>quot</strong>ing crate. It's the opposite of `syn`. It provides a `quote!` macro that lets you write Rust code inside it, and it will turn that code back into a token stream. It lets you easily "build" the code you want to generate.</li>
+                </ul>
+                
+                <h3>Practical Application: Dissecting a "Hello World" Derive Macro</h3>
+                <p>We won't build a full, working proc-macro today—that's the challenge for the next module. Instead, we will look at the complete source code for a simple "Hello World" derive macro and understand what each part does.</p>
+
+                <h4>The Goal:</h4>
+                <p>We want to be able to write this:</p>
+                <pre><code>#[derive(HelloWorld)]
+struct MyStruct;
+</code></pre>
+                <p>And have it generate this:</p>
+                <pre><code>impl HelloWorld for MyStruct {
+    fn hello_world() {
+        println!("Hello, World! My name is MyStruct.");
+    }
+}
+</code></pre>
+                
+                <h4>The Macro's Source Code:</h4>
+                <p>This code would live in a separate crate with `proc-macro = true` in its `Cargo.toml`.</p>
+                <pre><code>extern crate proc_macro;
+
+use proc_macro::TokenStream;
+use quote::quote;
+use syn::{parse_macro_input, DeriveInput};
+
+#[proc_macro_derive(HelloWorld)]
+pub fn hello_world_derive(input: TokenStream) -> TokenStream {
+    // 1. Parse the input tokens into a structured AST.
+    // `syn` does the heavy lifting of understanding the struct definition.
+    let ast = parse_macro_input!(input as DeriveInput);
+    
+    // 2. Get the name of the struct we're deriving for.
+    let name = &ast.ident;
+    
+    // 3. Use `quote` to build the output token stream.
+    // This looks like writing regular Rust code, but it's generating code!
+    let gen = quote! {
+        // We are generating an `impl` block for a trait named `HelloWorld`.
+        impl HelloWorld for #name {
+            fn hello_world() {
+                // `stringify!` turns an identifier into a string literal.
+                println!("Hello, World! My name is {}.", stringify!(#name));
+            }
+        }
+    };
+    
+    // 4. Convert the `quote` output back into a TokenStream and return it.
+    gen.into()
+}
+</code></pre>
+                
+                <h4>The Anatomy of the Macro:</h4>
+                <ul>
+                    <li><strong><code>#[proc_macro_derive(HelloWorld)]</code></strong>: This attribute marks the function as a custom derive for a trait named `HelloWorld`.</li>
+                    <li><strong><code>input: TokenStream</code></strong>: The compiler gives our function the source code of the struct (`struct MyStruct;`) as a stream of tokens.</li>
+                    <li><strong><code>parse_macro_input!</code></strong>: A handy macro from `syn` that parses the `TokenStream` into a `DeriveInput` struct, which is `syn`'s representation of a struct or enum definition.</li>
+                    <li><strong><code>ast.ident</code></strong>: We inspect the AST to get the identifier (the name) of the struct.</li>
+                    <li><strong><code>quote! { ... }</code></strong>: This is the code generator. We write the `impl` block we want to create. The `#name` syntax within `quote!` is special: it splices the `name` variable (which holds the identifier `MyStruct`) directly into the generated code.</li>
+                </ul>
+                <p>This is a challenging topic, but you now understand the fundamental workflow of a procedural macro: <strong>Parse -> Transform -> Generate</strong>. You know the three types of proc-macros and the roles of `syn` and `quote`. In the next module, we'll put this knowledge into practice and build one from scratch.</p>
+
+                <a href="../index.html" class="back-link">&larr; Back to Curriculum Map</a>
+            </article>
+        </div>
+    </main>
+    
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 The Rust Adventure.</p>
+        </div>
+    </footer>
+
+</body>
+</html>

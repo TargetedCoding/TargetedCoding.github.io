@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 84: Spawning Sprites and Handling Assets - The Rust Adventure</title>
+    <link rel="stylesheet" href="../style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <img src="https://www.rust-lang.org/static/images/rust-logo-blk.svg" alt="Rust Logo" class="logo">
+            <h1>Module 84: Spawning Sprites and Handling Assets</h1>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <article class="module-content">
+                <h2>Objective: To use the Bevy game engine to create a new project, load an image asset, and "spawn" an entity with the necessary components to display it on screen as a sprite.</h2>
+                <p>Now that you understand the theory of ECS, let's put it into practice. We will use <strong>Bevy</strong>, a popular, free, open-source, and data-driven game engine for Rust. We'll write our first "system" which will run once at startup, set up our game camera, and spawn our first entity: a player sprite.</p>
+                
+                <hr>
+
+                <h3>Step 1: The Bevy App and Plugins</h3>
+                <p>A Bevy application is built using an <code>App</code> builder. You add functionality to the app by inserting "plugins." A plugin is a collection of resources, components, and systems that provide a certain feature. The <code>DefaultPlugins</code> provide all the essentials for a 2D game: a window, rendering, input handling, etc.</p>
+                
+                <h3>Step 2: Spawning Entities with `Commands`</h3>
+                <p>In Bevy, you create, modify, and destroy entities using a special system parameter called <code>Commands</code>. The `commands` object is a queue of operations that Bevy will execute at a safe point in the game loop. The most common command is <code>commands.spawn(...)</code>, which creates a new entity.</p>
+
+                <h3>Step 3: Asset Handling</h3>
+                <p>Games need assets (images, sounds, fonts). Bevy has a built-in <code>AssetServer</code> that handles loading these assets asynchronously in the background. You give it a path, and it gives you back a "handle" to that asset. You can use the handle immediately, and Bevy will automatically swap in the real asset once it has finished loading.</p>
+
+                <h3>Practical Application: Putting a Character on Screen</h3>
+                
+                <h4>1. Create a New Bevy Project</h4>
+                <pre><code>cargo new bevy_player
+cd bevy_player
+</code></pre>
+
+                <h4>2. Update `Cargo.toml`</h4>
+                <p>Bevy is a single dependency. We'll enable "dynamic linking" during development to drastically speed up compile times.</p>
+                <pre><code># In bevy_player/Cargo.toml
+[dependencies]
+bevy = "0.11" # Use a recent version of Bevy
+
+# Enable a small amount of optimization in debug mode
+[profile.dev]
+opt-level = 1
+
+# Enable high optimizations for dependencies (incl. Bevy), but not for our code:
+[profile.dev.package."*"]
+opt-level = 3
+</code></pre>
+                
+                <h4>3. Get an Image Asset</h4>
+                <p>Create a new folder named <code>assets</code> in the root of your project. Download a simple character sprite (a <code>.png</code> file with a transparent background is best) and place it in this folder. For this example, we'll assume it's named <code>player.png</code>.</p>
+                
+                <h4>4. The Complete `src/main.rs`</h4>
+                <pre><code>use bevy::prelude::*;
+
+fn main() {
+    App::new()
+        // Add all the basic plugins for a 2D game.
+        .add_plugins(DefaultPlugins.set(ImagePlugin::default_nearest()))
+        // Add our custom setup system to run once at startup.
+        .add_systems(Startup, setup_system)
+        .run();
+}
+
+// --- COMPONENTS ---
+// These are the data-only structs that define our entities.
+
+// A "marker" component to identify the player entity.
+#[derive(Component)]
+struct Player;
+
+// --- SYSTEMS ---
+// These are the functions that contain all our game logic.
+
+/// This system runs once at the very beginning of the game.
+fn setup_system(mut commands: Commands, asset_server: Res<AssetServer>) {
+    // 1. SPAWN THE CAMERA
+    // We need a camera to see anything. The `Camera2dBundle` is a pre-packaged
+    // set of components for a 2D camera.
+    commands.spawn(Camera2dBundle::default());
+
+    // 2. SPAWN THE PLAYER
+    // `commands.spawn` creates a new entity. The `.insert()` methods add components to it.
+    commands.spawn((
+        // The `SpriteBundle` is a collection of components for rendering a 2D sprite.
+        SpriteBundle {
+            // We ask the `AssetServer` to load our image. It returns a `Handle`.
+            texture: asset_server.load("player.png"),
+            transform: Transform::from_xyz(0., 0., 0.).with_scale(Vec3::splat(3.0)),
+            ..default() // Use default values for other fields in the bundle
+        },
+        // We also add our custom `Player` marker component.
+        Player,
+    ));
+}
+</code></pre>
+
+                <h4>The ECS Architecture in Action:</h4>
+                <ul>
+                    <li><strong><code>App::new().add_plugins(...)</code></strong>: We create our application and add the default plugins. `ImagePlugin::default_nearest()` is a small configuration that makes pixel art look crisp instead of blurry.</li>
+                    <li><strong><code>.add_systems(Startup, setup_system)</code></strong>: We tell Bevy to run our `setup_system` function once, during the `Startup` schedule.</li>
+                    <li><strong>System Parameters (`mut commands: Commands, ...`)</strong>: Bevy's magic is dependency injection. Our `setup_system` function "asks for" the resources it needs by listing them as parameters. Bevy sees this and automatically provides them. Here, we ask for `Commands` (to spawn things) and the `AssetServer` (to load our image).</li>
+                    <li><strong><code>commands.spawn(...)</code></strong>: This is the core of our setup. We create a new entity. In Bevy, it's idiomatic to spawn an entity with a "Bundle," which is just a pre-made collection of components.
+                        <ul>
+                            <li><strong><code>SpriteBundle</code></strong>: This bundle includes a `Handle<Image>` (our texture), a `Transform` (its position, rotation, and scale), and a `Visibility` component, among others.</li>
+                            <li><strong><code>Player</code></strong>: We also add our own custom component. This entity is now "the player."</li>
+                        </ul>
+                    </li>
+                </ul>
+                
+                <h3>Step 5: Run Your Game!</h3>
+                <p>From your terminal, run the application:</p>
+                <pre><code>cargo run</code></pre>
+                <p>A window should appear, and you will see your player sprite right in the center of the screen! It doesn't do anything yet, but it exists in our game world. You have successfully created a Bevy application, loaded an asset, and spawned an entity with components, putting the entire ECS theory into practice.</p>
+
+                <a href="../index.html" class="back-link">&larr; Back to Curriculum Map</a>
+            </article>
+        </div>
+    </main>
+    
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 The Rust Adventure.</p>
+        </div>
+    </footer>
+
+</body>
+</html>

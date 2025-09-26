@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 70: API Error Handling - The Rust Adventure</title>
+    <link rel="stylesheet" href="../style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <img src="https://www.rust-lang.org/static/images/rust-logo-blk.svg" alt="Rust Logo" class="logo">
+            <h1>Module 70: API Error Handling</h1>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <article class="module-content">
+                <h2>Objective: To design and implement a robust, centralized error handling strategy for our Axum API that converts our internal Rust errors into clean, standard JSON error responses.</h2>
+                <p>So far, our handlers have been returning simple `StatusCode`s on failure. A real API should return a consistent JSON error object (e.g., <code>{"error": "Task not found"}</code>) and the correct HTTP status code. Doing this manually in every handler is repetitive and error-prone. The idiomatic Axum solution is to create a single, application-wide error type and a corresponding "response converter."</p>
+                
+                <hr>
+
+                <h3>Step 1: The `IntoResponse` Trait</h3>
+                <p>The magic behind Axum's error handling is the <code>axum::response::IntoResponse</code> trait. Any type that implements this trait can be returned from a handler. Axum knows how to convert it into a final HTTP response. We've seen this with `String`, `Json`, and `StatusCode`. Our goal is to create a custom `AppError` enum and implement `IntoResponse` for it. This will be our central point for converting all possible application errors into HTTP responses.</p>
+                
+                <h3>Step 2: A Unified `Result` Type</h3>
+                <p>We'll define a custom `Result` type alias for our application, like <code>pub type Result<T> = std::result::Result<T, AppError>;</code>. This will make our handler signatures much cleaner. Instead of returning `Result<Json<Task>, StatusCode>`, they will simply return `Result<Json<Task>>`.</p>
+                
+                <h3>Practical Application: A Centralized Error Handler</h3>
+                <p>We will refactor our entire `todo_api` project to use a new `AppError` type. All our handlers will now return our custom `Result`, and the `IntoResponse` implementation will handle the rest.</p>
+
+                <h4>1. Add `thiserror` to `Cargo.toml`</h4>
+                <p>We'll use `thiserror` (from Day 10) to build our professional error enum.</p>
+                <pre><code>[dependencies]
+# ... (existing dependencies)
+thiserror = "1.0"
+</code></pre>
+
+                <h4>2. The Complete, Refactored `src/main.rs`</h4>
+                <pre><code>use axum::{
+    async_trait,
+    extract::{FromRequestParts, Path, State},
+    http::{header, request::Parts, StatusCode},
+    response::{IntoResponse, Response},
+    routing::{get, post},
+    Json, Router,
+};
+use axum_extra::{headers::{authorization::Bearer, Authorization}, TypedHeader};
+use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
+use serde::{Deserialize, Serialize};
+use serde_json::json;
+use sqlx::sqlite::SqlitePool;
+use std::sync::Arc;
+use thiserror::Error;
+// ... (other use statements)
+
+// --- NEW: Centralized Application Error ---
+#[derive(Debug, Error)]
+pub enum AppError {
+    #[error("SQLx error: {0}")]
+    Sqlx(#[from] sqlx::Error),
+
+    #[error("JWT error: {0}")]
+    Jwt(#[from] jsonwebtoken::errors::Error),
+
+    #[error("Authentication failed: Missing or invalid token")]
+    InvalidToken,
+
+    #[error("Task with ID {0} not found")]
+    TaskNotFound(i64),
+}
+
+// --- NEW: `IntoResponse` Implementation ---
+// This is the central point where we convert our `AppError` into an HTTP response.
+impl IntoResponse for AppError {
+    fn into_response(self) -> Response {
+        let (status, error_message) = match self {
+            AppError::Sqlx(e) => {
+                // In production, you would log the full error `e` but return a generic message.
+                eprintln!("Database error: {}", e);
+                (StatusCode::INTERNAL_SERVER_ERROR, "A database error occurred".to_string())
+            }
+            AppError::Jwt(_) | AppError::InvalidToken => {
+                (StatusCode::UNAUTHORIZED, self.to_string())
+            }
+            AppError::TaskNotFound(_) => {
+                (StatusCode::NOT_FOUND, self.to_string())
+            }
+        };
+
+        let body = Json(json!({ "error": error_message }));
+        (status, body).into_response()
+    }
+}
+
+// --- NEW: Custom `Result` Type Alias ---
+pub type Result<T> = std::result::Result<T, AppError>;
+
+// --- REFACTORED: Custom Extractor now uses our AppError ---
+#[async_trait]
+impl<S> FromRequestParts</S> for Claims where S: Send + Sync {
+    type Rejection = AppError; // The rejection type is now our AppError
+
+    async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self> {
+        let TypedHeader(Authorization(bearer)) =
+            TypedHeader::<Authorization<Bearer>>::from_request_parts(parts, _state)
+                .await.map_err(|_| AppError::InvalidToken)?;
+        
+        let token_data = decode::<Claims>(bearer.token(), &DecodingKey::from_secret(b"secret"), &Validation::default())?;
+        Ok(token_data.claims)
+    }
+}
+
+
+// --- REFACTORED: All handlers now return our custom `Result` ---
+async fn list_tasks_protected(
+    claims: Claims,
+    State(state): State<AppState>,
+) -> Result<Json<Vec<Task>>> { // <-- Returns our Result
+    println!("User {} is listing tasks.", claims.sub);
+    
+    let tasks = sqlx::query_as!(Task, "SELECT id, description, completed FROM tasks")
+        .fetch_all(&state.db_pool)
+        .await?; // The `?` operator now works beautifully!
+
+    Ok(Json(tasks))
+}
+
+async fn get_task_protected(
+    claims: Claims,
+    State(state): State<AppState>,
+    Path(id): Path<i64>,
+) -> Result<Json<Task>> {
+    println!("User {} is getting task {}.", claims.sub, id);
+    
+    let task = sqlx::query_as!(Task, "SELECT id, description, completed FROM tasks WHERE id = ?", id)
+        .fetch_optional(&state.db_pool)
+        .await?
+        .ok_or(AppError::TaskNotFound(id))?; // Specific error for not found
+
+    Ok(Json(task))
+}
+
+// ... (other structs and main function setup are the same)
+</code></pre>
+
+                <h4>The Robust Error Handling Architecture:</h4>
+                <ul>
+                    <li><strong><code>AppError</code> Enum</strong>: We have a single enum that represents all possible *high-level* failures in our application. We use `thiserror` to make it a proper error type and `#[from]` to automatically convert errors from `sqlx` and `jsonwebtoken`.</li>
+                    <li><strong><code>impl IntoResponse for AppError</code></strong>: This is our central error handler. It takes any variant of our `AppError`, `match`es on it, and decides exactly what HTTP `StatusCode` and JSON body to return. This logic is now in one single place.</li>
+                    <li><strong><code>pub type Result<T> = ...</code></strong>: Our custom `Result` alias makes handler signatures clean. They no longer need to know about `StatusCode`.</li>
+                    <li><strong>The Power of `?`</strong>: Look at our handlers now! A line like `...await?` is doing so much work. If the database call fails, the `?` operator will convert the `sqlx::Error` into an `AppError::Sqlx` (thanks to `#[from]`), immediately return it from the handler, and our `IntoResponse` impl will catch it and generate a `500 Internal Server Error` response. The handler code is incredibly clean and focused only on the success path.</li>
+                </ul>
+
+                <h3>Step 3: Test Your Error Responses!</h3>
+                <p>Run your server. Now, try to trigger the errors we've defined.</p>
+                <pre><code># 1. Try to get a task that doesn't exist (e.g., ID 999)
+curl -v -H "Authorization: Bearer $TOKEN" http://127.0.0.1:3000/tasks/999
+# You will get a 404 Not Found status and a JSON body: {"error": "Task with ID 999 not found"}
+
+# 2. Try to use an invalid token or no token
+curl -v http://127.0.0.1:3000/tasks
+# You will get a 401 Unauthorized status and a JSON body: {"error": "Authentication failed: ..."}
+</code></pre>
+                <p>You have successfully built a professional, centralized, and ergonomic error handling system for your API. This pattern is scalable, easy to maintain, and provides a fantastic experience for the users of your API.</p>
+
+                <a href="../index.html" class="back-link">&larr; Back to Curriculum Map</a>
+            </article>
+        </div>
+    </main>
+    
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 The Rust Adventure.</p>
+        </div>
+    </footer>
+
+</body>
+</html>

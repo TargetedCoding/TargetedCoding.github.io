@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 15: The Mighty Vec and Slices - The Rust Adventure</title>
+    <link rel="stylesheet" href="../style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <img src="https://www.rust-lang.org/static/images/rust-logo-blk.svg" alt="Rust Logo" class="logo">
+            <h1>Module 15: The Mighty Vec and Slices</h1>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <article class="module-content">
+                <h2>Objective: To master Rust's growable list, the `Vec<T>`, and its relationship with the generic slice type `&[T]`.</h2>
+                <p>You've used `Vec` to store lists of items, but there's a lot of power under the hood. Understanding how `Vec` manages memory and how it relates to "slices" is key to writing flexible and high-performance Rust code.</p>
+                
+                <hr>
+
+                <h3>Step 1: Length vs. Capacity</h3>
+                <p>A `Vec` has two important properties:</p>
+                <ul>
+                    <li><strong>Length:</strong> The number of elements currently in the vector. You get this with <code>my_vec.len()</code>.</li>
+                    <li><strong>Capacity:</strong> The number of elements the vector can hold *without* needing to reallocate more memory. You get this with <code>my_vec.capacity()</code>.</li>
+                </ul>
+                <p><strong>Analogy: The Moving Truck.</strong> Think of a `Vec` as a moving truck. Its `length` is the number of boxes currently inside. Its `capacity` is how many boxes *could* fit before you need to rent a bigger truck. When a `Vec` runs out of capacity, it has to find a new, larger spot in memory and move all its elements, which can be slow. If you know you'll need space for 100 items, you can create the `Vec` with that capacity from the start to avoid this.</p>
+                <pre><code>let mut vec = Vec::with_capacity(10);
+println!("Length: {}, Capacity: {}", vec.len(), vec.capacity()); // Prints "Length: 0, Capacity: 10"</code></pre>
+
+                <h3>Step 2: The Power of Slices (`&[T]`)</h3>
+                <p>A <strong>slice</strong> (pronounced "slice," type-written as <code>&[T]</code> where `T` is the type) is a borrowed, immutable view of a contiguous sequence of elements. It doesn't own the data, it just points to it.</p>
+                <p>The most important insight is that slices are more generic than `Vec`. A function that takes a <code>&[i32]</code> can be passed a reference to a `Vec<i32>`, a plain array `[i32; 5]`, or another slice. This makes your functions much more flexible.</p>
+                <p><strong>Rule of Thumb:</strong> When writing a function that needs to read a list of data, prefer accepting a slice (<code>&[T]</code>) over a reference to a vector (<code>&Vec<T></code>).</p>
+
+                <h3>Let's Build Our Todo App (Part 14)</h3>
+                <p>Let's add two new commands: <code>delete &lt;id&gt;</code> and a <code>sort</code> command to display tasks alphabetically. The `sort` command is a perfect showcase for converting our `HashMap` data into a `Vec` to be sorted and displayed.</p>
+                <p>We'll add `DeleteCommand` and `SortCommand` structs and update our parsing logic.</p>
+                <pre><code>// ... (All previous structs, enums, and traits are the same) ...
+
+// --- NEW: A Command for Deleting a Task ---
+struct DeleteCommand { id: u32 }
+
+impl Command for DeleteCommand {
+    fn execute(&self, tasks: &mut HashMap<u32, Task>, _next_id: &mut u32) -> Result<(), AppError> {
+        // .remove() on a HashMap returns an Option<Task> with the removed task, if it existed.
+        if let Some(removed_task) = tasks.remove(&self.id) {
+            println!("Deleted task {}: '{}'", self.id, removed_task.description);
+            Ok(())
+        } else {
+            Err(AppError::NotFound(format!("Task with ID {} not found.", self.id)))
+        }
+    }
+}
+
+// --- NEW: A Command for Sorting and Displaying Tasks ---
+struct SortCommand;
+
+impl Command for SortCommand {
+    fn execute(&self, tasks: &mut HashMap<u32, Task>, _next_id: &mut u32) -> Result<(), AppError> {
+        // 1. Collect the HashMap's items into a Vec to be sorted.
+        let mut sorted_tasks: Vec<_> = tasks.iter().collect();
+
+        // 2. Sort the Vec in-place by the task description.
+        //    .sort_by() takes a closure that compares two elements.
+        sorted_tasks.sort_by(|a, b| a.1.description.cmp(&b.1.description));
+        
+        println!("\n--- SORTED TODO LIST ---");
+        for (id, task) in sorted_tasks {
+            let status = if task.completed { "[x]" } else { "[ ]" };
+            println!("{}: {} {}", id, status, task.description);
+        }
+        println!("------------------------");
+        Ok(())
+    }
+}
+
+// --- REFACTORED: The Run Loop (parsing part) ---
+fn run() -> Result<(), AppError> {
+    // ... (setup is the same) ...
+    loop {
+        println!("\n> Enter a command: add, complete, delete, list, sort, find, or quit");
+        // ... (input reading is the same) ...
+        
+        // ... match command_name { ...
+            // ("add", "complete", "list", "find" are the same)
+            
+            "delete" => {
+                // ... (parsing logic for ID is similar to "complete") ...
+                let id: u32 = ...;
+                Some(Box::new(DeleteCommand { id }))
+            },
+            "sort" => Some(Box::new(SortCommand)),
+
+            "quit" => break,
+            // ... etc ...
+        // }
+    }
+    // ...
+}
+// ... (main function is the same) ...
+</code></pre>
+
+                <h4>Vec and Slice Concepts in Action:</h4>
+                <ul>
+                    <li><strong><code>DeleteCommand</code></strong>: A straightforward addition to our feature set, using the <code>.remove()</code> method on `HashMap` which is a common operation.</li>
+                    <li><strong><code>let mut sorted_tasks: Vec<_> = tasks.iter().collect();</code></strong>: This is a powerful and common pattern. We take an iterator over our `HashMap` and use <code>.collect()</code> to gather all its items into a new `Vec`. Rust infers the full type of the `Vec`.</li>
+                    <li><strong><code>sorted_tasks.sort_by(...)</code></strong>: We can't sort a `HashMap`, but we can absolutely sort a `Vec`! The <code>.sort_by()</code> method takes a closure, allowing us to define precisely how we want to compare any two elements for sorting. Here, we compare them alphabetically by their descriptions.</li>
+                </ul>
+                <p>Run <code>cargo run</code>. You can now delete tasks by their ID and, more impressively, view a sorted list of your tasks without changing the underlying `HashMap` storage. You've just used a `Vec` as a temporary data structure to perform a powerful operation!</p>
+
+                <a href="../index.html" class="back-link">&larr; Back to Curriculum Map</a>
+            </article>
+        </div>
+    </main>
+    
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 The Rust Adventure.</p>
+        </div>
+    </footer>
+
+</body>
+</html>

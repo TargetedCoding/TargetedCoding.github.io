@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 4: Rust's Second Superpower: Borrowing - The Rust Adventure</title>
+    <link rel="stylesheet" href="../style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <img src="https://www.rust-lang.org/static/images/rust-logo-blk.svg" alt="Rust Logo" class="logo">
+            <h1>Module 4: Rust's Second Superpower: Borrowing</h1>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <article class="module-content">
+                <h2>Objective: To learn how to access data without taking ownership using references.</h2>
+                <p>In the last module, we saw that passing a value to a function moves ownership, and we can't use the original variable anymore. But what if we just want a function to <em>read</em> the data without taking it? The answer is <strong>borrowing</strong>.</p>
+                
+                <hr>
+
+                <h3>Step 1: Looking Without Taking (References)</h3>
+                <p>When you borrow something, you create a <strong>reference</strong> to it. A reference is like an address that points to the data owned by another variable. You create a reference by using the ampersand (<code>&</code>) symbol.</p>
+                <p><strong>Analogy: The Library Book.</strong> You can't take a library book home forever (that would be taking ownership). Instead, you borrow it to read (you create a reference). The library still owns the book, and you must eventually return it. The <code>&</code> symbol is your library card for that specific book.</p>
+                
+                <h3>Step 2: The Rules of Borrowing</h3>
+                <p>Just like a library, Rust has rules to prevent chaos. The borrow checker (part of the compiler) enforces these rules to ensure safety:</p>
+                <ol>
+                    <li>You can have as many <strong>immutable references</strong> (<code>&T</code>) to a piece of data as you want. (Many people can read the library book at the same time).</li>
+                    <li>You can only have <strong>one mutable reference</strong> (<code>&mut T</code>) at a time. (Only one person can be writing in the book at a time).</li>
+                    <li>You cannot have a mutable reference while immutable references exist. (You can't write in the book while others are trying to read it).</li>
+                </ol>
+                <p>This code demonstrates Rule #3 and will cause a compiler error:</p>
+                <pre><code>let mut s = String::from("hello");
+
+let r1 = &s; // immutable borrow starts here
+let r2 = &s; // another immutable borrow is fine
+
+// ERROR! You cannot borrow `s` as mutable because it is already borrowed as immutable.
+let r3 = &mut s; 
+
+println!("{}, {}, and {}", r1, r2, r3);</code></pre>
+                <p>These rules might seem strict, but they are the key to Rust's ability to prevent data races and other concurrency bugs at compile time!</p>
+
+
+                <h3>Let's Build Our Todo App (Part 4)</h3>
+                <p>Let's fix our app. We want to create a function that just prints the list of tasks. This function doesn't need to own the list, it just needs to read it. This is a perfect use case for an immutable borrow!</p>
+                <p>Replace the code in your <code>src/main.rs</code> file with this:</p>
+                <pre><code>fn main() {
+    let mut tasks = Vec::new();
+    tasks.push("1. Learn Ownership".to_string());
+    tasks.push("2. Learn Borrowing".to_string());
+    
+    // We pass an IMMUTABLE REFERENCE to the tasks vector.
+    // The `print_tasks` function will borrow it.
+    print_tasks(&tasks);
+    
+    // Because we only borrowed the vector, we can still use it here!
+    println!("\nWe still have our tasks!");
+    println!("Number of tasks: {}", tasks.len());
+}
+
+// This function now takes a REFERENCE to a vector of Strings.
+// It does NOT take ownership.
+fn print_tasks(task_list: &Vec<String>) {
+    println!("\n---- TODO LIST ----");
+    for task in task_list {
+        println!("- {}", task);
+    }
+    println!("-------------------");
+    // `task_list` goes out of scope here, but because it doesn't own the data,
+    // the data is NOT dropped. The borrow simply ends.
+}</code></pre>
+
+                <h4>The Solution in Action:</h4>
+                <ul>
+                    <li>In <code>main</code>, we call <code>print_tasks(&tasks)</code>. The <code>&</code> creates an immutable reference to our vector.</li>
+                    <li>The <code>print_tasks</code> function is defined to accept a reference: <code>task_list: &Vec<String></code>.</li>
+                    <li>The function can read from <code>task_list</code>, but it can't change it.</li>
+                    <li>When the function ends, the borrow is over. The <code>main</code> function never lost ownership of <code>tasks</code> and can continue to use it, as shown by the final <code>println!</code> statements.</li>
+                </ul>
+                <p>Run <code>cargo run</code>. The code works perfectly! You have now mastered the fundamental concepts of ownership and borrowing, setting you up for success in Rust.</p>
+
+
+                <a href="../index.html" class="back-link">&larr; Back to Curriculum Map</a>
+            </article>
+        </div>
+    </main>
+    
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 The Rust Adventure.</p>
+        </div>
+    </footer>
+
+</body>
+</html>

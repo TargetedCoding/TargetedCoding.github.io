@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 13: Demystifying Lifetimes - The Rust Adventure</title>
+    <link rel="stylesheet" href="../style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <img src="https://www.rust-lang.org/static/images/rust-logo-blk.svg" alt="Rust Logo" class="logo">
+            <h1>Module 13: Demystifying Lifetimes</h1>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <article class="module-content">
+                <h2>Objective: To understand the reason for lifetimes and how to read and write basic lifetime annotations.</h2>
+                <p>You have reached the final challenge of the core curriculum: lifetimes. They have a reputation for being difficult, but the concept is a logical extension of the borrow checker's mission: to prevent you from using references that point to invalid data.</p>
+                
+                <hr>
+
+                <h3>Step 1: The Problem: Dangling References</h3>
+                <p>First, let's understand the danger that lifetimes protect us from. A "dangling reference" is a reference that points to memory that has been deallocated. Using one is a common source of crashes in other languages.</p>
+                <p><strong>Analogy: The Demolished Library.</strong> Imagine you borrow a book and get a library card that points to its exact shelf. The next day, the library is demolished. Your library card is now a "dangling reference." It points to a location that is no longer valid, and trying to use it would be pointless and potentially disastrous.</p>
+                <p>The Rust compiler, our wise instructor, will simply refuse to compile code that could create this situation. Look at this example:</p>
+                <pre><code>// This code will NOT compile!
+fn get_a_dangling_reference() -> &String {
+    let s = String::from("hello");
+    &s // We are returning a reference to `s`.
+} // But `s` is dropped (deallocated) right here at the end of the function!</code></pre>
+                <p>The borrow checker sees that <code>s</code> will be destroyed, so a reference to it cannot be allowed to escape the function. Lifetimes are the tool we use to describe these relationships to the compiler in more complex situations.</p>
+
+                <h3>Step 2: The Solution: Lifetime Annotations</h3>
+                <p><strong>Important:</strong> Lifetime annotations do not change how long any value lives. They are a way for us to describe the relationships between the lifetimes of different references to the compiler, so it can verify their safety.</p>
+                <p>The syntax for a lifetime is an apostrophe followed by a name, typically lowercase and short, like <code>'a'</code> (pronounced "tick A").</p>
+                <p>Let's look at the classic example: a function that takes two string slices and returns the longest one. The compiler can't know if the returned reference will refer to the first input or the second, so we must tell it their lifetimes are connected.</p>
+                <pre><code>// We are telling Rust: "This function has one generic lifetime, 'a'."
+// The inputs are references that live at least as long as 'a'.
+// The output reference will also live at least as long as 'a'.
+fn longest<'a>(x: &'a str, y: &'a str) -> &'a str {
+    if x.len() > y.len() {
+        x
+    } else {
+        y
+    }
+}</code></pre>
+                <p>This annotation tells the compiler: "The returned reference is borrowed from one of the inputs, so it must not outlive the shorter of the two input lifetimes." This gives the borrow checker enough information to ensure the returned value is always valid.</p>
+                
+                <h3>Let's Build Our Todo App (Part 12)</h3>
+                <p>Our app is quite safe and doesn't currently require us to write explicit lifetimes. This is because the Rust compiler is smart enough to infer them in simpler cases using a set of rules called "lifetime elision." To practice, let's add a helper function where the relationship is less obvious and requires an annotation.</p>
+                <p>We'll create a function that, given a task list and a description, finds and returns a reference to the first task that matches. The lifetime annotation ensures the returned reference is valid for as long as the original task list is.</p>
+                <p>We only need to add one new function to our <code>src/main.rs</code>. We don't need to change anything else.</p>
+                <pre><code>// --- Add this new helper function somewhere in src/main.rs ---
+
+// This function takes a reference to a HashMap with lifetime 'a' and returns
+// an Option containing a reference to a Task that also lives as long as 'a'.
+fn find_task_by_description<'a>(
+    tasks: &'a HashMap<u32, Task>,
+    description: &str
+) -> Option<&'a Task> {
+    // We can use an iterator to find the first matching task.
+    tasks.values().find(|task| task.description == description)
+}
+
+
+// --- You can test it inside the 'run' loop if you like ---
+// For example, after the "list" command, you could add:
+/*
+if let Some(found_task) = find_task_by_description(&tasks, "Master traits") {
+    println!("Found task via helper: {}", found_task.description);
+}
+*/
+</code></pre>
+
+                <h4>The Lifetime in Action:</h4>
+                <ul>
+                    <li><strong><code>fn find_task_by_description<'a>(...)</code></strong>: We declare a generic lifetime `'a'`.</li>
+                    <li><strong><code>tasks: &'a HashMap<...></code></strong>: We tell the compiler that the `tasks` HashMap reference has the lifetime `'a'`.</li>
+                    <li><strong><code>-> Option<&'a Task></code></strong>: This is the crucial part. We promise the compiler that if we return a reference to a `Task` (inside the `Option`), that reference is tied to the lifetime of the original `tasks` HashMap. It cannot outlive the HashMap it was borrowed from.</li>
+                </ul>
+                <p>You have now successfully read, understood, and written code with explicit lifetimes. You've faced the borrow checker's final challenge and emerged victorious. With this, you have a solid foundation for understanding virtually any Rust code you encounter.</p>
+
+                <a href="../index.html" class="back-link">&larr; Back to Curriculum Map</a>
+            </article>
+        </div>
+    </main>
+    
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 The Rust Adventure.</p>
+        </div>
+    </footer>
+
+</body>
+</html>

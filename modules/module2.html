@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 2: Making Choices & Repeating Actions - The Rust Adventure</title>
+    <link rel="stylesheet" href="../style.css"> <!-- Links to the main stylesheet -->
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <img src="https://www.rust-lang.org/static/images/rust-logo-blk.svg" alt="Rust Logo" class="logo">
+            <h1>Module 2: Making Choices & Repeating Actions</h1>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <article class="module-content">
+                <h2>Objective: To learn how to control the flow of the program with conditions and loops.</h2>
+                <p>A program that only runs from top to bottom isn't very smart. To build truly useful things, our code needs to make decisions and perform repetitive tasks. This is called control flow.</p>
+                
+                <hr>
+
+                <h3>Step 1: Forks in the Road (<code>if/else</code>)</h3>
+                <p>To make decisions, we use <code>if</code> expressions. You can think of this like a fork in the road for your program.</p>
+                <p><strong>Analogy:</strong> If a condition is true, your program goes down one path. If it's false, it can go down another path (using <code>else</code>) or simply continue on.</p>
+                <pre><code>let number_of_tasks = 5;
+
+if number_of_tasks > 0 {
+    println!("You have tasks to do!");
+} else {
+    println!("You are all caught up!");
+}</code></pre>
+                <p>The condition (<code>number_of_tasks > 0</code>) must evaluate to a boolean: <code>true</code> or <code>false</code>.</p>
+                
+                <h3>Step 2: Repeating Actions (Loops)</h3>
+                <p>Loops allow us to repeat a block of code multiple times. Rust has a few types of loops, but the most common and useful one is the <code>for</code> loop.</p>
+                
+                <h4>The <code>for</code> Loop</h4>
+                <p>A <code>for</code> loop is perfect for executing a piece of code a specific number of times or for each item in a collection.</p>
+                <pre><code>// The `1..=5` creates a range that includes 1, 2, 3, 4, and 5.
+for number in 1..=5 {
+    println!("This is task number {}", number);
+}</code></pre>
+
+                <p>The other loop types, <code>loop</code> (which runs forever until you <code>break</code>) and <code>while</code> (which runs as long as a condition is true), are also useful but the <code>for</code> loop is what you'll use most often.</p>
+
+                <h3>Let's Build Our Todo App (Part 2)</h3>
+                <p>Our current app is a bit limited—it can only store tasks in one long string. Let's upgrade it to use a <strong>Vector</strong>, which is a growable list that can hold multiple, separate items.</p>
+                <p>Replace the code in your <code>src/main.rs</code> file with this:</p>
+                <pre><code>fn main() {
+    // Create an empty, mutable vector to hold our `String` tasks.
+    let mut tasks = Vec::new(); 
+
+    // Add two tasks to the list.
+    tasks.push("1. Learn Rust".to_string());
+    tasks.push("2. Build a Todo App".to_string());
+    tasks.push("3. Master control flow".to_string());
+
+    println!("--- My Todo List ---");
+
+    // Use a for loop to iterate over the tasks and print each one.
+    for task in &tasks {
+        println!("- {}", task);
+    }
+}</code></pre>
+
+                <h4>New Concepts Introduced:</h4>
+                <ul>
+                    <li><code>Vec::new()</code>: This creates a new, empty vector. We make it <code>mut</code> so we can add things to it.</li>
+                    <li><code>.push()</code>: This is a method that adds a new element to the end of the vector.</li>
+                    <li><code>.to_string()</code>: We need to convert our simple text (a <code>&str</code>) into the more flexible <code>String</code> type that our vector can own. We'll explore this more later!</li>
+                    <li><code>for task in &tasks</code>: This is the magic! The <code>for</code> loop iterates through our <code>tasks</code> vector. In each iteration, the variable <code>task</code> holds one of the items from the list.</li>
+                </ul>
+                <p><strong>A Sneak Peek:</strong> Notice that little <code>&</code> symbol before <code>tasks</code>? That's a very important part of Rust called a "borrow." It lets our loop "look at" the items in the vector without taking them. We will dive deep into this superpower in the next modules!</p>
+                <p>Run <code>cargo run</code> now. Your output will be a neatly formatted list of your tasks!</p>
+
+                <a href="../index.html" class="back-link">&larr; Back to Curriculum Map</a>
+            </article>
+        </div>
+    </main>
+    
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 The Rust Adventure.</p>
+        </div>
+    </footer>
+
+</body>
+</html>

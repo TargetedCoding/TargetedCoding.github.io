@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 45: Implementing a Singly Linked List - The Rust Adventure</title>
+    <link rel="stylesheet" href="../style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <img src="https://www.rust-lang.org/static/images/rust-logo-blk-svg" alt="Rust Logo" class="logo">
+            <h1>Module 45: Implementing a Singly Linked List</h1>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <article class="module-content">
+                <h2>Objective: To implement a classic singly linked list from scratch to gain a deep, practical understanding of Rust's ownership, `Box`, and `Option` types.</h2>
+                <p>You've used standard library data structures, but now it's time to build one yourself. Implementing a linked list is a famous "rite of passage" in Rust because it forces you to confront core concepts like pointers, heap allocation, and nullability in a very direct way. This exercise will sharpen your understanding of ownership like no other.</p>
+                
+                <hr>
+
+                <h3>Step 1: The Structure of a Linked List</h3>
+                <p>A linked list is a sequence of nodes. Each node contains a value and a "pointer" to the next node in the sequence. The last node's pointer is "null" to signify the end of the list. The list itself is just a pointer to the first node (the "head").</p>
+                <p>How do we represent this in Rust?</p>
+                <ul>
+                    <li><strong>The "Pointer":</strong> A pointer can be null, so we'll use <code>Option</code>.</li>
+                    <li><strong>Recursive Structure:</strong> A `Node` contains a value and another `Node`. This is a recursive type, so its size can't be known at compile time. This means we *must* use a <code>Box</code> to store the next node on the heap.</li>
+                </ul>
+                <p>This leads to our core data structures:</p>
+                <pre><code>// A link is an optional, heap-allocated Node.
+type Link<T> = Option<Box<Node<T>>>;
+
+// A Node holds a value and a Link to the next Node.
+struct Node<T> {
+    elem: T,
+    next: Link<T>,
+}
+
+// Our List just holds the head of the list.
+pub struct List<T> {
+    head: Link<T>,
+}
+</code></pre>
+                <p>The `type` keyword creates a convenient alias, so we don't have to write `Option<Box<Node<T>>>` everywhere.</p>
+
+                <h3>Practical Application: Building `MyList`</h3>
+                <p>We will build a simple list with three methods: <code>new</code>, <code>push</code> (add to the front), and <code>pop</code> (remove from the front). This is a standalone project.</p>
+
+                <h4>1. Create a New Project</h4>
+                <pre><code>cargo new my_list
+cd my_list
+</code></pre>
+                
+                <h4>2. The Complete `src/main.rs`</h4>
+                <pre><code>// A simple singly linked list implementation.
+
+// Use a type alias for convenience and readability.
+type Link<T> = Option<Box<Node<T>>>;
+
+struct Node<T> {
+    elem: T,
+    next: Link<T>,
+}
+
+pub struct List<T> {
+    head: Link<T>,
+}
+
+// We create an `impl` block to define the behavior of our List.
+impl<T> List<T> {
+    // Constructor
+    pub fn new() -> Self {
+        List { head: None }
+    }
+
+    // Add an element to the front of the list.
+    pub fn push(&mut self, elem: T) {
+        let new_node = Box::new(Node {
+            elem,
+            // `self.head.take()` replaces `self.head` with `None` and gives us ownership of the old value.
+            // This is key to moving the old head into the new node.
+            next: self.head.take(), 
+        });
+        
+        self.head = Some(new_node);
+    }
+
+    // Remove the element from the front of the list.
+    pub fn pop(&mut self) -> Option<T> {
+        // `self.head.take()` gives us ownership of the head node, leaving `None` in its place.
+        self.head.take().map(|node| {
+            // `node` is a Box<Node<T>>. We take ownership of it.
+            self.head = node.next; // The list's new head is the old head's `next`.
+            node.elem // Return the element from the popped node.
+        })
+    }
+}
+
+// Let's test our list!
+fn main() {
+    let mut list = List::new();
+    
+    println!("Pushing 3, 2, and 1 onto the list...");
+    list.push(1);
+    list.push(2);
+    list.push(3);
+
+    println!("Popping elements:");
+    println!("Popped: {:?}", list.pop()); // Should be Some(3)
+    println!("Popped: {:?}", list.pop()); // Should be Some(2)
+    println!("Popped: {:?}", list.pop()); // Should be Some(1)
+    println!("Popped: {:?}", list.pop()); // Should be None
+}
+
+
+// --- Unit Tests for our List ---
+#[cfg(test)]
+mod tests {
+    use super::List;
+
+    #[test]
+    fn test_push_pop() {
+        let mut list = List::new();
+        assert_eq!(list.pop(), None);
+
+        list.push(1);
+        list.push(2);
+        list.push(3);
+
+        assert_eq!(list.pop(), Some(3));
+        assert_eq!(list.pop(), Some(2));
+        assert_eq!(list.pop(), Some(1));
+        assert_eq!(list.pop(), None);
+    }
+}
+</code></pre>
+
+                <h4>The "Aha!" Moments:</h4>
+                <ul>
+                    <li><strong><code>Box<Node<T>></code></strong>: This is the core of making the recursive type work. A `Box` is a pointer, which has a known size, so the compiler is happy. It also ensures each `Node` is allocated on the heap.</li>
+                    <li><strong><code>self.head.take()</code></strong>: This is the most crucial trick for manipulating ownership in linked lists. The <code>Option::take()</code> method swaps the value inside the `Option` with `None` and returns the original value. This allows us to "steal" the `Link` out of `self.head` so we can move it, which the borrow checker would otherwise forbid.</li>
+                    <li><strong><code>.map(|node| { ... })</code></strong>: In `pop`, we use <code>.map()</code> on the `Option` returned by `.take()`. This is a clean way to say, "If the option is `Some(node)`, execute this block of code with `node`. If it's `None`, do nothing and just return `None`."</li>
+                </ul>
+                <p>Run <strong><code>cargo run</code></strong> and <strong><code>cargo test</code></strong>. Your list will work perfectly! While the standard library's `Vec` and `VecDeque` are almost always better choices in practice, building this list from scratch has given you a profound, hands-on understanding of some of Rust's most fundamental and powerful concepts.</p>
+
+                <a href="../index.html" class="back-link">&larr; Back to Curriculum Map</a>
+            </article>
+        </div>
+    </main>
+    
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 The Rust Adventure.</p>
+        </div>
+    </footer>
+
+</body>
+</html>

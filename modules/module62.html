@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 62: Your First Web Server - The Rust Adventure</title>
+    <link rel="stylesheet" href="../style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <img src="https://www.rust-lang.org/static/images/rust-logo-blk.svg" alt="Rust Logo" class="logo">
+            <h1>Module 62: Your First Web Server</h1>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <article class="module-content">
+                <h2>Objective: To set up a new project with the Axum web framework, create a simple routing structure, and write handler functions that respond to HTTP requests.</h2>
+                <p>Welcome to Day 17 and our week on web development! We're going to take the async knowledge you gained on Day 15 and apply it to building a real web service. For this, we'll use <strong>Axum</strong>, a modern, ergonomic, and high-performance web framework built by the same team that creates <code>tokio</code>.</p>
+                
+                <hr>
+
+                <h3>Step 1: The Core Concepts of a Web Framework</h3>
+                <p>Most web frameworks, including Axum, are built around a few core ideas:</p>
+                <ul>
+                    <li><strong>Router:</strong> A piece of code that looks at an incoming HTTP request (e.g., `GET /users/42`) and decides which part of your code should handle it based on the path (`/users/42`) and the method (`GET`).</li>
+                    <li><strong>Handler:</strong> A function that is responsible for processing a single request and producing a response. In Axum, handlers are just `async` functions.</li>
+                    <li><strong>Response:</strong> What your handler returns. It can be a simple string, a full HTML page, JSON data, or an HTTP error code.</li>
+                </ul>
+                <p><strong>Analogy: The Post Office.</strong> The `Router` is like the mail sorter at a post office. It looks at the address on an envelope (the URL path) and puts it in the correct mail carrier's bag. The `Handler` is the mail carrier who takes that specific piece of mail, figures out what to do with it, and prepares a response to send back.</p>
+
+                <h3>Practical Application: The "Hello, World!" Web Server</h3>
+                <p>Let's build a new application from scratch. This will be the foundation for our Todo List API that we'll build throughout the week.</p>
+
+                <h4>1. Create a New Project</h4>
+                <p>We'll call our new backend project `todo_api`.</p>
+                <pre><code>cargo new todo_api
+cd todo_api
+</code></pre>
+                
+                <h4>2. Update `Cargo.toml`</h4>
+                <p>We need `axum` and `tokio`, which Axum is built on.</p>
+                <pre><code>[dependencies]
+axum = "0.6"
+tokio = { version = "1", features = ["full"] }
+</code></pre>
+                
+                <h4>3. The Complete `src/main.rs`</h4>
+                <p>This is all the code you need for a complete, working web server.</p>
+                <pre><code>use axum::{
+    routing::get,
+    Router,
+};
+use std::net::SocketAddr;
+
+// This is our main entry point. The `#[tokio::main]` macro will
+// set up the async runtime for us.
+#[tokio::main]
+async fn main() {
+    // 1. Build our application's router.
+    // A router is used to map incoming requests to handler functions.
+    let app = Router::new()
+        .route("/", get(root_handler)) // Route for the root path "/"
+        .route("/hello", get(hello_handler)); // Route for "/hello"
+
+    // 2. Define the address to run our server on.
+    // `127.0.0.1:3000` is the local address for port 3000.
+    let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
+    println!("Server listening on {}", addr);
+
+    // 3. Run the server.
+    // `axum::Server` is a `Future`, so we can `.await` it.
+    // It will run forever, listening for incoming connections.
+    axum::Server::bind(&addr)
+        .serve(app.into_make_service())
+        .await
+        .unwrap();
+}
+
+// --- HANDLER FUNCTIONS ---
+
+/// A handler is just an async function that returns something that can be
+/// converted into a response. A simple string `&'static str` works.
+async fn root_handler() -> &'static str {
+    "Hello, World from the root!"
+}
+
+async fn hello_handler() -> &'static str {
+    "Hello from a different page!"
+}
+</code></pre>
+
+                <h4>The Web Server Architecture:</h4>
+                <ul>
+                    <li><strong><code>#[tokio::main]</code></strong>: Just like in Day 15, this macro starts the `tokio` async runtime. Our web server *is* an async application.</li>
+                    <li><strong><code>Router::new()</code></strong>: We create a new router. This will be the central hub for our application's endpoints.</li>
+                    <li><strong><code>.route("/path", get(handler))</code></strong>: This is the core of routing. We are telling Axum: "When you receive an HTTP `GET` request for the path `/`, you should call the `root_handler` function." We chain these calls to define all our application's routes.</li>
+                    <li><strong><code>async fn root_handler() -> ...</code></strong>: Our handler is a simple `async` function. Axum is smart enough to take the `&'static str` it returns and automatically turn it into a proper HTTP `200 OK` response with the text in the body.</li>
+                    <li><strong><code>axum::Server::bind(&addr).serve(...)</code></strong>: This creates the server, binds it to the network address, and tells it to use our `app` router to handle all incoming requests. Because it's a future, `.await`ing it starts the server and runs it forever.</li>
+                </ul>
+
+                <h3>Step 4: Run and Test Your Server</h3>
+                <p>First, run your server from the terminal:</p>
+                <pre><code>cargo run</code></pre>
+                <p>You will see the "Server listening on http://127.0.0.1:3000" message. Now, open your web browser and navigate to these two addresses:</p>
+                <ol>
+                    <li><a href="http://127.0.0.1:3000" target="_blank">http://127.0.0.1:3000</a> - You should see "Hello, World from the root!"</li>
+                    <li><a href="http://127.0.0.1:3000/hello" target="_blank">http://127.0.0.1:3000/hello</a> - You should see "Hello from a different page!"</li>
+                </ol>
+                <p>You can also use a command-line tool like `curl`:</p>
+                <pre><code># In a new terminal
+curl http://127.0.0.1:3000
+</code></pre>
+                <p>Congratulations! You have successfully built and run a high-performance, asynchronous web server in Rust. In the next modules, we'll build on this foundation to handle more complex requests and return structured JSON data.</p>
+
+                <a href="../index.html" class="back-link">&larr; Back to Curriculum Map</a>
+            </article>
+        </div>
+    </main>
+    
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 The Rust Adventure.</p>
+        </div>
+    </footer>
+
+</body>
+</html>

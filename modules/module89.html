@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 89: Tensors and `Candle` - The Rust Adventure</title>
+    <link rel="stylesheet" href="../style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <img src="https://www.rust-lang.org/static/images/rust-logo-blk.svg" alt="Rust Logo" class="logo">
+            <h1>Module 89: Tensors and `Candle`</h1>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <article class="module-content">
+                <h2>Objective: To introduce the concept of a "tensor" as the fundamental data structure for machine learning and to set up a project with the `Candle` framework to create and manipulate tensors.</h2>
+                <p>Welcome to Day 26! We're now exploring one of the most exciting frontiers for Rust: Artificial Intelligence and Machine Learning. While Python has historically dominated this field, Rust's performance, safety, and growing ecosystem are making it a powerful contender. Today, we'll start with the absolute basic building block of all modern ML: the <strong>tensor</strong>.</p>
+                
+                <hr>
+
+                <h3>Step 1: What is a Tensor?</h3>
+                <p>At its core, a tensor is just a multi-dimensional array of numbers. It's a generalization of concepts you already know:</p>
+                <ul>
+                    <li>A <strong>0-dimensional tensor</strong> is a single number (a scalar). E.g., <code>5</code>.</li>
+                    <li>A <strong>1-dimensional tensor</strong> is a list of numbers (a vector). E.g., <code>[1, 2, 3]</code>.</li>
+                    <li>A <strong>2-dimensional tensor</strong> is a grid of numbers (a matrix). E.g., <code>[[1, 2], [3, 4]]</code>.</li>
+                    <li>A <strong>3-dimensional tensor</strong> is a cube of numbers, and so on.</li>
+                </ul>
+                <p>Everything in machine learning—from input images to the weights of a neural network—is represented as a tensor. ML frameworks are highly optimized for performing mathematical operations (like matrix multiplication) on these tensors, often on a GPU for massive parallel speedups.</p>
+
+                <h3>Step 2: Introducing `Candle`</h3>
+                <p><strong>Candle</strong> is a new, minimalist ML framework for Rust, developed by Hugging Face, with a focus on performance and simplicity. It's heavily inspired by PyTorch. We will use it to create and manipulate our first tensors.</p>
+                
+                <h3>Practical Application: Your First Tensors</h3>
+                <p>Let's create a new project and perform some basic tensor operations. This will feel very similar to using a library like NumPy in Python.</p>
+
+                <h4>1. Create a New Project</h4>
+                <pre><code>cargo new candle_intro
+cd candle_intro
+</code></pre>
+                
+                <h4>2. Update `Cargo.toml`</h4>
+                <p>We'll add the core `candle-core` library.</p>
+                <pre><code>[dependencies]
+candle-core = "0.3.0"
+anyhow = "1.0" # For easy error handling
+</code></pre>
+                
+                <h4>3. The Complete `src/main.rs`</h4>
+                <p>This program will demonstrate creating tensors from Rust data, inspecting their properties, and performing a fundamental tensor operation: matrix multiplication.</p>
+                <pre><code>use anyhow::Result;
+use candle_core::{Device, Tensor};
+
+fn main() -> Result<()> {
+    // 1. CHOOSE A DEVICE
+    // Candle can run on a CPU or a GPU (like CUDA or Metal).
+    // For this example, we'll stick to the CPU.
+    let device = Device::Cpu;
+    println!("Using device: {:?}", device);
+
+    // 2. CREATE TENSORS
+    
+    // Create a 1D tensor (a vector) from a slice.
+    let tensor_a = Tensor::new(&[3f32, 1., 4.], &device)?;
+    println!("Tensor A (1D Vector):\n{}", tensor_a);
+
+    // Create a 2D tensor (a matrix) from a nested slice.
+    let tensor_b = Tensor::new(&[[1f32, 2.], [3., 4.], [5., 6.]], &device)?;
+    println!("\nTensor B (2D Matrix):\n{}", tensor_b);
+
+    // 3. INSPECT TENSOR PROPERTIES
+    println!("\n--- Tensor B Properties ---");
+    println!("Shape: {:?}", tensor_b.shape());
+    println!("Data Type: {:?}", tensor_b.dtype());
+    println!("Device: {:?}", tensor_b.device());
+    println!("Rank (number of dimensions): {}", tensor_b.rank());
+
+    // 4. PERFORM OPERATIONS
+
+    // Element-wise addition
+    let sum = (&tensor_a + &tensor_a)?;
+    println!("\nTensor A + Tensor A:\n{}", sum);
+    
+    // The most important operation in ML: Matrix Multiplication!
+    // We are multiplying B (a 3x2 matrix) by a reshaped A (a 2x1 matrix).
+    // The result should be a 3x1 matrix.
+    println!("\n--- Matrix Multiplication ---");
+    let reshaped_a = tensor_a.reshape((2, 1))?; // This won't work, A has 3 elements
+    
+    // Let's create a compatible tensor for multiplication
+    let tensor_c = Tensor::new(&[7f32, 8.], &device)?.reshape((2, 1))?;
+    println!("Tensor C (2x1 Matrix):\n{}", tensor_c);
+    
+    // B (3x2) @ C (2x1) -> Result (3x1)
+    let matmul_result = tensor_b.matmul(&tensor_c)?;
+    println!("\nResult of B @ C:\n{}", matmul_result);
+
+    Ok(())
+}
+</code></pre>
+                
+                <p>Let's correct the example to use a compatible shape for matrix multiplication.</p>
+                <pre><code>// Corrected main function
+fn main() -> Result<()> {
+    let device = Device::Cpu;
+
+    // A (2x3 matrix)
+    let tensor_a = Tensor::new(&[[1f32, 2., 3.], [4., 5., 6.]], &device)?;
+    println!("Tensor A (2x3 Matrix):\n{}", tensor_a);
+
+    // B (3x2 matrix)
+    let tensor_b = Tensor::new(&[[7f32, 8.], [9., 10.], [11., 12.]], &device)?;
+    println!("\nTensor B (3x2 Matrix):\n{}", tensor_b);
+
+    // Matrix Multiplication: A (2x3) @ B (3x2) -> Result (2x2)
+    let matmul_result = tensor_a.matmul(&tensor_b)?;
+    println!("\nResult of A @ B:\n{}", matmul_result);
+    assert_eq!(matmul_result.shape().dims(), &[2, 2]);
+
+    Ok(())
+}
+</code></pre>
+
+                <h4>The Core Concepts:</h4>
+                <ul>
+                    <li><strong><code>Device</code></strong>: Candle is device-agnostic. The `Device` enum tells it where to store the tensor's data and where to perform the computations (CPU or GPU). This makes it easy to write code that can be scaled up to powerful hardware.</li>
+                    <li><strong><code>Tensor::new(...)</code></strong>: The primary constructor for creating a tensor from existing data. The operations are fallible (they return a `Result`), for example, if you provide jagged arrays.</li>
+                    <li><strong>Shape and Rank</strong>: The "shape" of a tensor is a tuple describing its size in each dimension. This is the most important property of a tensor. The "rank" is simply the number of dimensions.</li>
+                    <li><strong>Operations</strong>: Tensor libraries like Candle provide a rich set of mathematical operations. Notice that we can use standard Rust operators like `+` for element-wise operations. The most important operation for neural networks is `matmul` (matrix multiplication).</li>
+                </ul>
+                <p>Run <strong><code>cargo run</code></strong>. The program will create the tensors, print their properties, and perform the matrix multiplication. You have just taken your first step into the world of high-performance machine learning in Rust. You now understand the fundamental data type that powers this entire field. In the next modules, we will use these tensors to build and train a real neural network.</p>
+
+                <a href="../index.html" class="back-link">&larr; Back to Curriculum Map</a>
+            </article>
+        </div>
+    </main>
+    
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 The Rust Adventure.</p>
+        </div>
+    </footer>
+
+</body>
+</html>

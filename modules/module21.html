@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 21: Practical Application: Building a State Machine - The Rust Adventure</title>
+    <link rel="stylesheet" href="../style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;7_00&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <img src="https://www.rust-lang.org/static/images/rust-logo-blk.svg" alt="Rust Logo" class="logo">
+            <h1>Module 21: Practical Application: Building a State Machine</h1>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <article class="module-content">
+                <h2>Objective: To tie all of Day 4's concepts together by building a simple state machine, a very common and powerful programming pattern.</h2>
+                <p>Congratulations on reaching the final module of Day 4! We're going to combine everything you've learned—enums, loops, and especially `match`—to build one of the most fundamental patterns in computer science: a <strong>state machine</strong>. This pattern is used everywhere, from parsing text to controlling video game characters to managing network connections.</p>
+                
+                <hr>
+
+                <h3>Step 1: What is a State Machine?</h3>
+                <p>A state machine is a model that can exist in one of a finite number of "states." It can only be in one state at a time. It transitions from one state to another based on input or events. The combination of an <code>enum</code> to represent the states and a <code>loop</code> with a <code>match</code> to drive the logic is a perfect fit for Rust.</p>
+                <p><strong>Analogy: The Board Game.</strong> Your game piece is always on a specific square (the current `state`). You get an input (you roll the dice). The rules of the game (the `match` statement) look at your current square and your dice roll to determine which square you move to next (the new `state`). The game `loop`s until you land on the "Finish" square.</p>
+
+                <h3>Step 2: The Core Components in Rust</h3>
+                <ol>
+                    <li><strong>An <code>enum</code> for the States:</strong> This defines all the possible states the machine can be in.</li>
+                    <li><strong>A variable to hold the current state:</strong> `let mut current_state = State::Initial;`</li>
+                    <li><strong>A <code>loop</code>:</strong> To keep the machine running.</li>
+                    <li><strong>A <code>match</code> statement:</strong> Inside the loop, you match on the current state to decide what to do and which state to transition to next.</li>
+                </ol>
+
+                <h3>Let's Build Our Todo App (Part 18)</h3>
+                <p>We'll add a powerful new command to our app: <code>add_interactive</code>. Instead of taking all the info on one line, this command will guide the user through a multi-step process for creating a new task. This is a perfect use case for a state machine.</p>
+                <p>We will add a new `InteractiveAddCommand` and update our parsing logic. This will be a self-contained state machine inside the command's `execute` method.</p>
+                <pre><code>// ... (All previous structs, enums, and traits are the same) ...
+
+// --- NEW: A Command for Interactive Adding ---
+struct InteractiveAddCommand;
+
+// We define the states for our mini-machine right inside the impl block.
+enum InteractiveAddState {
+    AwaitingDescription,
+    AwaitingConfirmation { description: String }, // State can hold data!
+    Done,
+}
+
+impl Command for InteractiveAddCommand {
+    fn execute(&self, tasks: &mut HashMap<u32, Task>, next_id: &mut u32) -> Result<(), AppError> {
+        let mut current_state = InteractiveAddState::AwaitingDescription;
+        
+        // This loop is our state machine.
+        loop {
+            // The `match` statement drives the entire machine.
+            match current_state {
+                InteractiveAddState::AwaitingDescription => {
+                    println!("Please enter the task description:");
+                    let mut desc = String::new();
+                    io::stdin().read_line(&mut desc)?;
+                    // Transition to the next state, carrying the data with us.
+                    current_state = InteractiveAddState::AwaitingConfirmation { description: desc.trim().to_string() };
+                },
+                InteractiveAddState::AwaitingConfirmation { ref description } => {
+                    println!("You entered '{}'. Save this task? (y/n)", description);
+                    let mut confirmation = String::new();
+                    io::stdin().read_line(&mut confirmation)?;
+
+                    if confirmation.trim().eq_ignore_ascii_case("y") {
+                        // Re-use the logic from our simple AddCommand!
+                        let add_cmd = AddCommand { description: description.clone() };
+                        add_cmd.execute(tasks, next_id)?;
+                        current_state = InteractiveAddState::Done;
+                    } else {
+                        println!("Cancelled.");
+                        break; // Exit the loop if the user cancels.
+                    }
+                },
+                InteractiveAddState::Done => {
+                    println!("Task added successfully!");
+                    break; // The machine's work is finished, so we exit the loop.
+                }
+            }
+        }
+        Ok(())
+    }
+}
+
+// --- REFACTORED: The Run Loop (parsing part) ---
+fn run() -> Result<(), AppError> {
+    // ... (setup is the same) ...
+    // ... match command_name { ...
+        // (other commands are the same)
+        "add_interactive" | "ai" => Some(Box::new(InteractiveAddCommand)),
+    // ... }
+}
+</code></pre>
+
+                <h4>State Machine Concepts in Action:</h4>
+                <ul>
+                    <li><strong><code>enum InteractiveAddState</code></strong>: This clearly defines the three possible states of our interactive session.</li>
+                    <li><strong><code>AwaitingConfirmation { description: String }</code></strong>: This is a powerful concept! An enum variant can hold data. This allows our state to carry the description from one step to the next. The `ref` keyword in the `match` arm lets us borrow the description without taking ownership of it.</li>
+                    <li><strong>The <code>loop</code> and <code>match</code> Combo</strong>: The core of the machine. In each iteration, we `match` on the `current_state`. The code in each arm does some work (like prompting the user) and then decides the next state.</li>
+                    <li><strong>State Transitions</strong>: The line <code>current_state = ...;</code> is a state transition. We are moving the machine from one state to another based on user input.</li>
+                </ul>
+                <p>Run <code>cargo run</code> and try your new `add_interactive` (or `ai`) command. You'll be guided through a clear, multi-step process. You have successfully built a state machine, tying together all the control flow concepts from Day 4 into a robust and elegant pattern.</p>
+
+                <a href="../index.html" class="back-link">&larr; Back to Curriculum Map</a>
+            </article>
+        </div>
+    </main>
+    
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 The Rust Adventure.</p>
+        </div>
+    </footer>
+
+</body>
+</html>

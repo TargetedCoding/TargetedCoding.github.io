@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 55: The Newtype and Deref Patterns - The Rust Adventure</title>
+    <link rel="stylesheet" href="../style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <img src="https://www.rust-lang.org/static/images/rust-logo-blk.svg" alt="Rust Logo" class="logo">
+            <h1>Module 55: The Newtype and Deref Patterns</h1>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <article class="module-content">
+                <h2>Objective: To learn how to use the "newtype" pattern to add behavior to external types and how the `Deref` trait enables the ergonomic magic of smart pointers.</h2>
+                <p>Congratulations on reaching the final module of Day 14! Today, we'll cover two powerful patterns that are essential for writing clean, idiomatic Rust. The "newtype" pattern solves a key limitation of the orphan rule, while the <code>Deref</code> trait is what makes smart pointers like <code>Box</code> and <code>String</code> feel like regular references.</p>
+                
+                <hr>
+
+                <h3>Step 1: The Newtype Pattern</h3>
+                <p>Rust has a rule called the "orphan rule": you can only implement a trait for a type if either the trait or the type is defined in your own crate. This prevents you from, for example, implementing your custom `JsonSerializable` trait for the standard library's `Vec<T>`. It ensures that your implementation can't conflict with another crate's implementation.</p>
+                <p>So how do you add behavior to an external type? You wrap it! The <strong>newtype pattern</strong> involves creating a simple tuple struct with one field, effectively creating a new, distinct type that wraps the external type.</p>
+                
+                <pre><code>// Imagine `Vec<String>` is from an external crate and we can't touch it.
+// We can't do this because of the orphan rule:
+// impl MyTrait for Vec<String> { ... }
+
+// The Newtype Solution:
+struct MyVec(Vec<String>); // Create a new type that wraps `Vec<String>`.
+
+// Now we can implement our trait for our *new type*.
+impl MyTrait for MyVec { ... }
+</code></pre>
+                <p>This also improves type safety. A function that takes `MyVec` can't accidentally be passed a regular `Vec<String>`.</p>
+
+                <h3>Step 2: The `Deref` Trait and Deref Coercion</h3>
+                <p>Have you ever wondered why you can call `&String` methods on a `Box<String>`, or `&str` methods on a `String`? This is not a special-cased language feature; it's a trait in action: the <strong><code>Deref</code></strong> trait.</p>
+                <p>The `Deref` trait allows you to customize the behavior of the dereference operator (`*`). Smart pointers implement `Deref` to return a reference to the data they contain. This, combined with a compiler feature called "deref coercion," is what makes them so ergonomic.</p>
+                <p><strong>Deref Coercion:</strong> If you have a type `U` and it implements `Deref<Target=T>`, Rust will automatically convert a `&U` into a `&T` when passed to a function. This can happen multiple times in a chain. For example, `String` implements `Deref<Target=str>`, so a `&String` is coerced into a `&str` automatically.</p>
+
+                <h3>Practical Application: Building a "Smart String"</h3>
+                <p>Let's combine these patterns. We'll create a `SanitizedString` newtype that wraps a `String` but guarantees it contains no whitespace. Then, we'll implement `Deref` to make it behave just like a regular string.</p>
+
+                <h4>1. Create a New Project</h4>
+                <pre><code>cargo new deref_demo
+cd deref_demo
+</code></pre>
+                
+                <h4>2. The Complete `src/main.rs`</h4>
+                <pre><code>use std::ops::Deref;
+
+// 1. The Newtype: A tuple struct wrapping a String.
+#[derive(Debug)]
+struct SanitizedString(String);
+
+impl SanitizedString {
+    // A constructor that enforces our type's invariant.
+    pub fn new(s: &str) -> Self {
+        let sanitized = s.trim().to_string();
+        SanitizedString(sanitized)
+    }
+}
+
+// 2. The `Deref` implementation. This is the magic!
+impl Deref for SanitizedString {
+    type Target = str; // The type that `*` will return a reference to.
+
+    fn deref(&self) -> &Self::Target {
+        // We return a reference to the inner String's slice.
+        &self.0
+    }
+}
+
+// A function that expects a string slice.
+fn print_slice(s: &str) {
+    println!("The slice is: '{}'", s);
+}
+
+fn main() {
+    let my_name = SanitizedString::new("  Rustacean  ");
+    
+    println!("The sanitized struct is: {:?}", my_name);
+
+    // --- Deref Coercion in Action! ---
+    
+    // `my_name` is a `SanitizedString`.
+    // We pass `&my_name`, which is a `&SanitizedString`.
+    // Because `SanitizedString` implements `Deref<Target=str>`, Rust
+    // automatically coerces `&SanitizedString` into `&str`.
+    print_slice(&my_name);
+    
+    // We can even call `&str` methods directly on our type!
+    // `my_name` -> `&my_name` -> `&str` (via deref)
+    println!("Its length is: {}", my_name.len());
+    println!("Is it empty? {}", my_name.is_empty());
+}
+</code></pre>
+
+                <h4>The Ergonomic Patterns:</h4>
+                <ul>
+                    <li><strong>Newtype for Safety:</strong> Our `SanitizedString` is a distinct type. The only way to create one is through our `::new()` constructor, which guarantees the whitespace is trimmed. You can now write a function `fn process(s: SanitizedString)` and be 100% certain that the string you receive has no leading/trailing whitespace, enforced by the type system.</li>
+                    <li><strong><code>Deref</code> for Ergonomics:</strong> Without `impl Deref`, we would have to access the inner value everywhere: `print_slice(&my_name.0)`. This is clumsy. By implementing `Deref`, we tell Rust that our `SanitizedString` can act like a `&str` when needed.</li>
+                    <li><strong>Deref Coercion:</strong> The compiler automatically and implicitly calls `.deref()` for us. When we call `my_name.len()`, the compiler sees that `SanitizedString` has no `.len()` method, checks if it implements `Deref`, sees that it does, calls `.deref()` to get a `&str`, and then calls `.len()` on that. This is what makes smart pointers feel seamless.</li>
+                </ul>
+                <p>You have now learned two of the most powerful and idiomatic patterns in the Rust language. The newtype pattern allows you to create safe, expressive APIs, while the `Deref` trait is the key to creating smart pointers that are a joy to use. This concludes our deep dive into Rust's trait system!</p>
+
+                <a href="../index.html" class="back-link">&larr; Back to Curriculum Map</a>
+            </article>
+        </div>
+    </main>
+    
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 The Rust Adventure.</p>
+        </div>
+    </footer>
+
+</body>
+</html>

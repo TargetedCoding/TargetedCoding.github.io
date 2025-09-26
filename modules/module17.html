@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 17: Multi-Dimensional Data & Pattern Printing - The Rust Adventure</title>
+    <link rel="stylesheet" href="../style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <img src="https://www.rust-lang.org/static/images/rust-logo-blk.svg" alt="Rust Logo" class="logo">
+            <h1>Module 17: Multi-Dimensional Data & Pattern Printing</h1>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <article class="module-content">
+                <h2>Objective: To address the classic programming exercise of creating 2D grids (matrices) and printing patterns, the "Rust way."</h2>
+                <p>Congratulations on making it to the end of Day 3! To cap off our deep dive into data structures, we'll tackle a classic problem: creating and manipulating two-dimensional grids. This is common in everything from games to image processing to fun pattern-printing exercises.</p>
+                
+                <hr>
+
+                <h3>Step 1: Representing a Grid in Rust</h3>
+                <p>Rust doesn't have a built-in 2D array or matrix type like some other languages. Instead, the idiomatic way to represent a grid is with a <strong>vector of vectors</strong>. If you want a grid of characters, the type would be <code>Vec&lt;Vec&lt;char&gt;&gt;</code>.</p>
+                <p><strong>Analogy: The Bookshelf.</strong> A `Vec<Vec<char>>` is like a bookshelf. The outer `Vec` represents the entire bookshelf. Each element inside it is another `Vec`, representing a single shelf. And each element on a shelf is a `char`, representing a book.</p>
+                <p>To access the book at row 2, column 5, you would write <code>bookshelf[2][5]</code>.</p>
+
+                <h3>Step 2: Initializing and Iterating</h3>
+                <p>To create a grid, you first create the outer vector, and then loop to create the inner vectors (the rows) and fill them with default values. To process the grid, you use nested `for` loops: the outer loop for rows and the inner loop for columns.</p>
+                <pre><code>let rows = 5;
+let cols = 10;
+let default_char = '.';
+
+// Initialize a 5x10 grid with '.' characters.
+let mut grid: Vec<Vec<char>> = vec![vec![default_char; cols]; rows];
+
+// Iterate and print the grid
+for row in 0..rows {
+    for col in 0..cols {
+        print!("{}", grid[row][col]); // `print!` doesn't add a newline
+    }
+    println!(); // Add a newline after each row
+}</code></pre>
+                <p>The expression <code>vec![value; count]</code> is a handy macro that creates a `Vec` containing `count` copies of `value`.</p>
+
+                <h3>Practical Application: A Standalone Pattern Printer</h3>
+                <p>For this final module of the day, we'll take a break from our Todo app and write a small, complete program from scratch. This will solidify your understanding of loops, `Vec`, and grid manipulation.</p>
+                <p>Create a new project with <code>cargo new pattern_printer</code> if you wish, or just replace the code in your Todo app's <code>main.rs</code> temporarily to run this exercise.</p>
+                <pre><code>// A standalone program to print a triangle pattern.
+
+use std::io;
+
+fn main() {
+    println!("Enter the size of the triangle to draw:");
+    
+    let mut input = String::new();
+    io::stdin().read_line(&mut input).expect("Failed to read input");
+
+    let size: usize = input.trim().parse().expect("Please enter a valid number");
+
+    // Initialize an empty grid (vector of vectors).
+    let mut grid: Vec<Vec<char>> = Vec::new();
+
+    // Build the grid row by row.
+    for row in 0..size {
+        // Create a new row with `size` spaces.
+        let mut new_row = vec![' '; size];
+        
+        // In each row, change the character at the `row` index to a '*'.
+        // This will create a diagonal line.
+        new_row[row] = '*';
+        
+        grid.push(new_row);
+    }
+    
+    // --- Let's make a more interesting triangle ---
+    // We'll reset and build a filled triangle instead.
+    
+    grid.clear(); // Empty the grid.
+    
+    for row in 0..size {
+        let mut new_row = vec![' '; size];
+        // Now, for each row, loop `row + 1` times to fill it.
+        for col in 0..(row + 1) {
+            new_row[col] = '*';
+        }
+        grid.push(new_row);
+    }
+
+
+    println!("\nHere is your triangle:");
+    // Print the final grid.
+    for row in 0..size {
+        for col in 0..size {
+            print!("{}", grid[row][col]);
+        }
+        println!(); // Newline at the end of the row.
+    }
+}</code></pre>
+
+                <h4>Concepts in Action:</h4>
+                <ul>
+                    <li><strong><code>let size: usize = ...</code></strong>: When dealing with vector indices or lengths, the correct integer type in Rust is <code>usize</code>. It's an unsigned integer that is the same size as a pointer on the target machine (e.g., 64 bits on a 64-bit OS).</li>
+                    <li><strong><code>grid.clear()</code></strong>: Empties a vector, allowing us to reuse it.</li>
+                    <li><strong>Nested Loops for Logic</strong>: The core of the pattern printing is the nested loop. The outer loop controls which row we are on. The inner loop (<code>for col in 0..(row + 1)</code>) determines how many `*` characters to place in that specific row, creating the triangle shape.</li>
+                </ul>
+                <p>Run this program. It will ask for a size and then draw a beautiful right-angled triangle. You have successfully mastered the fundamentals of data structures in Rust, from simple strings to complex 2D grids!</p>
+
+                <a href="../index.html" an class="back-link">&larr; Back to Curriculum Map</a>
+            </article>
+        </div>
+    </main>
+    
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 The Rust Adventure.</p>
+        </div>
+    </footer>
+
+</body>
+</html>

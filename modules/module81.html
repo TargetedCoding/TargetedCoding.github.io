@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 81: Project Review - The Rust Adventure</title>
+    <link rel="stylesheet" href="../style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <img src="https://www.rust-lang.org/static/images/rust-logo-blk.svg" alt="Rust Logo" class="logo">
+            <h1>Module 81: Project Review</h1>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <article class="module-content">
+                <h2>Objective: To conduct a complete, high-level walkthrough of our full-stack application, tracing the flow of data from the database to the backend API, and finally to the frontend Wasm application rendered in the browser.</h2>
+                <p>You have built an incredible amount of technology over the past week. It's easy to get lost in the details of a specific module. Now, we will take a step back and look at the entire system holistically. Understanding how all the pieces connect is the key to building and maintaining complex software.</p>
+                
+                <hr>
+
+                <h3>The Big Picture: Our Full-Stack Architecture</h3>
+                <p>Our application consists of three major layers, all running within our orchestrated Docker environment:</p>
+                <ol>
+                    <li><strong>The Database (PostgreSQL Container):</strong> The single source of truth for our data. It's responsible for persistence, ensuring our tasks are saved permanently.</li>
+                    <li><strong>The Backend (Rust/Axum API Container):</strong> The logical core of our application. It's responsible for handling business logic, authentication, and providing a structured JSON API. It is the only layer that talks to the database.</li>
+                    <li><strong>The Frontend (Browser running Wasm/JS):</strong> The presentation layer. It's responsible for rendering the user interface and handling user interactions. It knows nothing about the database; it only communicates with the backend via its API.</li>
+                </ol>
+                
+                <pre><code>
++-----------------------------------------------------------------+
+| User's Web Browser                                              |
+|                                                                 |
+|  +---------------------+        HTTP API Calls (JSON)           |
+|  | Rust (Wasm)         |  <----------------------------------->  |
+|  | Yew Frontend        |                                        |
+|  +---------------------+                                        |
+|      |                                                          |
+|      | Renders HTML/CSS                                         |
+|      v                                                          |
+|  [ User Interface ]                                             |
++-----------------------------------------------------------------+
+       ^
+       | Serves static files (HTML, JS, Wasm)
+       |
++-----------------------------------------------------------------+
+| Server (Docker Container running on a Host)                     |
+|                                                                 |
+|  +-----------------------------------------------------------+  |
+|  | Rust Backend (Axum)                                       |  |
+|  |                                                           |  |
+|  |  [ Static File Server ] --> Serves `public/` directory    |  |
+|  |                                                           |  |
+|  |  [ API Router (/api)  ]                                   |  |
+|  |     - Middleware (CORS, Logging)                          |  |
+|  |     - Handlers (list_tasks, etc.)                         |  |
+|  |     - State (DB Pool)                                     |  |
+|  +-----------------------------------------------------------+  |
+|                       |                                         |
+|                       | SQL Queries                             |
+|                       v                                         |
+|  +-----------------------------------------------------------+  |
+|  | Database (PostgreSQL)                                     |  |
+|  |                                                           |  |
+|  |  - `tasks` Table                                          |  |
+|  |  - Data Persistence                                       |  |
+|  +-----------------------------------------------------------+  |
++-----------------------------------------------------------------+
+                </code></pre>
+
+                <h3>Tracing a Request: Listing All Tasks</h3>
+                <p>Let's trace the complete lifecycle of a single user action: loading the page to see the list of tasks.</p>
+                <ol>
+                    <li><strong>Initial Page Load:</strong> A user navigates their browser to <code>http://localhost:3000/</code>.</li>
+                    <li><strong>Backend - Static File Request:</strong> The Axum server receives the `GET /` request. It doesn't match any `/api` routes. The request falls back to the <code>ServeDir</code> service.</li>
+                    <li><strong>Backend - Serving Frontend:</strong> `ServeDir` finds `public/index.html` and serves it to the browser. The browser then requests the linked `.js` and `.wasm` files, which are also served by `ServeDir`.</li>
+                    <li><strong>Frontend - Wasm Initialization:</strong> The browser loads and initializes our Yew application. The `App` component renders for the first time.</li>
+                    <li><strong>Frontend - API Call:</strong> The <code>use_effect</code> hook in our `App` component runs. It uses `gloo-net` to send an asynchronous <code>GET</code> request to <code>/api/tasks</code>.</li>
+                    <li><strong>Backend - API Request:</strong> The Axum server receives the `GET /api/tasks` request. This time, it matches our API router. The request passes through our middleware (CORS, logging).</li>
+                    <li><strong>Backend - Handler Execution:</strong> The router calls the `list_tasks` handler. The `State` extractor provides a handle to the `sqlx` database pool.</li>
+                    <li><strong>Backend - Database Query:</strong> The handler executes <code>sqlx::query_as!("SELECT ...")</code>. `sqlx` takes a connection from the pool and sends the query to the PostgreSQL container.</li>
+                    <li><strong>Database - Data Retrieval:</strong> PostgreSQL executes the query, retrieves all rows from the `tasks` table, and sends them back to the Axum backend.</li>
+                    <li><strong>Backend - Serialization:</strong> `sqlx` deserializes the database rows into a `Vec<Task>`. The handler returns `Json(tasks)`. Axum and `serde` then serialize this Rust vector into a JSON string.</li>
+                    <li><strong>Backend - API Response:</strong> Axum sends an HTTP `200 OK` response back to the browser, with the `Content-Type: application/json` header and the JSON string in the body.</li>
+                    <li><strong>Frontend - Deserialization:</strong> The `.await` on our `gloo-net` request in the frontend completes. It receives the JSON response and deserializes it back into a `Vec<Task>`.</li>
+                    <li><strong>Frontend - State Update:</strong> The async block calls <code>tasks.set(fetched_tasks)</code>.</li>
+                    <li><strong>Frontend - Re-render:</strong> Yew detects the state change and re-renders the `App` component. This time, the `tasks` vector is not empty, so the `.map()` runs and generates the final HTML list of tasks that the user sees on the screen.</li>
+                </ol>
+
+                <h3>Key Takeaways from the Architecture</h3>
+                <ul>
+                    <li><strong>Strong Separation of Concerns:</strong> Each layer has a distinct responsibility. The frontend doesn't know about SQL. The backend doesn't know about HTML rendering. This makes the system easier to reason about, test, and maintain.</li>
+                    <li><strong>Type Safety, End-to-End:</strong> We have strong, compile-time guarantees at every stage. `serde` ensures our JSON matches our Rust structs. `sqlx` ensures our SQL queries match our database schema. Yew ensures our HTML is well-formed. This dramatically reduces runtime errors.</li>
+                    <li><strong>Single Point of Deployment:</strong> Despite being a "multi-layered" application, we have a single unit of deployment: our Axum server binary, which contains the API logic and the compiled frontend assets.</li>
+                </ul>
+                <p>You have successfully built a modern, robust, and performant full-stack web application. The patterns you've learned here—from the database to the API to the component-based frontend—are the foundation of professional web development.</p>
+
+                <a href="../index.html" class="back-link">&larr; Back to Curriculum Map</a>
+            </article>
+        </div>
+    </main>
+    
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 The Rust Adventure.</p>
+        </div>
+    </footer>
+
+</body>
+</html>

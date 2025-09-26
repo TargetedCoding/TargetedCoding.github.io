@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 75: State Management and Callbacks - The Rust Adventure</title>
+    <link rel="stylesheet" href="../style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <img src="https://www.rust-lang.org/static/images/rust-logo-blk.svg" alt="Rust Logo" class="logo">
+            <h1>Module 75: State Management and Callbacks</h1>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <article class="module-content">
+                <h2>Objective: To use Yew's "hooks" for managing component state and to use "callbacks" to handle user events like button clicks, making the UI interactive.</h2>
+                <p>A static UI is boring. Real applications need to respond to user input and change what's on the screen. To do this, a component needs to have a "memory" of its own data—this is called <strong>state</strong>. When an event happens (like a click), we use a <strong>callback</strong> to update that state, which causes Yew to automatically re-render the component and show the changes.</p>
+                
+                <hr>
+
+                <h3>Step 1: State Management with Hooks</h3>
+                <p>Yew's function components manage state using "hooks." A hook is a special function that "hooks into" Yew's lifecycle. The most important hook is <strong><code>use_state</code></strong>.</p>
+                <p>When you call <code>let my_state = use_state(|| initial_value);</code>, it returns a special handle. This handle allows you to:</p>
+                <ul>
+                    <li><strong>Read the state:</strong> You can get the current value by dereferencing the handle (e.g., `*my_state`).</li>
+                    <li><strong>Update the state:</strong> The handle has a <code>.set()</code> method. When you call <code>my_state.set(new_value)</code>, you are telling Yew that the state has changed. Yew will then schedule a re-render of your component to reflect the new state on the screen.</li>
+                </ul>
+                <p><strong>Analogy: The Smart Whiteboard.</strong> Component state is like a smart whiteboard. The `use_state` hook gives you a special pen. When you write a new value on the board with the pen's `.set()` method, the whiteboard automatically takes a picture and updates the main display for everyone to see (it triggers a re-render).</p>
+
+                <h3>Step 2: Handling Events with Callbacks</h3>
+                <p>To respond to user events like `onclick`, `oninput`, etc., we use the <strong><code>Callback</code></strong> type. A callback wraps a closure. When you create a callback, you tell it what to do when the event happens—usually, this involves updating some state.</p>
+                
+                <h3>Practical Application: An Interactive Counter and Task List</h3>
+                <p>Let's make our `todo-frontend` interactive. We'll start with a simple counter to demonstrate the state/callback cycle, and then apply that knowledge to allow us to "complete" tasks by clicking on them.</p>
+
+                <h4>1. Project Setup</h4>
+                <p>Continue in your `todo-frontend` project from the previous module.</p>
+                
+                <h4>2. The Complete, Interactive `src/main.rs`</h4>
+                <pre><code>use yew::prelude::*;
+
+// --- Define our core data structures ---
+// We add `Clone` because state needs to be cloneable.
+#[derive(Clone, PartialEq)]
+struct Task {
+    id: usize,
+    description: String,
+    completed: bool,
+}
+
+// --- The Main Application Component ---
+#[function_component(App)]
+fn app() -> Html {
+    // 1. STATE: Create a piece of state to hold the list of tasks.
+    // `use_state` initializes our state with a vector of default tasks.
+    let tasks = use_state(|| vec![
+        Task { id: 1, description: "Learn Yew State".to_string(), completed: true },
+        Task { id: 2, description: "Build an interactive app".to_string(), completed: false },
+        Task { id: 3, description: "Master callbacks".to_string(), completed: false },
+    ]);
+    
+    // 2. CALLBACK: Create a callback to handle the "complete task" action.
+    // The `move` closure captures a copy of the `tasks` state handle.
+    let on_task_complete = {
+        let tasks = tasks.clone();
+        Callback::from(move |id: usize| {
+            // Create a new vector based on the old one.
+            let mut new_tasks = (*tasks).clone();
+            if let Some(task) = new_tasks.iter_mut().find(|t| t.id == id) {
+                task.completed = !task.completed; // Toggle the completed status
+            }
+            // 3. UPDATE STATE: Use `.set()` to update the state and trigger a re-render.
+            tasks.set(new_tasks);
+        })
+    };
+
+    html! {
+        <main>
+            <h1>{ "My Interactive Todo List" }</h1>
+            
+            // Map over the tasks in our state to render them dynamically.
+            {
+                tasks.iter().map(|task| {
+                    html! {
+                        <div class={if task.completed { "task done" } else { "task" }}>
+                            <h3>{ &task.description }</h3>
+                            <p>{ if task.completed { "Status: Completed" } else { "Status: Pending" } }</p>
+                            // Attach our callback to the button's `onclick` event.
+                            <button onclick={
+                                let on_task_complete = on_task_complete.clone();
+                                let id = task.id;
+                                move |_| on_task_complete.emit(id)
+                            }>{ "Toggle Status" }</button>
+                        </div>
+                    }
+                }).collect::<Html>()
+            }
+            
+        </main>
+    }
+}
+
+fn main() {
+    yew::Renderer::<App>::new().render();
+}
+</code></pre>
+
+                <h4>The Interactive Architecture:</h4>
+                <ul>
+                    <li><strong><code>use_state(|| ... )</code></strong>: We initialize our application's entire state—the list of tasks—in a single `use_state` hook. The return value, `tasks`, is a `UseStateHandle<Vec<Task>>`.</li>
+                    <li><strong>Dynamic Rendering with `.map()`</strong>: Instead of hardcoding our tasks, we now iterate over the `tasks` state handle. The `.iter().map(|task| html!{...})` pattern is the core of dynamic rendering in Yew. It transforms our `Vec<Task>` into a `Vec<Html>`.</li>
+                    <li><strong><code>Callback::from(move |...|)</code></strong>: We define our logic for what should happen when a task's status needs to be toggled. The callback takes the `id` of the task to be changed. It's crucial that it captures a `clone` of the `tasks` state handle.</li>
+                    <li><strong>Updating State Immutably</strong>: Inside the callback, notice we don't modify the state directly. We create a `new_tasks` clone of the current state, modify the clone, and then call `tasks.set(new_tasks)`. This "immutable update" pattern is standard in many modern UI frameworks and helps prevent subtle bugs.</li>
+                    <li><strong><code>onclick={...}</code></strong>: In our render loop, we attach the callback to each button's `onclick` event. We create a *new* closure for each button that captures the specific `id` of the task it corresponds to. When the button is clicked, it calls `.emit(id)` on our main callback, triggering the state update.</li>
+                </ul>
+
+                <h3>Step 3: Run it!</h3>
+                <p>If your `trunk serve` is still running, it will have automatically reloaded the page. If not, run it again:</p>
+                <pre><code>trunk serve --open</code></pre>
+                <p>You will see your list of tasks. Now, click the "Toggle Status" button on any task. The task's appearance will instantly change! You have successfully created a dynamic, interactive web UI in pure Rust by mastering the state and callback cycle.</p>
+
+                <a href="../index.html" class="back-link">&larr; Back to Curriculum Map</a>
+            </article>
+        </div>
+    </main>
+    
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 The Rust Adventure.</p>
+        </div>
+    </footer>
+
+</body>
+</html>

@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 83: The Entity-Component-System (ECS) Pattern - The Rust Adventure</title>
+    <link rel="stylesheet" href="../style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <img src="https://www.rust-lang.org/static/images/rust-logo-blk.svg" alt="Rust Logo" class="logo">
+            <h1>Module 83: The Entity-Component-System (ECS) Pattern</h1>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <article class="module-content">
+                <h2>Objective: To understand the data-driven Entity-Component-System (ECS) architectural pattern, which is the foundation of the Bevy game engine and many other modern game engines.</h2>
+                <p>Welcome to Day 24! We are now venturing into the exciting world of game development. Before we can write a single line of game code, we must understand the powerful architectural pattern that makes modern game engines like <strong>Bevy</strong> so fast and flexible: <strong>Entity-Component-System (ECS)</strong>.</p>
+                
+                <hr>
+
+                <h3>Step 1: What is ECS? (And why not use OOP?)</h3>
+                <p>In traditional Object-Oriented Programming (OOP), you might create a `Player` class that inherits from a `Character` class, which inherits from a `GameObject` class. This leads to rigid hierarchies. What if you want a `Tree` that can be set on fire, just like a `Monster`? Do they both inherit from a `Flammable` class? This can get complicated quickly.</p>
+                <p>ECS turns this on its head. Instead of "is-a" relationships (inheritance), it favors "has-a" relationships (composition). It splits everything into three simple concepts.</p>
+
+                <h3>Step 2: The Three Pillars of ECS</h3>
+                <ol>
+                    <li>
+                        <strong>Entity:</strong> An entity is just a unique ID number. That's it! It has no data and no behavior. It's simply a "thing" that exists in your game world. Think of it as a primary key in a database table.
+                        <pre><code>Entity 101, Entity 102, Entity 103, ...</code></pre>
+                    </li>
+                    <li>
+                        <strong>Component:</strong> A component is a plain Rust struct containing only data. It represents a single "aspect" or "property" of an entity.
+                        <pre><code>struct Position { x: f32, y: f32 }
+struct Velocity { dx: f32, dy: f32 }
+struct Health { current: u32, max: u32 }
+struct Player; // A "tag" component with no data
+</code></pre>
+                        <p>An entity is "defined" by the components attached to it. For example:</p>
+                        <ul>
+                            <li>Entity 101 might have `Position`, `Velocity`, `Health`, and `Player` components. This is our player character.</li>
+                            <li>Entity 102 might have `Position` and `Health`. This could be a stationary tree.</li>
+                            <li>Entity 103 might have `Position` and `Velocity`. This could be a non-living thing, like a moving platform.</li>
+                        </ul>
+                    </li>
+                    <li>
+                        <strong>System:</strong> A system is a function that contains all the logic. A system runs on all entities that have a specific set of components.
+                        <pre><code>// A system that moves things
+fn movement_system(query: Query<(&mut Position, &Velocity)>) { /* ... */ }
+
+// A system that makes players take damage
+fn player_damage_system(query: Query<(&mut Health, &Player)>) { /* ... */ }
+</code></pre>
+                    </li>
+                </ol>
+
+                <h3>Step 3: The Spreadsheet Analogy</h3>
+                <p>The best way to think about an ECS is like a giant spreadsheet or database.</p>
+                <ul>
+                    <li>The <strong>Entities</strong> are the Row IDs.</li>
+                    <li>The <strong>Components</strong> are the Columns.</li>
+                    <li>A "game object" is a <strong>Row</strong>, defined by which columns have data.</li>
+                    <li>A <strong>System</strong> is a macro or function that operates on the spreadsheet, for example: "For every row that has a value in both the `Position` column and the `Velocity` column, update `Position` based on `Velocity`."</li>
+                </ul>
+                <pre><code>| Entity ID | Position     | Velocity     | Health     | Player |
+|-----------|--------------|--------------|------------|--------|
+| 101       | {x:0, y:0}   | {dx:1, dy:0} | {hp:100}   |  Yes   |
+| 102       | {x:50, y:20} |   (empty)    | {hp:50}    | (empty)|
+| 103       | {x:10, y:80} | {dx:0, dy:-1}|   (empty)  | (empty)|
+</code></pre>
+                <p>The `movement_system` would run on rows 101 and 103. The `player_damage_system` would run only on row 101.</p>
+
+                <h3>Step 4: Why is This So Fast?</h3>
+                <p>The performance of ECS comes from how it stores data in memory. Instead of storing all of an entity's components together, it stores all components of the *same type* together. All `Position`s are in one contiguous block of memory, all `Velocity`s are in another, and so on. When a system runs, it iterates over these tightly packed arrays of data. This is incredibly fast because modern CPUs are optimized for this exact kind of linear memory access ("cache locality").</p>
+                
+                <p>You have now learned the fundamental theory behind the data-driven architecture that powers high-performance game engines. This separation of data and logic is a powerful pattern that you will see in many other areas of high-performance computing. In the next module, we will put this theory into practice by using the Bevy engine to create entities and give them components.</p>
+
+                <a href="../index.html" class="back-link">&larr; Back to Curriculum Map</a>
+            </article>
+        </div>
+    </main>
+    
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 The Rust Adventure.</p>
+        </div>
+    </footer>
+
+</body>
+</html>

@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 92: N-Dimensional Arrays with `ndarray` - The Rust Adventure</title>
+    <link rel="stylesheet" href="../style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <img src="https://www.rust-lang.org/static/images/rust-logo-blk.svg" alt="Rust Logo" class="logo">
+            <h1>Module 92: N-Dimensional Arrays with `ndarray`</h1>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <article class="module-content">
+                <h2>Objective: To introduce the `ndarray` crate as the fundamental tool for numerical computing in Rust and to perform basic vector and matrix operations.</h2>
+                <p>Welcome to Day 27! While ML frameworks like Candle are specialized for neural networks, the bedrock of all scientific computing is the N-dimensional array. In the Python world, this is provided by NumPy. In the Rust ecosystem, the standard for this is the powerful and mature <strong><code>ndarray</code></strong> crate.</p>
+                
+                <hr>
+
+                <h3>Step 1: Why `ndarray`?</h3>
+                <p>A `Vec<Vec<T>>` is a fine way to represent a 2D grid, but it's not efficient for mathematical operations. The inner vectors can be allocated all over memory. An `ndarray` `Array` type guarantees that all its data is in a single, contiguous block of memory, which is essential for high-performance linear algebra.</p>
+                <p><code>ndarray</code> provides:</p>
+                <ul>
+                    <li>An <code>Array</code> type that can have any number of dimensions.</li>
+                    <li>Powerful indexing, slicing, and "view" capabilities.</li>
+                    <li>A huge range of mathematical operations, from simple arithmetic to complex matrix decompositions.</li>
+                    <li>Optional integration with high-performance linear algebra libraries like BLAS.</li>
+                </ul>
+                
+                <h3>Step 2: Creating Arrays and Performing Operations</h3>
+                <p>Creating an `ndarray` is easy with the <code>array!</code> macro, which is very similar to NumPy's `np.array()`.</p>
+                <p><strong>Analogy: The Professional Engineering Grid.</strong> A `Vec<Vec<T>>` is like a grid drawn on notebook paper. It's functional but flimsy. An `ndarray` `Array` is like a professional engineering blueprint. The grid is precise, the data is stored efficiently, and you have a whole suite of specialized tools (like calipers and protractors) to perform complex calculations on it.</p>
+                
+                <h3>Practical Application: Basic Linear Algebra</h3>
+                <p>Let's create a new project to explore the basics of `ndarray`. We'll create vectors and matrices and perform some common linear algebra operations like dot products and matrix-vector multiplication.</p>
+
+                <h4>1. Create a New Project</h4>
+                <pre><code>cargo new ndarray_demo
+cd ndarray_demo
+</code></pre>
+                
+                <h4>2. Update `Cargo.toml`</h4>
+                <pre><code>[dependencies]
+ndarray = "0.15"
+</code></pre>
+                
+                <h4>3. The Complete `src/main.rs`</h4>
+                <pre><code>use ndarray::{array, Array1, Array2, Axis};
+
+fn main() {
+    // --- 1. CREATING 1D ARRAYS (VECTORS) ---
+    // The `array!` macro provides a convenient syntax.
+    let a: Array1<i32> = array![1, 2, 3, 4];
+    let b: Array1<i32> = array![5, 6, 7, 8];
+
+    println!("Vector A: {}", a);
+    println!("Vector B: {}", b);
+
+    // Element-wise operations are simple with standard operators.
+    let sum = &a + &b;
+    println!("A + B = {}", sum);
+
+    // The dot product is a fundamental vector operation.
+    let dot_product = a.dot(&b);
+    println!("Dot product of A and B = {}", dot_product); // 1*5 + 2*6 + 3*7 + 4*8 = 70
+
+    // --- 2. CREATING 2D ARRAYS (MATRICES) ---
+    let matrix: Array2<f64> = array![
+        [1.0, 2.0, 3.0],
+        [4.0, 5.0, 6.0]
+    ];
+    println!("\nMatrix M:\n{}", matrix);
+    println!("Shape of M: {:?}", matrix.shape());
+
+    // --- 3. SLICING AND VIEWS ---
+    // Slicing creates a "view" of the data without copying it.
+    // Get the first row (index 0 on Axis 0).
+    let first_row = matrix.row(0);
+    println!("\nFirst row of M: {}", first_row);
+    
+    // Get the second column (index 1 on Axis 1).
+    let second_col = matrix.column(1);
+    println!("Second column of M: {}", second_col.to_owned()); // .to_owned() to print easily
+    
+    // --- 4. MATRIX-VECTOR MULTIPLICATION ---
+    let vector: Array1<f64> = array![10.0, 20.0, 30.0];
+    println!("\nVector V: {}", vector);
+    
+    // M (2x3) dot V (3,) -> Result (2,)
+    let result = matrix.dot(&vector);
+    println!("Result of M dot V = {}", result);
+    // [1*10+2*20+3*30, 4*10+5*20+6*30] = [140, 320]
+
+    // --- 5. AGGREGATIONS ---
+    // You can sum along axes.
+    let col_sums = matrix.sum_axis(Axis(0));
+    println!("\nSum of columns of M: {}", col_sums); // [1+4, 2+5, 3+6] = [5, 7, 9]
+    
+    let row_sums = matrix.sum_axis(Axis(1));
+    println!("Sum of rows of M: {}", row_sums); // [1+2+3, 4+5+6] = [6, 15]
+}
+</code></pre>
+
+                <h4>The `ndarray` in Action:</h4>
+                <ul>
+                    <li><strong>Typed Arrays</strong>: We explicitly create an <code>Array1<i32></code> (a 1-dimensional array of `i32`) or an <code>Array2<f64></code> (a 2-dimensional array of `f64`). This provides strong, compile-time type safety.</li>
+                    <li><strong>Operator Overloading</strong>: `ndarray` makes heavy use of operator overloading, so you can write natural-looking mathematical code like <code>&a + &b</code> for element-wise addition.</li>
+                    <li><strong>Method Chaining</strong>: The library provides a rich, fluent API for common operations like <code>.dot()</code> for dot products and matrix multiplication.</li>
+                    <li><strong>Views vs. Ownership</strong>: When you slice an array (e.g., <code>matrix.row(0)</code>), you get back an <code>ArrayView</code>. This is a borrowed view of the original data, which is extremely efficient as it avoids copying memory. If you need an owned copy, you can call <code>.to_owned()</code>.</li>
+                    <li><strong>Axes</strong>: Operations like `sum_axis` use the concept of an `Axis`. `Axis(0)` refers to the columns, and `Axis(1)` refers to the rows in a 2D matrix.</li>
+                </ul>
+                <p>Run <strong><code>cargo run</code></strong>. You will see the results of the various vector and matrix operations printed to the console. You have just scratched the surface of the `ndarray` crate, the foundational tool that powers a huge portion of Rust's scientific computing, data analysis, and machine learning ecosystem. Understanding how to manipulate these N-dimensional arrays is the key to writing high-performance numerical code.</p>
+
+                <a href="../index.html" class="back-link">&larr; Back to Curriculum Map</a>
+            </article>
+        </div>
+    </main>
+    
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 The Rust Adventure.</p>
+        </div>
+    </footer>
+
+</body>
+</html>

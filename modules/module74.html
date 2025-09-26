@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 74: The Component Model - The Rust Adventure</title>
+    <link rel="stylesheet" href="../style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <img src="https://www.rust-lang.org/static/images/rust-logo-blk.svg" alt="Rust Logo" class="logo">
+            <h1>Module 74: The Component Model</h1>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <article class="module-content">
+                <h2>Objective: To introduce the "component" model of modern frontend development and use the Yew framework to build simple, reusable UI components in pure Rust.</h2>
+                <p>Welcome to Day 21! Manually manipulating the DOM with <code>web-sys</code> is powerful, but it can quickly become complex and hard to manage for a large application. Modern frontend development is built on the idea of <strong>components</strong>. We will use <strong>Yew</strong>, a popular Rust framework inspired by React and Elm, to build our frontend in a structured and maintainable way.</p>
+                
+                <hr>
+
+                <h3>Step 1: What is a Component?</h3>
+                <p>A component is a self-contained, reusable piece of the user interface. It encapsulates its own HTML structure, logic, and state. An entire web page is built by composing these small components together, like building a complex model out of simple LEGO bricks.</p>
+                <p>In Yew, a component is just a Rust function annotated with the <code>#[function_component]</code> attribute. This function returns a value of type <code>Html</code>, which you create using the <code>html!</code> macro.</p>
+
+                <h3>Step 2: The `html!` Macro</h3>
+                <p>The <code>html!</code> macro is Yew's secret sauce. It provides a JSX-like syntax that lets you write what looks like HTML directly inside your Rust code. The macro then transforms this into efficient Rust code that creates and updates the DOM.</p>
+                <pre><code>use yew::prelude::*;
+
+#[function_component(MyComponent)]
+fn my_component() -> Html {
+    html! {
+        <div>
+            <h1>{ "Hello from a Yew Component!" }</h1>
+            <p>{ "This is rendered by Rust and Wasm." }</p>
+        </div>
+    }
+}
+</code></pre>
+                
+                <h3>Practical Application: Building a Yew Frontend for our Todo App</h3>
+                <p>Let's start a brand-new project for our frontend. Yew has a template to make this easy.</p>
+
+                <h4>1. Install `trunk`</h4>
+                <p>`trunk` is a build tool specifically for Rust Wasm applications. It simplifies the process of compiling, bundling, and serving your app.</p>
+                <pre><code>cargo install trunk</code></pre>
+
+                <h4>2. Create a New Project from a Template</h4>
+                <p>We'll use `cargo-generate` to clone a Yew starter template.</p>
+                <pre><code>cargo install cargo-generate
+cargo generate --git https://github.com/yewstack/yew-template.git --name todo-frontend
+cd todo-frontend
+</code></pre>
+                <p>This will create a new project with all the necessary configuration for a Yew application.</p>
+
+                <h4>3. The Core Component: `src/main.rs`</h4>
+                <p>Open the `src/main.rs` file created by the template. We will replace its contents with a simple structure for our Todo app, including a reusable `TaskCard` component.</p>
+                <pre><code>use yew::prelude::*;
+
+// --- Our Reusable, "Dumb" Component ---
+// This component just receives data via properties and displays it.
+#[derive(Properties, PartialEq)]
+pub struct TaskCardProps {
+    pub title: String,
+    pub is_done: bool,
+}
+
+#[function_component(TaskCard)]
+fn task_card(props: &TaskCardProps) -> Html {
+    html! {
+        <div class={if props.is_done { "task done" } else { "task" }}>
+            <h3>{ &props.title }</h3>
+            <p>{ if props.is_done { "Status: Completed" } else { "Status: Pending" } }</p>
+        </div>
+    }
+}
+
+
+// --- The Main Application Component ---
+#[function_component(App)]
+fn app() -> Html {
+    html! {
+        <main>
+            <h1>{ "My Todo List" }</h1>
+            
+            // We can reuse our `TaskCard` component multiple times with different properties.
+            <TaskCard title={"Learn Yew Components".to_string()} is_done={true} />
+            <TaskCard title={"Build a state management module".to_string()} is_done={false} />
+            <TaskCard title={"Make API calls from the frontend".to_string()} is_done={false} />
+            
+        </main>
+    }
+}
+
+// The main entry point for our Wasm application.
+fn main() {
+    yew::Renderer::<App>::new().render();
+}
+</code></pre>
+
+                <h4>4. Add some CSS</h4>
+                <p>The template includes an `index.html` that links to a stylesheet. Open `index.html` in the project root and add a `<style>` tag or link a CSS file to make our components look nice.</p>
+                <pre><code>/* In a style tag in index.html */
+.task { border: 1px solid #ccc; padding: 1em; margin: 1em; border-radius: 5px; }
+.task.done { border-color: green; background-color: #e8f5e9; }
+h3 { margin-top: 0; }
+</code></pre>
+
+                <h4>5. Build and Serve with `trunk`</h4>
+                <p>Now, from the `todo-frontend` directory, run the `trunk` command:</p>
+                <pre><code>trunk serve --open</code></pre>
+                <p>`trunk` will compile your Rust code to Wasm, prepare all the necessary files, start a local development server, and automatically open the page in your browser. You should see your list of tasks, rendered by your reusable `TaskCard` component!</p>
+
+                <h4>The Component Architecture:</h4>
+                <ul>
+                    <li><strong><code>#[function_component]</code></strong>: The attribute that turns a Rust function into a Yew component.</li>
+                    <li><strong><code>html! { ... }</code></strong>: The macro that allows you to write HTML-like syntax to define what your component renders.</li>
+                    <li><strong>Properties (`props`)</strong>: Components are reusable because you can pass data to them via "properties." We define a struct that derives `Properties` and `PartialEq` to specify what data a component accepts. In `App`, we create `TaskCard`s by passing them the required `title` and `is_done` props.</li>
+                    <li><strong>Composition</strong>: The main `App` component is built by *composing* several smaller `TaskCard` components. This is the core principle of this architectural style.</li>
+                </ul>
+                <p>You have just built your first component-based web application in pure Rust. You've learned how to create reusable UI elements and compose them into a larger application. In the next module, we'll make this application interactive by adding state and handling user events.</p>
+
+                <a href="../index.html" class="back-link">&larr; Back to Curriculum Map</a>
+            </article>
+        </div>
+    </main>
+    
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 The Rust Adventure.</p>
+        </div>
+    </footer>
+
+</body>
+</html>

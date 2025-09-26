@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 28: Interior Mutability with `RefCell<T>` - The Rust Adventure</title>
+    <link rel="stylesheet" href="../style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <img src="https://www.rust-lang.org/static/images/rust-logo-blk.svg" alt="Rust Logo" class="logo">
+            <h1>Module 28: Interior Mutability with `RefCell<T>`</h1>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <article class="module-content">
+                <h2>Objective: To learn how to mutate data even when it's behind a shared, immutable reference (like `Rc<T>`).</h2>
+                <p>In the last module, we used <code>Rc&lt;T&gt;</code> to get multiple shared *immutable* references to our data. But what if we need to change that data? The borrow checker would normally stop us. This is where the <strong>interior mutability</strong> pattern, and its primary tool <strong><code>RefCell&lt;T&gt;</code></strong>, comes in.</p>
+                
+                <hr>
+
+                <h3>Step 1: The Problem and The "Trick"</h3>
+                <p>The borrow checker's rules (one mutable borrow OR many immutable borrows) are checked at compile time. <code>RefCell&lt;T&gt;</code> is a special container that moves the enforcement of these rules from compile time to *run time*. It lets you ask for a mutable reference to the data inside it, even when the `RefCell` itself is immutable.</p>
+                <p>If you break the rules at run time (e.g., you try to get a second mutable reference while another one is active), your program will <strong>panic</strong>. So, the safety is still guaranteed, just in a different way.</p>
+
+                <p><strong>Analogy: The "Librarian's Key".</strong> The <code>Rc</code> gives everyone a read-only copy of a popular book. But what if you need to add a footnote? A <code>RefCell</code> wrapping the book is like a special desk at the library. You can't write on the book directly. Instead, you go to the desk and ask the librarian (the `RefCell`) for a special, temporary "editor's key" (a mutable borrow). The librarian will only give out one editor's key at a time. If you ask for a second one while someone else has one out, the librarian will sound a loud alarm and shut everything down (a `panic!`).</p>
+
+                <h3>Step 2: The `Rc<RefCell<T>>` Pattern</h3>
+                <p>Combining <code>Rc</code> and <code>RefCell</code> is an extremely common and powerful pattern for single-threaded code.
+                <ul>
+                    <li><code>Rc&lt;T&gt;</code> lets you have multiple owners of the same data.</li>
+                    <li><code>RefCell&lt;T&gt;</code> lets any of those owners request temporary mutable access to that data.</li>
+                </ul>
+                <p>You use <code>.borrow()</code> to get an immutable reference and <code>.borrow_mut()</code> to get a mutable reference at run time.</p>
+                
+                <h3>Let's Build Our Todo App (Part 23)</h3>
+                <p>Let's use this pattern to solve a real problem. In our app, a task can be in the main list and also in a group. What if we want to complete the task? We need to be able to modify it. We'll wrap our `Task` in an <code>Rc&lt;RefCell&lt;Task&gt;&gt;</code> to allow this.</p>
+                <p>This builds directly on the previous module's code.</p>
+                <pre><code>// In src/main.rs
+use std::rc::Rc;
+use std::cell::RefCell; // Bring RefCell into scope!
+use std::collections::HashMap;
+
+// --- Let's simplify the Task struct for this example ---
+#[derive(Debug)] // We'll add more traits back later
+struct Task {
+    description: String,
+    completed: bool,
+}
+
+impl Task {
+    fn new(description: String) -> Task {
+        Task { description, completed: false }
+    }
+}
+
+// --- Data Structures ---
+struct TaskGroup {
+    name: String,
+    tasks: Vec<Rc<RefCell<Task>>>, // Now holds Rc<RefCell<Task>>
+}
+
+struct AppState {
+    tasks: HashMap<u32, Rc<RefCell<Task>>>, // Also holds Rc<RefCell<Task>>
+    groups: HashMap<String, TaskGroup>,
+    next_id: u32,
+}
+
+fn main() {
+    let mut state = AppState {
+        tasks: HashMap::new(),
+        groups: HashMap::new(),
+        next_id: 1,
+    };
+
+    // 1. Create a task and put it inside Rc and RefCell.
+    let task1 = Rc::new(RefCell::new(Task::new("Learn RefCell".to_string())));
+    state.tasks.insert(state.next_id, Rc::clone(&task1));
+    let task1_id = state.next_id;
+    state.next_id += 1;
+
+    // 2. Create a group and add the task to it.
+    let mut work_group = TaskGroup { name: "Work".to_string(), tasks: Vec::new() };
+    work_group.tasks.push(Rc::clone(&task1));
+    state.groups.insert("Work".to_string(), work_group);
+
+    println!("Initial State:");
+    println!("Task 1 from master list: {:?}", state.tasks.get(&task1_id).unwrap().borrow());
+    println!("Task 1 from work group: {:?}", state.groups.get("Work").unwrap().tasks[0].borrow());
+    println!("-------------------");
+
+    // 3. THE MAGIC: Mutate the task from one place.
+    println!("Completing task {}...", task1_id);
+    if let Some(task_rc) = state.tasks.get(&task1_id) {
+        // Use .borrow_mut() to get temporary mutable access.
+        // This panics if someone else already has a mutable borrow.
+        task_rc.borrow_mut().completed = true;
+    }
+
+    // 4. The change is reflected EVERYWHERE!
+    println!("\nFinal State:");
+    println!("Task 1 from master list: {:?}", state.tasks.get(&task1_id).unwrap().borrow());
+    println!("Task 1 from work group: {:?}", state.groups.get("Work").unwrap().tasks[0].borrow());
+}</code></pre>
+
+                <h4>The Interior Mutability Architecture:</h4>
+                <ul>
+                    <li><strong><code>Rc<RefCell<Task>></code></strong>: This is the complete pattern. `Rc` provides shared ownership, and `RefCell` provides the ability to mutate the shared value.</li>
+                    <li><strong><code>.borrow()</code></strong>: When we just want to read the data (like for printing), we use <code>.borrow()</code>. This returns a smart pointer `Ref` and increments a runtime immutable borrow count.</li>
+                    <li><strong><code>.borrow_mut()</code></strong>: When we need to change the data, we use <code>.borrow_mut()</code>. This returns a smart pointer `RefMut` and checks the runtime borrow counts. If there are any other borrows (mutable or immutable) active, it will panic.</li>
+                </ul>
+                <p>Run the code. You will see that after we complete the task by accessing it from the main `tasks` list, the change is instantly visible when we access the "same" task through the `work_group`. This is because both `Rc` pointers point to the exact same memory location, and `RefCell` gave us a safe, temporary key to modify the contents of that location.</p>
+
+                <a href="../index.html" class="back-link">&larr; Back to Curriculum Map</a>
+            </article>
+        </div>
+    </main>
+    
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 The Rust Adventure.</p>
+        </div>
+    </footer>
+
+</body>
+</html>

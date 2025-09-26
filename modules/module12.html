@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 12: Advanced Iterators & Closures - The Rust Adventure</title>
+    <link rel="stylesheet" href="../style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <img src="https://www.rust-lang.org/static/images/rust-logo-blk.svg" alt="Rust Logo" class="logo">
+            <h1>Module 12: Advanced Iterators & Closures</h1>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <article class="module-content">
+                <h2>Objective: To unlock the expressive, functional side of Rust by mastering iterator adaptors and closures.</h2>
+                <p>So far, we've used `for` loops to iterate over our collections. This is great, but Rust has a more powerful and flexible way to process sequences of data: the <strong><code>Iterator</code></strong> trait and its "adaptors," which are often paired with <strong>closures</strong>.</p>
+                
+                <hr>
+
+                <h3>Step 1: Functions Without a Name (Closures)</h3>
+                <p>A <strong>closure</strong> is a lightweight, anonymous function that you can create and store in a variable or pass to other functions. Its power comes from its ability to "capture" variables from the scope where it's defined.</p>
+                <p><strong>Analogy: The Sticky Note.</strong> A closure is like a sticky note with a small set of instructions (e.g., "check if this number is even"). You can pass this note around, and it remembers the context of where you wrote it (e.g., it might remember a `limit` variable from the surrounding code).</p>
+                <p>The syntax uses pipes <code>|...|</code> for arguments: <code>let add_one = |x: u32| -> u32 { x + 1 };</code>. For simple closures, the compiler can often infer the types.</p>
+                <pre><code>let numbers = vec![1, 2, 3];
+// The `map` function takes a closure.
+// `|n| n * 2` is a closure that takes `n` and returns `n * 2`.
+let doubled: Vec<_> = numbers.iter().map(|n| n * 2).collect();
+// doubled is now vec![2, 4, 6]</code></pre>
+
+                <h3>Step 2: Iterator Adaptors</h3>
+                <p>An iterator is a sequence of values. "Adaptors" are methods that take an iterator and transform it into a new iterator with different behavior. This allows for elegant chaining.</p>
+                <ul>
+                    <li><code>.iter()</code>: Creates an iterator over a collection.</li>
+                    <li><code>.map(|item| ...)</code>: Transforms each item in the iterator using a closure.</li>
+                    <li><code>.filter(|item| ...)</code>: Creates a new iterator that only contains items for which the closure returns `true`.</li>
+                    <li><code>.collect()</code>: A "consuming" adaptor that gathers all the items from an iterator into a new collection, like a <code>Vec</code>.</li>
+                </ul>
+
+                <h3>Let's Build Our Todo App (Part 11)</h3>
+                <p>Let's add a great new feature to our app: filtering the task list! We'll allow the user to type <code>list completed</code> or <code>list pending</code>. This is a perfect use case for the <code>.filter()</code> iterator adaptor.</p>
+                <p>We only need to modify the <code>ListCommand</code> struct and the parsing logic in `run`. The rest of the architecture stays the same.</p>
+                <pre><code>// ... (Task struct, AppError enum, Command trait, Add/Complete commands are all the same) ...
+
+// --- MODIFIED: The ListCommand ---
+// It now holds an optional filter state.
+enum TaskFilter { All, Completed, Pending }
+struct ListCommand { filter: TaskFilter }
+
+impl Command for ListCommand {
+    fn execute(&self, tasks: &mut HashMap<u32, Task>, _next_id: &mut u32) -> Result<(), AppError> {
+        println!("\n--- TODO LIST ---");
+        
+        // Start an iterator chain!
+        tasks.iter()
+            // The filter adaptor takes a closure.
+            // It keeps items where the closure returns true.
+            .filter(|(_, task)| match self.filter {
+                TaskFilter::Completed => task.completed,
+                TaskFilter::Pending => !task.completed,
+                TaskFilter::All => true, // Keep all tasks
+            })
+            // `for_each` is another adaptor that executes a closure on each item.
+            .for_each(|(id, task)| {
+                let status = if task.completed { "[x]" } else { "[ ]" };
+                println!("{}: {} {}", id, status, task.description);
+            });
+            
+        println!("-----------------");
+        Ok(())
+    }
+}
+
+// --- REFACTORED: The Run Loop (only the parsing part) ---
+fn run() -> Result<(), AppError> {
+    // ... (setup is the same) ...
+    loop {
+        println!("\n> Enter a command: add [desc], complete [id], list [all|completed|pending], or quit");
+        // ... (input reading is the same) ...
+
+        let mut parts = input.trim().split_whitespace();
+        let command_name = parts.next().unwrap_or("");
+        
+        let command: Option<Box<dyn Command>> = match command_name {
+            // ... ("add" and "complete" arms are the same) ...
+            "add" => { /* same as before */ },
+            "complete" => { /* same as before */ },
+
+            "list" => {
+                let filter_str = parts.next().unwrap_or("all");
+                let filter = match filter_str {
+                    "completed" => TaskFilter::Completed,
+                    "pending" => TaskFilter::Pending,
+                    _ => TaskFilter::All,
+                };
+                Some(Box::new(ListCommand { filter }))
+            },
+            "quit" => break,
+            "" => continue,
+            _ => { /* same as before */ }
+        };
+
+        // ... (command execution is the same) ...
+    }
+    Ok(())
+}
+
+fn main() { /* same as before */ }
+</code></pre>
+
+                <h4>The Functional Upgrade:</h4>
+                <ul>
+                    <li><strong><code>enum TaskFilter</code></strong>: We created an enum to represent the possible filter states in a type-safe way.</li>
+                    <li><strong><code>ListCommand { filter: TaskFilter }</code></strong>: Our command struct now holds the desired filter state.</li>
+                    <li><strong>Parsing Logic</strong>: The `list` arm in our `match` statement now checks for a second word (`completed` or `pending`) and creates the `ListCommand` with the correct filter.</li>
+                    <li><strong><code>.iter().filter(...).for_each(...)</code></strong>: This is the star of the show! Instead of a `for` loop with an `if` statement inside, we now have a declarative chain of operations. It reads like a sentence: "Take an iterator of the tasks, filter them according to our rule, and for each of the remaining ones, print them." This is a very common and powerful pattern in Rust.</li>
+                </ul>
+                <p>Run <code>cargo run</code>. Your app now has a powerful new feature! Try `list`, `list pending`, and `list completed` to see your iterator chain in action. You've just learned how to write code that is not only powerful but also highly expressive.</p>
+
+                <a href="../index.html" class="back-link">&larr; Back to Curriculum Map</a>
+            </article>
+        </div>
+    </main>
+    
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 The Rust Adventure.</p>
+        </div>
+    </footer>
+
+</body>
+</html>

@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 25: Tying it all Together: A Major Refactor - The Rust Adventure</title>
+    <link rel="stylesheet" href="../style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <img src="https://www.rust-lang.org/static/images/rust-logo-blk.svg" alt="Rust Logo" class="logo">
+            <h1>Module 25: Tying it all Together: A Major Refactor</h1>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <article class="module-content">
+                <h2>Objective: To consolidate all of Day 5's learning by applying every new concept to the Todo app, resulting in a cleaner, more idiomatic, and better-structured codebase.</h2>
+                <p>Congratulations on making it to the end of Day 5! You've learned about `impl` blocks, methods, enum behavior, and the power of standard traits. Now it's time to see the cumulative effect of all these changes. We will present the fully refactored code for our application and add one final command to make use of our new `Priority` enum.</p>
+                
+                <hr>
+
+                <h3>Step 1: Reviewing the Architectural Changes</h3>
+                <p>Let's recap the improvements we've made throughout the day:</p>
+                <ul>
+                    <li><strong>Encapsulation:</strong> Logic that belongs to a `Task` (like completing it) or a `Priority` (like displaying it) is now attached directly to those types in `impl` blocks. Our `Command` structs are simpler as a result.</li>
+                    <li><strong>Type Safety:</strong> Our `Priority` enum ensures we can only use valid priority levels.</li>
+                    <li><strong>Reusability:</strong> Our `Task::new` constructor provides a single, reliable way to create tasks.</li>
+                    <li><strong>Expressiveness:</strong> By implementing traits like `Ord`, our high-level code becomes more declarative. `my_vec.sort()` is a beautiful example of this—it says *what* to do, not *how* to do it.</li>
+                </ul>
+
+                <h3>Step 2: The Final Code for Day 5</h3>
+                <p>The functionality of our app is largely the same, but its internal quality is vastly superior. This is what a well-structured, small Rust application looks like. We will add one last command, <code>set_priority &lt;id&gt; &lt;low|medium|high&gt;</code>, to complete the feature set.</p>
+                <p>Here is the complete, refactored <code>main.rs</code> for the end of Day 5. Replace the entire contents of your file with this.</p>
+                <pre><code>use std::collections::HashMap;
+use std::io;
+use std::cmp::Ordering;
+
+// --- Day 5 Final Code ---
+
+// --- PRIORITY ENUM ---
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+enum Priority { Low, Medium, High }
+
+impl Priority {
+    fn from_str(s: &str) -> Option<Priority> {
+        match s.to_lowercase().as_str() {
+            "low" => Some(Priority::Low),
+            "medium" => Some(Priority::Medium),
+            "high" => Some(Priority::High),
+            _ => None,
+        }
+    }
+}
+
+// --- TASK STRUCT ---
+#[derive(Debug, Clone)]
+struct Task {
+    description: String,
+    completed: bool,
+    edit_count: u32,
+    priority: Priority,
+}
+
+impl Task {
+    fn new(description: String) -> Task {
+        Task { description, completed: false, edit_count: 0, priority: Priority::Medium }
+    }
+    fn complete(&mut self) {
+        self.completed = true;
+        self.edit_count += 1;
+    }
+}
+
+impl PartialEq for Task { fn eq(&self, other: &Self) -> bool { self.description == other.description } }
+impl Eq for Task {}
+impl Ord for Task {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.priority.cmp(&other.priority).reverse()
+            .then_with(|| self.description.cmp(&other.description))
+    }
+}
+impl PartialOrd for Task { fn partial_cmp(&self, other: &Self) -> Option<Ordering> { Some(self.cmp(other)) } }
+
+// --- APP ERROR ---
+#[derive(Debug)]
+enum AppError { /* ... same as before ... */ }
+impl From<io::Error> for AppError { /* ... */ }
+
+// --- COMMAND TRAIT & STRUCTS ---
+trait Command { /* ... same as before ... */ }
+
+// (AddCommand, CompleteCommand, etc., are the same as in Module 22)
+// (ListCommand and SortCommand are the same as in Module 24)
+
+// --- NEW: SetPriorityCommand ---
+struct SetPriorityCommand { id: u32, priority: Priority }
+impl Command for SetPriorityCommand {
+    fn execute(&self, tasks: &mut HashMap<u32, Task>, _next_id: &mut u32) -> Result<(), AppError> {
+        let task = tasks.get_mut(&self.id)
+            .ok_or_else(|| AppError::NotFound(format!("Task with ID {} not found.", self.id)))?;
+        
+        task.priority = self.priority;
+        task.edit_count += 1;
+        println!("Set priority for task {}: '{}'", self.id, task.description);
+        Ok(())
+    }
+}
+
+// --- RUN LOOP ---
+fn run() -> Result<(), AppError> {
+    // ... setup ...
+    loop {
+        // ... prompt ...
+        // ... match command_name ...
+            // (other commands are the same)
+            "set_priority" | "p" => {
+                let id_str = parts.next().ok_or_else(|| AppError::ParseError("'set_priority' requires an ID.".to_string()))?;
+                let id: u32 = id_str.parse().map_err(|_| AppError::ParseError(format!("'{}' is not a valid ID.", id_str)))?;
+                
+                let prio_str = parts.next().ok_or_else(|| AppError::ParseError("'set_priority' requires a priority (low|medium|high).".to_string()))?;
+                let priority = Priority::from_str(prio_str)
+                    .ok_or_else(|| AppError::ParseError(format!("'{}' is not a valid priority.", prio_str)))?;
+
+                Some(Box::new(SetPriorityCommand { id, priority }))
+            },
+        // ...
+    }
+}
+
+fn main() { /* same as before */ }
+</code></pre>
+
+                <h4>The Final Feature:</h4>
+                <ul>
+                    <li><strong><code>Priority::from_str</code></strong>: We added a new associated function (a constructor) to our `Priority` enum. This encapsulates the logic for parsing a string into a `Priority`, making our main command loop cleaner. It returns an `Option` to handle cases where the user types invalid text.</li>
+                    <li><strong><code>SetPriorityCommand</code></strong>: This new command ties everything together. It takes an ID and a `Priority`, finds the relevant task, and updates its state. The parsing logic in the `run` loop uses our new `Priority::from_str` constructor to safely create the `Priority` enum from user input.</li>
+                </ul>
+                <p>Run <code>cargo run</code>. You can now control the priority of your tasks! Try adding a few, setting one to `high`, and then running the `sort` command. You will see your custom `Ord` implementation in action as the high-priority task jumps to the top of the list.</p>
+                <p>You have successfully refactored a simple script into a well-designed application that effectively uses Rust's powerful type and trait system. This is a massive step on your journey to becoming a proficient Rust developer.</p>
+
+                <a href="../index.html" class="back-link">&larr; Back to Curriculum Map</a>
+            </article>
+        </div>
+    </main>
+    
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 The Rust Adventure.</p>
+        </div>
+    </footer>
+
+</body>
+</html>

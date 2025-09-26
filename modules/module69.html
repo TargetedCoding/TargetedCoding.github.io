@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 69: API Authentication - The Rust Adventure</title>
+    <link rel="stylesheet" href="../style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <img src="https://www.rust-lang.org/static/images/rust-logo-blk.svg" alt="Rust Logo" class="logo">
+            <h1>Module 69: API Authentication</h1>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <article class="module-content">
+                <h2>Objective: To secure API endpoints by implementing a simple authentication scheme using JSON Web Tokens (JWTs) and custom Axum extractors.</h2>
+                <p>Most APIs are not public. They require some form of authentication to verify the identity of the client making the request. A very common and popular standard for this is the <strong>JSON Web Token (JWT)</strong>. We will add a simple authentication layer to our API, requiring a valid JWT to be present in the request headers.</p>
+                
+                <hr>
+
+                <h3>Step 1: What is a JWT?</h3>
+                <p>A JWT is a compact, URL-safe string that represents "claims" to be transferred between two parties. It consists of three parts separated by dots: a header, a payload, and a signature.</p>
+                <ul>
+                    <li><strong>Header:</strong> Contains metadata about the token, like the signing algorithm.</li>
+                    <li><strong>Payload:</strong> Contains the "claims," which are statements about an entity. For us, this will be the user ID and an expiration date.</li>
+                    <li><strong>Signature:</strong> A cryptographic signature created using a secret key. This is the most important part. The server can use the signature to verify that the token was issued by a trusted source and has not been tampered with.</li>
+                </ul>
+                <p>The client typically sends the JWT in the `Authorization` HTTP header, like so: <code>Authorization: Bearer <token></code>.</p>
+                
+                <h3>Practical Application: Securing the Todo API</h3>
+                <p>We'll create a new, unprotected `/login` endpoint that generates a token. All our existing `/tasks` endpoints will be modified to require this token.</p>
+
+                <h4>1. Update `Cargo.toml`</h4>
+                <p>We need crates for handling JWTs and for working with HTTP headers.</p>
+                <pre><code>[dependencies]
+# ... (existing dependencies)
+jsonwebtoken = "8"
+axum-extra = { version = "0.7", features = ["typed-header"] }
+</code></pre>
+                
+                <h4>2. The Complete, Secured `src/main.rs`</h4>
+                <p>This is a significant update. We'll define our JWT claims, create login and protected handlers, and write a custom extractor to validate the token.</p>
+                <pre><code>use axum::{
+    extract::{Path, State},
+    http::{header, StatusCode},
+    routing::{get, post},
+    Json, Router,
+    async_trait,
+    extract::FromRequestParts,
+    http::request::Parts,
+};
+use axum_extra::headers::{authorization::Bearer, Authorization};
+use axum_extra::TypedHeader;
+use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
+use serde::{Deserialize, Serialize};
+// ... (other use statements)
+
+// --- Define our JWT Claims ---
+#[derive(Debug, Serialize, Deserialize)]
+struct Claims {
+    sub: u32, // Subject (the user ID)
+    exp: usize, // Expiration time
+}
+
+// --- Custom Extractor to Validate the JWT ---
+// This extractor will run for any handler that includes it as an argument.
+#[async_trait]
+impl<S> FromRequestParts<S> for Claims
+where
+    S: Send + Sync,
+{
+    type Rejection = (StatusCode, &'static str);
+
+    async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
+        // Extract the token from the authorization header
+        let TypedHeader(Authorization(bearer)) =
+            TypedHeader::<Authorization<Bearer>>::from_request_parts(parts, _state)
+                .await
+                .map_err(|_| (StatusCode::UNAUTHORIZED, "Missing or invalid token"))?;
+        
+        // Decode the user data
+        let token_data = decode::<Claims>(bearer.token(), &DecodingKey::from_secret(b"secret"), &Validation::default())
+            .map_err(|_| (StatusCode::UNAUTHORIZED, "Invalid token"))?;
+
+        Ok(token_data.claims)
+    }
+}
+
+// ... (Task struct, AppState, etc. are the same) ...
+
+#[tokio::main]
+async fn main() {
+    // ... (setup is the same) ...
+
+    let app = Router::new()
+        .route("/login", post(login_handler)) // New, unprotected login route
+        .route("/tasks", post(create_task_protected)) // Protected routes
+        .route("/tasks", get(list_tasks_protected))
+        // ...
+        .with_state(shared_state);
+        // ... (middleware and server run) ...
+}
+
+// --- HANDLER FUNCTIONS ---
+
+async fn login_handler() -> Result<Json<String>, StatusCode> {
+    // In a real app, you would validate a username/password here.
+    // For this example, we'll just create a token for a dummy user.
+    let claims = Claims {
+        sub: 1337, // Dummy user ID
+        exp: (chrono::Utc::now() + chrono::Duration::hours(1)).timestamp() as usize,
+    };
+    
+    let token = encode(&Header::default(), &claims, &EncodingKey::from_secret(b"secret"))
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        
+    Ok(Json(token))
+}
+
+// This is our new, protected version of the create_task handler.
+async fn create_task_protected(
+    claims: Claims, // Our custom extractor runs here!
+    State(state): State<AppState>,
+    Json(payload): Json<CreateTask>,
+) -> Result<Json<Task>, StatusCode> {
+    // If the code reaches this point, the token was valid.
+    // We can use the user ID from the token's claims.
+    println!("User {} is creating a task.", claims.sub);
+    // ... (the rest of the create_task logic is the same) ...
+    create_task(State(state), Json(payload)).await
+}
+
+async fn list_tasks_protected(
+    claims: Claims,
+    State(state): State<AppState>,
+) -> Result<Json<Vec<Task>>, StatusCode> {
+    println!("User {} is listing tasks.", claims.sub);
+    list_tasks(State(state)).await
+}
+
+// ... (Original handlers can be kept for re-use if needed)
+</code></pre>
+
+                <h4>The Authentication Architecture:</h4>
+                <ul>
+                    <li><strong><code>Claims</code> Struct:</strong> This defines the data we want to store inside our JWT payload.</li>
+                    <li><strong>Custom Extractor (`impl FromRequestParts for Claims`)</strong>: This is the core of our authentication system. We've implemented Axum's extractor trait for our `Claims` struct. When a handler has `claims: Claims` as an argument, Axum will run our `from_request_parts` function. This function extracts the `Authorization` header, decodes the JWT using our secret key, and validates it. If anything fails, it returns an `UNAUTHORIZED` status code, and the handler is never called.</li>
+                    <li><strong><code>/login</code> Endpoint</strong>: A new, public endpoint that simulates a login. It creates a set of claims for a user and encodes them into a JWT, which it returns to the client. In a real app, this would only happen after checking a password.</li>
+                    <li><strong>Protected Handlers</strong>: Our `create_task_protected` and `list_tasks_protected` handlers now require a `claims: Claims` argument. This "plugs in" our authentication logic. The request will only ever reach the handler's main body if a valid JWT was provided.</li>
+                </ul>
+
+                <h3>Step 3: Test Your Secure API!</h3>
+                <p>Run your server with <code>cargo run</code>. Use `curl` for a multi-step test:</p>
+                <pre><code># 1. Try to access a protected route without a token. It should fail.
+curl -v http://127.0.0.1:3000/tasks
+# You will get a 401 Unauthorized error.
+
+# 2. Log in to get a token.
+TOKEN=$(curl -X POST http://127.0.0.1:3000/login | tr -d '"')
+echo "Got token: $TOKEN"
+
+# 3. Now, use the token to access the protected route.
+curl -H "Authorization: Bearer $TOKEN" http://127.0.0.1:3000/tasks
+# This time, it will succeed!
+</code></pre>
+                <p>You have successfully implemented a robust authentication system for your API. You've learned how to create and validate JWTs and how to build custom Axum extractors to create protected endpoints in a clean and reusable way.</p>
+
+                <a href="../index.html" class="back-link">&larr; Back to Curriculum Map</a>
+            </article>
+        </div>
+    </main>
+    
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 The Rust Adventure.</p>
+        </div>
+    </footer>
+
+</body>
+</html>

@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 49: Introduction to Graph Traversal - The Rust Adventure</title>
+    <link rel="stylesheet" href="../style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <img src="https://www.rust-lang.org/static/images/rust-logo-blk.svg" alt="Rust Logo" class="logo">
+            <h1>Module 49: Introduction to Graph Traversal</h1>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <article class="module-content">
+                <h2>Objective: To implement Breadth-First Search (BFS) and Depth-First Search (DFS) on the binary search tree, introducing fundamental algorithmic concepts.</h2>
+                <p>Congratulations on building a binary search tree! Now that we have this non-linear structure, how do we visit all the nodes in a systematic way? This process is called "traversal," and it's a core concept in working with any graph-like data structure. We will implement the two most famous traversal algorithms: Breadth-First Search and Depth-First Search.</p>
+                
+                <hr>
+
+                <h3>Step 1: Breadth-First Search (BFS)</h3>
+                <p>BFS explores the tree "layer by layer." It visits all nodes at the current depth before moving on to the next depth level. To achieve this, it uses a <strong>Queue</strong> (First-In, First-Out).</p>
+                <p><strong>Analogy: Ripples in a Pond.</strong> Dropping a stone in a pond creates ripples. BFS is like following those ripples. You start at the center (the root), then you visit all the points on the first ripple (depth 1), then all the points on the second ripple (depth 2), and so on, moving outwards layer by layer.</p>
+                
+                <h3>Step 2: Depth-First Search (DFS)</h3>
+                <p>DFS explores as far as possible down one path before backtracking. It goes "deep" first. To achieve this, it uses a <strong>Stack</strong> (Last-In, First-Out). Since function calls use a call stack, recursion is a very natural way to implement DFS.</p>
+                <p><strong>Analogy: Exploring a Maze.</strong> DFS is like exploring a maze by always taking the first possible path you see. You follow that path all the way to a dead end, then you backtrack to the last intersection and try the next available path. You go deep down one route before exploring any others.</p>
+
+                <h3>Practical Application: Adding Traversal Methods to our `BST`</h3>
+                <p>We will add two new methods to our BST implementation from the previous module. One will return a `Vec` of the tree's elements in BFS order, and the other will do the same for DFS order.</p>
+                
+                <h4>1. Project Setup</h4>
+                <p>Continue in your `bst_example` project. We'll need to add the `VecDeque` to use as our queue for BFS.</p>
+                
+                <h4>2. Add Traversal Methods to `src/main.rs`</h4>
+                <p>Open your `main.rs` file and add the `use std::collections::VecDeque;` statement at the top. Then, add these new methods inside the `impl<T: Ord> BST<T>` block.</p>
+                <pre><code>// In src/main.rs, inside the `impl<T: Ord> BST<T>` block
+// Make sure to add `use std::collections::VecDeque;` at the top of the file.
+
+    // Returns a Vec of elements in Breadth-First Search order.
+    pub fn to_vec_bfs(&self) -> Vec<T> where T: Clone {
+        let mut result = Vec::new();
+        let mut queue = VecDeque::new();
+
+        // Start with the root node.
+        if let Some(root) = &self.root {
+            queue.push_back(Rc::clone(root));
+        }
+
+        while let Some(current_node_ptr) = queue.pop_front() {
+            let current_node = current_node_ptr.borrow();
+            
+            // 1. Process the current node.
+            result.push(current_node.elem.clone());
+
+            // 2. Enqueue its children (left, then right).
+            if let Some(left_child) = &current_node.left {
+                queue.push_back(Rc::clone(left_child));
+            }
+            if let Some(right_child) = &current_node.right {
+                queue.push_back(Rc::clone(right_child));
+            }
+        }
+        result
+    }
+
+    // Returns a Vec of elements in Depth-First Search (in-order) order.
+    pub fn to_vec_dfs_inorder(&self) -> Vec<T> where T: Clone {
+        let mut result = Vec::new();
+        Self::recursive_dfs_inorder(&self.root, &mut result);
+        result
+    }
+
+    // Private helper for recursive DFS traversal.
+    fn recursive_dfs_inorder(link: &Link<T>, result: &mut Vec<T>) where T: Clone {
+        if let Some(node_ptr) = link {
+            let node = node_ptr.borrow();
+            
+            // 1. Traverse the left subtree.
+            Self::recursive_dfs_inorder(&node.left, result);
+            
+            // 2. Process the current node.
+            result.push(node.elem.clone());
+            
+            // 3. Traverse the right subtree.
+            Self::recursive_dfs_inorder(&node.right, result);
+        }
+    }
+</code></pre>
+
+                <h4>3. Update `main` to Test the Traversals</h4>
+                <pre><code>fn main() {
+    let mut tree = BST::new();
+    tree.insert(10);
+    tree.insert(5);
+    tree.insert(15);
+    tree.insert(3);
+    tree.insert(7);
+    tree.insert(12);
+    tree.insert(18);
+
+    println!("BFS traversal: {:?}", tree.to_vec_bfs());
+    // Expected BFS output: [10, 5, 15, 3, 7, 12, 18] (layer by layer)
+
+    println!("DFS (in-order) traversal: {:?}", tree.to_vec_dfs_inorder());
+    // Expected DFS output: [3, 5, 7, 10, 12, 15, 18] (sorted order, a property of in-order traversal on a BST)
+}
+</code></pre>
+
+                <h4>The Algorithms in Action:</h4>
+                <ul>
+                    <li><strong>BFS with a Queue</strong>: The <code>to_vec_bfs</code> method uses a `VecDeque` as a classic FIFO queue. In each step of the `while` loop, it dequeues a node, processes its value, and then enqueues its children. This guarantees that it explores the tree layer by layer.</li>
+                    <li><strong>DFS with Recursion</strong>: The <code>recursive_dfs_inorder</code> method is a beautiful example of recursive DFS. For any given node, it recursively calls itself on the left child, then processes the current node's value, then recursively calls itself on the right child. This "left-root-right" pattern is called "in-order traversal" and has the special property of visiting the nodes of a BST in sorted order.</li>
+                    <li><strong><code>where T: Clone</code></strong>: Notice the new trait bound on our methods. Since we are creating a new `Vec` containing the values, we need to be able to `clone` the elements out of the tree.</li>
+                </ul>
+                <p>Run <strong><code>cargo run</code></strong>. The output will show the elements of the tree visited in two completely different orders, demonstrating the distinct strategies of BFS and DFS. You have now implemented fundamental graph algorithms, a cornerstone of computer science, in safe, idiomatic Rust.</p>
+
+                <a href="../index.html" class="back-link">&larr; Back to Curriculum Map</a>
+            </article>
+        </div>
+    </main>
+    
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 The Rust Adventure.</p>
+        </div>
+    </footer>
+
+</body>
+</html>

@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 87: Frontend-Backend Communication - The Rust Adventure</title>
+    <link rel="stylesheet" href="../style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <img src="https://www.rust-lang.org/static/images/rust-logo-blk.svg" alt="Rust Logo" class="logo">
+            <h1>Module 87: Frontend-Backend Communication</h1>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <article class="module-content">
+                <h2>Objective: To use Tauri's Inter-Process Communication (IPC) system to define a command in Rust and invoke it from the JavaScript frontend, and to emit an event from Rust that the frontend can listen for.</h2>
+                <p>A Tauri app would be very limited if its two halves couldn't talk to each other. Tauri provides a seamless and secure IPC bridge that allows the frontend to invoke Rust functions and the Rust backend to emit events to the frontend. This is how you build a truly interactive desktop application.</p>
+                
+                <hr>
+
+                <h3>Step 1: The Command System (JS to Rust)</h3>
+                <p>The primary way the frontend communicates with the backend is by invoking "commands." A command is just a Rust function with a special attribute.</p>
+                <ol>
+                    <li>You define a regular Rust function and annotate it with <strong><code>#[tauri::command]</code></strong>.</li>
+                    <li>You "register" this command with the Tauri builder in your <code>main.rs</code> file using <code>.invoke_handler(tauri::generate_handler![...])</code>.</li>
+                    <li>Tauri automatically exposes this function to the frontend, where you can call it using a special JavaScript function: <code>window.__TAURI__.invoke()</code>.</li>
+                </ol>
+                <p>Tauri uses `serde` under the hood, so your command functions can take complex arguments (like structs) and return complex values, and they will be automatically serialized/deserialized as JSON.</p>
+                
+                <h3>Step 2: The Event System (Rust to JS)</h3>
+                <p>Communication can also go the other way. The Rust backend can emit named events with a payload, and the JavaScript frontend can listen for these events to react to changes happening in the backend.</p>
+                <ol>
+                    <li>From anywhere you have access to an <code>AppHandle</code> or <code>Window</code> in Rust, you can call <code>.emit_all("event-name", payload)</code>. The payload must be serializable.</li>
+                    <li>In JavaScript, you use the <code>window.__TAURI__.event.listen()</code> function to register a listener for a specific event name.</li>
+                </ol>
+
+                <h3>Practical Application: Building an Interactive Greeter</h3>
+                <p>Let's modify our `tauri_hello` project. We will create a simple UI with a name input and a button. When the button is clicked, the frontend will invoke a Rust command, passing the name. The Rust command will process the name and then return a greeting message.</p>
+
+                <h4>1. Update the Rust Backend (`src-tauri/src/main.rs`)</h4>
+                <p>We need to define and register our new command.</p>
+                <pre><code>// In src-tauri/src/main.rs
+
+// Prevents additional console window on Windows in release, DO NOT REMOVE!!
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+
+// 1. Define our command. It's just a regular Rust function.
+//    It can be async if it needs to do I/O.
+#[tauri::command]
+fn greet(name: &str) -> String {
+    // This logic runs in the Rust backend!
+    println!("Greet command invoked from frontend with name: {}", name);
+    format!("Hello, {}! You've been greeted from Rust!", name)
+}
+
+fn main() {
+    tauri::Builder::default()
+        // 2. Register our `greet` command with the Tauri application.
+        .invoke_handler(tauri::generate_handler![greet])
+        .run(tauri::generate_context!())
+        .expect("error while running tauri application");
+}
+</code></pre>
+
+                <h4>2. Update the Frontend (`src/main.js` and `index.html`)</h4>
+                <p>First, add the necessary HTML elements to `index.html`.</p>
+                <pre><code>&lt;!-- In src/index.html, inside the `<body>` --&gt;
+<div class="container">
+  <h1>Welcome to Tauri!</h1>
+  <div class="row">
+    <input id="greet-input" placeholder="Enter a name..." />
+    <button id="greet-button">Greet</button>
+  </div>
+  <p id="greet-msg"></p>
+</div>
+</code></pre>
+                
+                <p>Now, update `src/main.js` to add the event listener and invoke the Rust command.</p>
+                <pre><code>// In src/main.js
+
+// We need to get a reference to the `invoke` function from the Tauri API.
+const { invoke } = window.__TAURI__.tauri;
+
+let greetInputEl;
+let greetMsgEl;
+
+async function greet() {
+  // `invoke` returns a Promise, so we use `await`
+  // The first argument is the name of the Rust command.
+  // The second argument is an object with the arguments for the Rust function.
+  greetMsgEl.textContent = await invoke("greet", { name: greetInputEl.value });
+}
+
+window.addEventListener("DOMContentLoaded", () => {
+  greetInputEl = document.querySelector("#greet-input");
+  greetMsgEl = document.querySelector("#greet-msg");
+  document.querySelector("#greet-button").addEventListener("click", () => greet());
+});
+</code></pre>
+
+                <h3>Step 3: Run the Application</h3>
+                <p>From the root of your `tauri_hello` project, run the dev command again:</p>
+                <pre><code>cargo tauri dev</code></pre>
+                <p>Your desktop application will open. You will see the new input field and button. Type your name into the input and click the "Greet" button. The following will happen:</p>
+                <ol>
+                    <li>The JavaScript `click` listener fires.</li>
+                    <li>It calls <code>invoke("greet", { name: "YourName" })</code>.</li>
+                    <li>The Tauri IPC bridge sends this message to the Rust backend.</li>
+                    <li>The Rust `greet` function runs. You'll see the `println!` message in your terminal.</li>
+                    <li>The Rust function returns the formatted `String`.</li>
+                    <li>The IPC bridge sends this return value back to the JavaScript frontend.</li>
+                    <li>The `await` in JavaScript resolves, and the returned message is set as the text content of the paragraph.</li>
+                </ol>
+                <p>You have successfully created a full, end-to-end communication channel between a web-based UI and a powerful Rust backend. This pattern is the foundation of all Tauri applications, allowing you to build complex, feature-rich desktop apps with a clear separation between your UI logic and your core application logic.</p>
+
+                <a href="../index.html" class="back-link">&larr; Back to Curriculum Map</a>
+            </article>
+        </div>
+    </main>
+    
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 The Rust Adventure.</p>
+        </div>
+    </footer>
+
+</body>
+</html>

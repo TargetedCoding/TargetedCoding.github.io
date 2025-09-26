@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 59: Declarative Macros with `macro_rules!` - The Rust Adventure</title>
+    <link rel="stylesheet" href="../style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <img src="https://www.rust-lang.org/static/images/rust-logo-blk.svg" alt="Rust Logo" class="logo">
+            <h1>Module 59: Declarative Macros with `macro_rules!`</h1>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <article class="module-content">
+                <h2>Objective: To learn the syntax and patterns for writing your own simple, reusable "declarative macros" using the `macro_rules!` system.</h2>
+                <p>Welcome to Day 16! Today we delve into one of Rust's most powerful and unique features: <strong>metaprogramming</strong>. Metaprogramming is, simply, code that writes other code. In Rust, the primary way to do this is with macros. You've been using macros since Day 1 (<code>println!</code>, <code>vec!</code>), and now it's time to learn how to build your own.</p>
+                
+                <hr>
+
+                <h3>Step 1: What are Declarative Macros?</h3>
+                <p>Rust has two kinds of macros. The first and simplest kind are <strong>declarative macros</strong>, which you create with <code>macro_rules!</code>. These are also sometimes called "macros by example."</p>
+                <p>A declarative macro works like a super-powered `match` statement. It takes the code you provide as input, compares it against a series of patterns, and if a pattern matches, it expands into the code specified in that pattern's "body." This all happens at compile time before the compiler does its main analysis.</p>
+
+                <p><strong>Analogy: The Rubber Stamp.</strong> A declarative macro is like a custom rubber stamp. You define the shape of the stamp (the pattern) and what it says (the expansion). When you "use" the stamp in your code, the compiler replaces the stamp mark with the full text, which it then reads as regular Rust code.</p>
+
+                <h3>Step 2: The `macro_rules!` Syntax</h3>
+                <p>The syntax can look a little strange at first. Let's break down a simple macro that acts like a simplified `vec!`.</p>
+                <pre><code>// Define a macro named `my_vec`.
+macro_rules! my_vec {
+    // A macro can have multiple "rules" or "arms". This is our first arm.
+    // It matches the pattern `my_vec![elem1, elem2, elem3, ...]`
+    // `$()` is a capture.
+    // `$x:expr` captures any Rust expression and names it `$x`.
+    // `,` is a literal comma separator.
+    // `*` means "zero or more times".
+    ( $( $x:expr ),* ) => {
+        // This is the expansion part. The code here will be generated.
+        {
+            let mut temp_vec = Vec::new();
+            // The `$()` block is repeated for each captured expression.
+            $(
+                temp_vec.push($x);
+            )*
+            temp_vec
+        }
+    };
+}
+
+fn main() {
+    let v = my_vec![1, 2, 3];
+    // At compile time, the line above is expanded into:
+    // let v = {
+    //     let mut temp_vec = Vec::new();
+    //     temp_vec.push(1);
+    //     temp_vec.push(2);
+    //     temp_vec.push(3);
+    //     temp_vec
+    // };
+    println!("{:?}", v);
+}
+</code></pre>
+                
+                <h3>Step 3: Captures and Repetition</h3>
+                <p>The real power comes from captures and repetition syntax.</p>
+                <ul>
+                    <li><strong>Captures:</strong> You can capture different kinds of Rust syntax using "fragment specifiers" like:
+                        <ul>
+                            <li><code>$item:item</code>: An item, like a function, struct, or module.</li>
+                            <li><code>$block:block</code>: A code block (`{ ... }`).</li>
+                            <li><code>$ident:ident</code>: An identifier, like a variable or function name.</li>
+                            <li><code>$expr:expr</code>: An expression.</li>
+                            <li><code>$ty:ty</code>: A type.</li>
+                        </ul>
+                    </li>
+                    <li><strong>Repetition:</strong> The <code>$(...),*</code> syntax means "match the pattern inside zero or more times, separated by a comma." You can change the separator (e.g., `;`) and the repetition operator (`*` for zero or more, `+` for one or more).</li>
+                </ul>
+
+                <h3>Practical Application: A Map Creation Macro</h3>
+                <p>Writing `let mut map = HashMap::new(); map.insert(k1, v1); map.insert(k2, v2);` can be tedious. Let's create a convenient macro to initialize a `HashMap` in one line, similar to `vec!`.</p>
+
+                <h4>1. Create a New Project</h4>
+                <pre><code>cargo new macro_demo
+cd macro_demo
+</code></pre>
+
+                <h4>2. The Complete `src/main.rs`</h4>
+                <pre><code>use std::collections::HashMap;
+
+/// A macro to create a `HashMap` with a convenient syntax.
+///
+/// # Examples
+///
+/// ```
+/// let map = map!{ "a" => 1, "b" => 2 };
+/// ```
+#[macro_export] // Export the macro so other modules can use it.
+macro_rules! map {
+    // The pattern matches one or more `key => value` pairs separated by commas.
+    // We capture the key and value as expressions.
+    ( $( $key:expr => $value:expr ),+ ) => {
+        {
+            let mut temp_map = HashMap::new();
+            // The expansion block is repeated for each matched pair.
+            $(
+                temp_map.insert($key, $value);
+            )+
+            temp_map
+        }
+    };
+}
+
+fn main() {
+    println!("Creating a map of strings to numbers...");
+    let my_map = map! {
+        "one".to_string() => 1,
+        "two".to_string() => 2,
+        "three".to_string() => 3
+    };
+    
+    println!("{:#?}", my_map);
+    assert_eq!(my_map.get("two"), Some(&2));
+    
+    println!("\nCreating a map with a different syntax...");
+    // Our macro is flexible because it accepts any expression.
+    let number = 4;
+    let other_map = map!{ 1 => "one", 2 => "two", 3 => "three", number => "four" };
+
+    println!("{:#?}", other_map);
+    assert_eq!(other_map.get(&4), Some(&"four"));
+}
+</code></pre>
+
+                <h4>The Macro in Action:</h4>
+                <ul>
+                    <li><strong><code>#[macro_export]</code></strong>: This attribute is crucial. It makes the macro visible and usable in other modules or crates. Without it, the macro would be private to the current module.</li>
+                    <li><strong>The Pattern:</strong> <code>( $( $key:expr => $value:expr ),+ )</code> is the core. It says: "I'm expecting one or more (`+`) of the following pattern, separated by commas (`,`). The pattern is: an expression (`$key`), followed by a literal `=>`, followed by another expression (`$value`)."</li>
+                    <li><strong>The Expansion:</strong> The <code>$( ... )+</code> block in the body mirrors the pattern. It tells the compiler: "For each `key => value` pair you captured, generate the code inside this block." This is how the multiple `insert` calls are created.</li>
+                </ul>
+                <p>Declarative macros are a powerful tool for reducing boilerplate and creating convenient, domain-specific mini-languages (DSLs) within Rust. You now have the fundamental knowledge to read and write them, allowing you to create more expressive and less repetitive code.</p>
+
+                <a href="../index.html" class="back-link">&larr; Back to Curriculum Map</a>
+            </article>
+        </div>
+    </main>
+    
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 The Rust Adventure.</p>
+        </div>
+    </footer>
+
+</body>
+</html>

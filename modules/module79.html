@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 79: Orchestration with `docker-compose` - The Rust Adventure</title>
+    <link rel="stylesheet" href="../style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <img src="https://www.rust-lang.org/static/images/rust-logo-blk.svg" alt="Rust Logo" class="logo">
+            <h1>Module 79: Orchestration with `docker-compose`</h1>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <article class="module-content">
+                <h2>Objective: To use `docker-compose` to define and run our multi-container application (the Rust API and a PostgreSQL database) as a single, cohesive service.</h2>
+                <p>Our API is containerized, but it still depends on an external database. For development and testing, we want to be able to spin up our entire application stack—the API *and* its database—with a single command. The tool for this is <strong><code>docker-compose</code></strong>.</p>
+                
+                <hr>
+
+                <h3>Step 1: What is `docker-compose`?</h3>
+                <p>`docker-compose` is a tool for defining and running multi-container Docker applications. You use a YAML file (by convention, <code>docker-compose.yml</code>) to configure your application's services. With a single command, you can then create and start all the services from your configuration.</p>
+                <p><strong>Analogy: The Concert Conductor.</strong> Your individual containers (`todo-api`, `postgres-db`) are like talented musicians. `docker-compose` is the conductor. The `docker-compose.yml` file is the musical score. The conductor reads the score and, with a wave of the baton (`docker-compose up`), tells each musician exactly what to play, when to start, and how to work together to create a symphony.</p>
+                
+                <h3>Step 2: Moving from SQLite to PostgreSQL</h3>
+                <p>SQLite was great for getting started, but for a real, multi-service application, a dedicated database server like PostgreSQL is the standard. This will allow our API container and the database container to communicate over a private Docker network.</p>
+
+                <h3>Practical Application: Orchestrating our `todo_api`</h3>
+                <p>We'll create a `docker-compose.yml` file, update our Rust code to connect to PostgreSQL, and write a new database migration.</p>
+
+                <h4>1. Update `Cargo.toml`</h4>
+                <p>Change the `sqlx` feature from `sqlite` to `postgres`.</p>
+                <pre><code># In todo_api/Cargo.toml
+[dependencies]
+# ...
+sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "postgres"] }
+# ...
+</code></pre>
+
+                <h4>2. Create a new Migration for PostgreSQL</h4>
+                <p>PostgreSQL has slightly different syntax for autoincrementing IDs (`SERIAL PRIMARY KEY`).</p>
+                <pre><code># First, delete the old `migrations` directory and `tasks.db` file.
+# Then, update your .env file with the new database URL:
+# DATABASE_URL="postgres://user:password@localhost:5432/mydb"
+
+sqlx migrate add create_pg_tasks_table
+</code></pre>
+                <p>In the new migration file, add this content:</p>
+                <pre><code>-- migrations/..._create_pg_tasks_table.sql
+CREATE TABLE tasks (
+    id BIGSERIAL PRIMARY KEY,
+    description TEXT NOT NULL,
+    completed BOOLEAN NOT NULL DEFAULT false
+);
+</code></pre>
+                
+                <h4>3. Create `docker-compose.yml`</h4>
+                <p>In the root of your `todo_api` project, create a new file named `docker-compose.yml`.</p>
+                <pre><code>version: '3.8'
+
+services:
+  # The Database Service
+  db:
+    image: postgres:15-alpine
+    container_name: todo_db
+    restart: always
+    environment:
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=mydb
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432" # Expose the port to the host for `sqlx-cli`
+
+  # The API Service
+  api:
+    container_name: todo_api
+    build: . # Build the image from the Dockerfile in the current directory
+    restart: always
+    environment:
+      # This URL uses the service name `db` as the hostname.
+      # Docker Compose provides automatic DNS between services.
+      - DATABASE_URL=postgres://user:password@db:5432/mydb
+    ports:
+      - "3000:3000"
+    depends_on:
+      - db # Tell Docker to start the `db` service before the `api` service
+
+volumes:
+  postgres_data:
+</code></pre>
+
+                <h4>4. Update `src/main.rs`</h4>
+                <p>We just need to change the `SqlitePool` to a `PgPool`.</p>
+                <pre><code>// In src/main.rs
+use sqlx::postgres::{PgPool, PgPoolOptions}; // Import the PostgreSQL pool
+
+// ...
+#[derive(Clone)]
+struct AppState {
+    db_pool: PgPool, // Change the type
+}
+
+#[tokio::main]
+async fn main() {
+    // ...
+    // The pool creation logic changes to use PgPoolOptions.
+    let pool = PgPoolOptions::new()
+        .max_connections(5)
+        .connect(&db_url)
+        .await
+        .expect("Failed to create database pool.");
+
+    // ---- NEW: Run migrations automatically on startup ----
+    // This is a great pattern for ensuring the DB is always up to date.
+    println!("Running database migrations...");
+    sqlx::migrate!("./migrations")
+        .run(&pool)
+        .await
+        .expect("Failed to run migrations");
+    println!("Migrations complete.");
+
+    // ... (the rest of main is the same)
+}
+
+// All of our handler code using `sqlx` macros will continue to work!
+// We just need to change the `id` type from `i64` to `i64` if not already done,
+// as `BIGSERIAL` corresponds to `i64`.
+</code></pre>
+                
+                <h3>Step 4: Run the Entire Stack</h3>
+                <p>Now for the magic. From your terminal, you only need one command:</p>
+                <pre><code>docker-compose up --build</code></pre>
+                <p>Docker Compose will:</p>
+                <ol>
+                    <li>Pull the official `postgres` image.</li>
+                    <li>Start the database container.</li>
+                    <li>Build your `todo-api` image using your `Dockerfile`.</li>
+                    <li>Start the API container, waiting for the database to be ready first.</li>
+                </ol>
+                <p>You will see the logs from both your Rust application and the PostgreSQL database interleaved in your terminal. Your entire application stack is now running. You can interact with your API on `http://localhost:3000` just like before, but now it's talking to a powerful, containerized PostgreSQL database.</p>
+                <p>To stop everything, just press `Ctrl+C`.</p>
+
+                <h4>The Orchestrated Architecture:</h4>
+                <ul>
+                    <li><strong>Service Discovery:</strong> The API container connects to the database using the URL `postgres://user:password@db:5432/mydb`. Docker Compose provides a private network where the hostname `db` automatically resolves to the IP address of the database container.</li>
+                    <li><strong>`depends_on`</strong>: This ensures a correct startup order, preventing the API from starting and crashing because the database isn't ready yet.</li>
+                    <li><strong>Volumes:</strong> The `postgres_data` volume ensures that your database data persists even if you stop and remove the containers.</li>
+                    <li><strong>`sqlx::migrate!` macro</strong>: By running migrations at startup, our application ensures the database schema is always correct before it starts accepting requests.</li>
+                </ul>
+                <p>You have successfully orchestrated a multi-service application. You now have a professional, reproducible development environment that can be spun up and torn down with a single command, mirroring the best practices used in modern software deployment.</p>
+
+                <a href="../index.html" class="back-link">&larr; Back to Curriculum Map</a>
+            </article>
+        </div>
+    </main>
+    
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 The Rust Adventure.</p>
+        </div>
+    </footer>
+
+</body>
+</html>

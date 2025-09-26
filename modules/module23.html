@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 23: Enums with Data and Behavior - The Rust Adventure</title>
+    <link rel="stylesheet" href="../style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <img src="https://www.rust-lang.org/static/images/rust-logo-blk.svg" alt="Rust Logo" class="logo">
+            <h1>Module 23: Enums with Data and Behavior</h1>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <article class="module-content">
+                <h2>Objective: To demonstrate that enums are not just simple labels; they are powerful "sum types" that can hold variant-specific data and have their own `impl` blocks with methods.</h2>
+                <p>In the last module, you learned how to attach behavior to structs. But what about enums? In Rust, enums are just as powerful. You can give them methods, which allows you to encapsulate the logic associated with each possible variant of the enum directly with the enum itself.</p>
+                
+                <hr>
+
+                <h3>Step 1: Enums are "Sum Types"</h3>
+                <p>First, a quick reminder that enum variants can hold data. This makes them a "sum type" because an instance of the enum can be one of several different kinds of things. A struct is a "product type" because it is a single thing made of a product of all its fields.</p>
+                <pre><code>enum Shape {
+    Circle { radius: f64 },
+    Rectangle { width: f64, height: f64 },
+}</code></pre>
+
+                <h3>Step 2: Enum Methods with `match self`</h3>
+                <p>You can add an <code>impl</code> block for an enum just like you do for a struct. The most common pattern inside an enum's method is to <code>match self</code>. This lets the method perform different logic depending on which variant it is.</p>
+                <p><strong>Analogy: The Vending Machine Coin.</strong> Imagine an <code>enum Coin { Penny, Nickel, Dime, Quarter }</code>. You can give it a method, <code>fn value_in_cents(&self) -> u8</code>. Inside this method, a <code>match self</code> statement would check which variant `self` is and return the correct value: `1` for `Coin::Penny`, `5` for `Coin::Nickel`, and so on. The behavior is part of the coin itself!</p>
+                <pre><code>impl Shape {
+    fn area(&self) -> f64 {
+        match self {
+            Shape::Circle { radius } => std::f64::consts::PI * radius * radius,
+            Shape::Rectangle { width, height } => width * height,
+        }
+    }
+}</code></pre>
+
+                <h3>Let's Build Our Todo App (Part 20)</h3>
+                <p>Let's make our Todo app more expressive by adding a priority level to our tasks. We'll create a new <code>Priority</code> enum and give it a method to control how it's displayed. This is a perfect example of encapsulating variant-specific logic.</p>
+                <p>We'll create the enum, add it to our `Task` struct, and update our `ListCommand` to display it.</p>
+                <pre><code>// In src/main.rs
+
+// --- NEW: The Priority Enum ---
+enum Priority {
+    Low,
+    Medium,
+    High,
+}
+
+// --- NEW: The impl block for our Priority enum ---
+impl Priority {
+    // This method's logic depends on which variant `self` is.
+    fn as_char(&self) -> char {
+        match self {
+            Priority::Low => 'L',
+            Priority::Medium => 'M',
+            Priority::High => 'H',
+        }
+    }
+}
+
+// --- MODIFIED: The Task struct now includes a priority ---
+struct Task {
+    description: String,
+    completed: bool,
+    edit_count: u32,
+    priority: Priority, // New field!
+}
+
+impl Task {
+    // Modify the constructor to set a default priority.
+    fn new(description: String) -> Task {
+        Task {
+            description,
+            completed: false,
+            edit_count: 0,
+            priority: Priority::Medium, // All new tasks start at Medium priority.
+        }
+    }
+    
+    // ... (the `complete` method is unchanged) ...
+}
+
+// ... (Commands are mostly the same, but we update how they print) ...
+
+// --- MODIFIED: ListCommand's execute method ---
+impl Command for ListCommand {
+    fn execute(&self, tasks: &mut HashMap<u32, Task>, _next_id: &mut u32) -> Result<(), AppError> {
+        println!("\n--- TODO LIST ---");
+        // ... (filtering logic is the same) ...
+        tasks.iter()
+            .filter(/* ... */)
+            .for_each(|(id, task)| {
+                let status = if task.completed { "[x]" } else { "[ ]" };
+                // Call the new method on the priority enum!
+                let priority_char = task.priority.as_char();
+                println!("{}: {} [{}] {} (edits: {})", id, status, priority_char, task.description, task.edit_count);
+            });
+            
+        println!("-----------------");
+        Ok(())
+    }
+}
+// (You would make a similar change to the println! in SortCommand)
+</code></pre>
+
+                <h4>The Design Improvement:</h4>
+                <ul>
+                    <li><strong><code>enum Priority</code></strong>: We've created a type-safe way to represent priority. We can't accidentally assign a priority of "Super Mega" or `99`. It must be one of the defined variants.</li>
+                    <li><strong><code>priority.as_char()</code></strong>: The logic for how a `Priority` is displayed is now perfectly encapsulated within the `Priority` enum itself. The `ListCommand` doesn't need a messy `match` statement to figure out what to print. It just asks the priority, "How should I display you as a character?"</li>
+                    <li><strong>Single Responsibility</strong>: The `Priority` enum is now responsible for all logic related to priorities. This is a core principle of good software design. If we later decide that 'L' should be '!', we only have to change it in one place: the `as_char` method.</li>
+                </ul>
+                <p>This powerful combination of enums holding data and `impl` blocks defining variant-specific behavior is one of the features that makes Rust such an expressive and safe language for modeling complex domains.</p>
+
+                <a href="../index.html" class="back-link">&larr; Back to Curriculum Map</a>
+            </article>
+        </div>
+    </main>
+    
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 The Rust Adventure.</p>
+        </div>
+    </footer>
+
+</body>
+</html>

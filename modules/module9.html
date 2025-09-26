@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 9: The Interactive App & Advanced Collections - The Rust Adventure</title>
+    <link rel="stylesheet" href="../style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <img src="https://www.rust-lang.org/static/images/rust-logo-blk.svg" alt="Rust Logo" class="logo">
+            <h1>Module 9: The Interactive App & Advanced Collections</h1>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <article class="module-content">
+                <h2>Objective: To transform our program into an interactive application and introduce more versatile data structures.</h2>
+                <p>Welcome to Day 2! Our app is great, but it runs once and then exits. A real application needs to run continuously, accepting commands from a user. We'll achieve this with a main loop, user input, and a more powerful data structure called a <code>HashMap</code>.</p>
+                
+                <hr>
+
+                <h3>Step 1: The Main Loop & User Input</h3>
+                <p>To make an app that runs until a user quits, we use a <code>loop</code>. Inside this loop, we will prompt the user for a command, read their input from the terminal using the <code>std::io</code> module, and then act on it.</p>
+                <pre><code>use std::io;
+
+// Inside main...
+loop {
+    let mut input = String::new();
+    println!("> Enter a command (add, list, complete, quit):");
+    
+    // Read a line from the user
+    io::stdin().read_line(&mut input).expect("Failed to read line");
+
+    // Check if the user wants to quit
+    if input.trim() == "quit" {
+        break; // Exit the loop
+    }
+    // ... process other commands ...
+}</code></pre>
+                <p>The <code>.expect("...")</code> call is a shortcut. If `read_line` returns an `Err`, the program will panic and show our message. We'll learn a more graceful way to handle this in the next module!</p>
+
+                <h3>Step 2: A Better Home for Our Data (<code>HashMap</code>)</h3>
+                <p>A `Vec` is a great list, but how do we "complete task #5"? We'd have to search the whole list. A <strong><code>HashMap</code></strong> is a much better tool for this. It stores data as key-value pairs, allowing for instant lookups by a unique key.</p>
+                <p><strong>Analogy:</strong> A `Vec` is like a numbered list of books on a shelf. To find a book, you might have to scan the whole shelf. A <code>HashMap</code> is like a library's card catalog, where you can look up a book directly by its unique ID (the key) to instantly find its location (the value).</p>
+                <p>We will store our tasks in a <code>HashMap&lt;u32, Task&gt;</code>, where the `u32` is a unique task ID.</p>
+
+                <h3>Let's Build Our Todo App (Part 8)</h3>
+                <p>This is a major rewrite that brings everything together. We will not be using modules from Day 1 for now to keep this file self-contained. Replace all the code in your <code>src/main.rs</code> file with this new, interactive version.</p>
+                <pre><code>use std::collections::HashMap;
+use std::io;
+
+// Our Task struct remains the same.
+struct Task {
+    description: String,
+    completed: bool,
+}
+
+fn main() {
+    // Our new data storage: a HashMap with a numeric ID as the key.
+    let mut tasks = HashMap::new();
+    let mut next_id: u32 = 1;
+
+    println!("Welcome to your Rust-powered Todo List!");
+
+    // The main application loop.
+    loop {
+        println!("\n> Enter a command: add [desc], complete [id], list, or quit");
+        
+        let mut input = String::new();
+        io::stdin().read_line(&mut input).expect("Failed to read input");
+        
+        // Trim whitespace and split the command from its arguments.
+        let mut parts = input.trim().split_whitespace();
+        let command = parts.next().unwrap_or("");
+        
+        match command {
+            "add" => {
+                let description = parts.collect::<Vec<&str>>().join(" ");
+                if description.is_empty() {
+                    println!("Error: 'add' command requires a description.");
+                    continue;
+                }
+
+                let new_task = Task {
+                    description,
+                    completed: false,
+                };
+                tasks.insert(next_id, new_task);
+                println!("Added task {}: '{}'", next_id, tasks.get(&next_id).unwrap().description);
+                next_id += 1;
+            },
+            "list" => {
+                println!("\n--- TODO LIST ---");
+                for (id, task) in &tasks {
+                    let status = if task.completed { "[x]" } else { "[ ]" };
+                    println!("{}: {} {}", id, status, task.description);
+                }
+                println!("-----------------");
+            },
+            "complete" => {
+                match parts.next().and_then(|id_str| id_str.parse::<u32>().ok()) {
+                    Some(id) => {
+                        if let Some(task) = tasks.get_mut(&id) {
+                            task.completed = true;
+                            println!("Completed task {}: '{}'", id, task.description);
+                        } else {
+                            println!("Error: Task with ID {} not found.", id);
+                        }
+                    },
+                    None => println!("Error: 'complete' command requires a numeric ID."),
+                }
+            },
+            "quit" => {
+                println!("Goodbye!");
+                break;
+            },
+            "" => { /* Ignore empty input */ },
+            _ => println!("Error: Unknown command '{}'", command),
+        }
+    }
+}</code></pre>
+
+                <h4>The New Architecture Explained:</h4>
+                <ul>
+                    <li><strong><code>HashMap::new()</code></strong>: We create our new key-value store.</li>
+                    <li><strong><code>next_id</code></strong>: A simple counter to ensure every task gets a unique ID.</li>
+                    <li><strong><code>loop { ... }</code></strong>: The application now runs forever until `break` is called.</li>
+                    <li><strong><code>input.trim().split_whitespace()</code></strong>: A powerful combination. `.trim()` removes leading/trailing whitespace (including the newline from pressing Enter). `.split_whitespace()` creates an iterator over the words in the command.</li>
+                    <li><strong><code>parts.next().unwrap_or("")</code></strong>: This gets the first word (the command) or an empty string if nothing was entered.</li>
+                    <li><strong><code>tasks.insert(key, value)</code></strong>: How we add a new task to our HashMap.</li>
+                    <li><strong><code>tasks.get_mut(&id)</code></strong>: This is how we look up a task by its ID. We use `get_mut` because we want to modify the task (mark it as completed). This returns an `Option`, which is `Some(&mut Task)` if found, or `None` if not. The `if let` syntax is a clean way to handle this.</li>
+                </ul>
+                <p>Run <code>cargo run</code>. Your application is now alive! Try adding tasks, listing them, completing one by its ID, and quitting. You've just taken a massive leap forward in building real-world applications.</p>
+
+                <a href="../index.html" class="back-link">&larr; Back to Curriculum Map</a>
+            </article>
+        </div>
+    </main>
+    
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 The Rust Adventure.</p>
+        </div>
+    </footer>
+
+</body>
+</html>

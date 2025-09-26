@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 47: Hashing and `HashMap` Internals - The Rust Adventure</title>
+    <link rel="stylesheet" href="../style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <img src="https://www.rust-lang.org/static/images/rust-logo-blk.svg" alt="Rust Logo" class="logo">
+            <h1>Module 47: Hashing and `HashMap` Internals</h1>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <article class="module-content">
+                <h2>Objective: To understand the core traits (`Hash`, `Eq`, and `Borrow`) that power `HashMap`, enabling you to create custom key types and perform efficient lookups.</h2>
+                <p>Welcome to Day 12! We're moving from linear data structures to the powerful world of key-value stores. You've used <code>HashMap</code> extensively, but how does it actually work? How does it take a key, like a string, and instantly find the corresponding value in memory? The answer lies in <strong>hashing</strong> and a few key traits.</p>
+                
+                <hr>
+
+                <h3>Step 1: The Magic of Hashing</h3>
+                <p>A `HashMap` stores its data in a large array of buckets. When you insert a key-value pair, the `HashMap` doesn't search the array for an empty spot. Instead, it uses a "hashing function" on your key.</p>
+                <p>A hashing function takes your key as input and produces a single number (a "hash") as output. This number is then used to calculate an index into the array of buckets. This is how the `HashMap` can find the right bucket in O(1) time—it's a direct mathematical calculation, not a search.</p>
+                <p><strong>Analogy: The Magical Librarian.</strong> A `HashMap` is like a magical library with millions of shelves. To store a book, you give it to the librarian. The librarian performs a magical calculation on the book's title (the key) which instantly tells them the exact shelf number where the book should go. To retrieve the book, you just give them the title, they do the same calculation, and go directly to the correct shelf. No searching required!</p>
+
+                <h3>Step 2: The Key Traits</h3>
+                <p>For a type to be used as a key in a `HashMap`, it must implement two crucial traits:</p>
+                <ol>
+                    <li><strong><code>Eq</code> (and its parent, <code>PartialEq</code>):</strong> The trait for equality checking. If two different keys produce the same hash (a "hash collision"), the `HashMap` needs to be able to compare the keys directly with <code>==</code> to see if they are actually the same.</li>
+                    <li><strong><code>Hash</code>:</strong> The trait that provides the hashing function itself. It defines a method, <code>hash(&self, state: &mut Hasher)</code>, which feeds the key's data into the hashing algorithm.</li>
+                </ol>
+                <p>Thankfully, for most built-in types (like strings, numbers, and tuples) and for most custom structs/enums, you can simply use <code>#[derive(PartialEq, Eq, Hash)]</code> to implement these traits automatically!</p>
+                
+                <h3>Practical Application: Creating a Custom Key Type</h3>
+                <p>Let's create a program where we want to use a custom struct as the key in a `HashMap`. This will force us to implement the required traits and see the system in action.</p>
+
+                <h4>1. Create a New Project</h4>
+                <pre><code>cargo new custom_key
+cd custom_key
+</code></pre>
+                
+                <h4>2. The Complete `src/main.rs`</h4>
+                <pre><code>use std::collections::HashMap;
+use std::hash::{Hash, Hasher};
+
+// Let's model a user category for a multi-tenant system.
+// A user is uniquely identified by both their tenant ID and their user ID.
+// We want to use this struct as a key in a HashMap.
+
+// We can use `derive` to get the implementations for free!
+#[derive(Debug, Clone, Copy)] // Add derive for Hash and Eq
+struct UserKey {
+    tenant_id: u32,
+    user_id: u32,
+}
+
+// --- Let's also do it MANUALLY to understand what `derive` is doing. ---
+struct ManualUserKey {
+    tenant_id: u32,
+    user_id: u32,
+}
+
+// Manual implementation of PartialEq.
+impl PartialEq for ManualUserKey {
+    fn eq(&self, other: &Self) -> bool {
+        self.tenant_id == other.tenant_id && self.user_id == other.user_id
+    }
+}
+
+// Eq is a "marker" trait that says "PartialEq is fully implemented and correct".
+impl Eq for ManualUserKey {}
+
+// Manual implementation of Hash.
+impl Hash for ManualUserKey {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        // It's crucial that all fields that are part of `eq` are also part of `hash`.
+        self.tenant_id.hash(state);
+        self.user_id.hash(state);
+    }
+}
+
+
+fn main() {
+    // We'll use the manual one to prove it works.
+    let mut user_data = HashMap::new();
+
+    let key1 = ManualUserKey { tenant_id: 1, user_id: 101 };
+    let key2 = ManualUserKey { tenant_id: 1, user_id: 102 };
+    let key3 = ManualUserKey { tenant_id: 2, user_id: 101 };
+
+    user_data.insert(key1, "Alice");
+    user_data.insert(key2, "Bob");
+    user_data.insert(key3, "Charlie");
+
+    println!("Fetching data for user 101 in tenant 1...");
+    
+    // We create a new key to look up the data.
+    let lookup_key = ManualUserKey { tenant_id: 1, user_id: 101 };
+    
+    match user_data.get(&lookup_key) {
+        Some(name) => println!("  Found name: {}", name), // This will print "Alice"
+        None => println!("  User not found."),
+    }
+    
+    // The HashMap correctly differentiates between user 101 in tenant 1 vs. tenant 2.
+    println!("Fetching data for user 101 in tenant 2...");
+    println!("  Found name: {}", user_data.get(&key3).unwrap()); // This will print "Charlie"
+}
+</code></pre>
+
+                <h4>The `derive` Macro in Action:</h4>
+                <p>Notice that for `UserKey` we could have simply added <code>#[derive(Hash, Eq, PartialEq)]</code>. The code we wrote manually for `ManualUserKey` is almost exactly what the `derive` macro generates for us behind the scenes. It's a fantastic tool that saves a lot of boilerplate code.</p>
+                <p>The crucial rule is: <strong>if two instances are equal (according to `Eq`), they MUST produce the same hash (according to `Hash`)</strong>. The derive macro guarantees this. If you implement them manually, you must uphold this contract yourself.</p>
+                
+                <h3>A Quick Look at the `Borrow` Trait</h3>
+                <p>You may have noticed that you can look up a value in a `HashMap<String, i32>` using a `&str`. How does this work if the key type is `String`? This is enabled by a third, more advanced trait called <strong><code>Borrow</code></strong>. `HashMap`'s `get` method is generic over `Q` where `K: Borrow<Q>`. Because `String` implements `Borrow<&str>`, you can use a `&str` for lookups, avoiding the need to create a new `String` just for the lookup, which is a powerful optimization.</p>
+                
+                <p>You now understand the fundamental traits that make `HashMap` possible. You can confidently create your own custom key types and understand the requirements for hashing and equality that Rust's type system enforces for correctness.</p>
+
+                <a href="../index.html" class="back-link">&larr; Back to Curriculum Map</a>
+            </article>
+        </div>
+    </main>
+    
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 The Rust Adventure.</p>
+        </div>
+    </footer>
+
+</body>
+</html>

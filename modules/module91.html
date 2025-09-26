@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 91: The Training Loop - The Rust Adventure</title>
+    <link rel="stylesheet" href="../style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <img src="https://www.rust-lang.org/static/images/rust-logo-blk.svg" alt="Rust Logo" class="logo">
+            <h1>Module 91: The Training Loop</h1>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <article class="module-content">
+                <h2>Objective: To write a complete training loop that loads the MNIST dataset, calculates loss, performs backpropagation, and updates the model's weights using an optimizer.</h2>
+                <p>A neural network with random weights is useless. The process of making it useful is called <strong>training</strong>. We will write a "training loop," which is the heart of machine learning. The loop repeatedly shows the model data, measures how wrong its predictions are, and nudges its weights in the right direction to make it less wrong next time.</p>
+                
+                <hr>
+
+                <h3>Step 1: The Core Concepts of Training</h3>
+                <p>A training loop consists of these steps, repeated many times:</p>
+                <ol>
+                    <li><strong>Forward Pass:</strong> Feed a batch of data (e.g., images) through the model to get its predictions (logits).</li>
+                    <li><strong>Calculate Loss:</strong> Compare the model's predictions to the true labels using a "loss function" (e.g., cross-entropy). The loss is a single number that represents how wrong the model was. A lower loss is better.</li>
+                    <li><strong>Backward Pass (Backpropagation):</strong> This is the magic of calculus. The framework automatically calculates the "gradient" of the loss with respect to every single weight in the model. The gradient is a vector that points in the direction of the steepest increase in the loss.</li>
+                    <li><strong>Update Weights (Optimization):</strong> We take a small step in the *opposite* direction of the gradient. This "nudges" every weight in the model in a direction that will make the loss slightly lower. The tool that does this is called an "optimizer" (e.g., SGD or Adam).</li>
+                </ol>
+                
+                <h3>Step 2: Datasets and Optimizers in Candle</h3>
+                <p>Candle provides utilities to make this process easier:</p>
+                <ul>
+                    <li><strong><code>candle_datasets</code></strong>: A crate with helpers to download and load common datasets like MNIST.</li>
+                    <li><strong>Optimizers:</strong> The `candle_nn` crate provides common optimizers. An optimizer takes the model's variables and a "learning rate" and handles the weight update step for you.</li>
+                </ul>
+
+                <h3>Practical Application: Training our MLP on MNIST</h3>
+                <p>Let's write the full program to train our model. This is a complete, standalone project.</p>
+
+                <h4>1. Project Setup</h4>
+                <p>Continue in your `candle_intro` project. We need to add the `candle-datasets` crate.</p>
+                
+                <h4>2. Update `Cargo.toml`</h4>
+                <pre><code>[dependencies]
+candle-core = "0.3.0"
+candle-nn = "0.3.0"
+candle-datasets = "0.3.0" # Add the datasets crate
+anyhow = "1.0"
+# We don't need rand for this one
+</code></pre>
+                
+                <h4>3. The Complete `src/main.rs` for Training</h4>
+                <pre><code>use anyhow::Result;
+use candle_core::{Device, Tensor, D};
+use candle_nn::{loss, ops, Adam, Optimizer, VarBuilder, VarMap};
+use candle_datasets::vision::mnist;
+
+// --- The Model struct and its `new` and `forward` methods are the same as Module 90 ---
+const IMAGE_DIM: usize = 784;
+const HIDDEN_SIZE: usize = 100;
+const NUM_CLASSES: usize = 10;
+struct Model { /* ... same as before ... */ }
+impl Model { /* ... same as before ... */ }
+
+pub fn main() -> Result<()> {
+    let device = Device::Cpu;
+
+    // 1. LOAD THE DATASET
+    println!("Loading MNIST dataset...");
+    let m = mnist::load()?;
+    println!("  Images train: {:?}", m.train_images.shape()); // [60000, 784]
+    println!("  Labels train: {:?}", m.train_labels.shape()); // [60000]
+
+    // 2. INITIALIZE THE MODEL AND OPTIMIZER
+    let varmap = VarMap::new(); // A container for all our model's variables
+    let vb = VarBuilder::from_varmap(&varmap, candle_core::DType::F32, &device);
+    let model = Model::new(vb)?;
+
+    let mut optimizer = Adam::new(varmap.all_vars(), 0.01)?; // 0.01 is the learning rate
+    
+    // --- THE TRAINING LOOP ---
+    let num_epochs = 5;
+    let batch_size = 64;
+    println!("\nStarting training for {} epochs...", num_epochs);
+
+    for epoch in 1..=num_epochs {
+        // Iterate over the data in batches.
+        for i in (0..m.train_images.dims()[0]).step_by(batch_size) {
+            // Get a batch of images and labels.
+            let end = (i + batch_size).min(m.train_images.dims()[0]);
+            let batch_images = m.train_images.narrow(0, i, end - i)?;
+            let batch_labels = m.train_labels.narrow(0, i, end - i)?;
+
+            // 1. FORWARD PASS
+            let logits = model.forward(&batch_images)?;
+            
+            // 2. CALCULATE LOSS
+            // `cross_entropy` is a standard loss function for classification.
+            let loss = loss::cross_entropy(&logits, &batch_labels)?;
+            
+            // 3. BACKWARD PASS (Backpropagation)
+            // This automatically calculates gradients for all variables.
+            optimizer.backward_step(&loss)?;
+            
+            // The optimizer step in `backward_step` already updated the weights.
+        }
+        
+        // --- EVALUATION (Optional, but good practice) ---
+        // Let's see how well the model is doing on the test set.
+        let test_logits = model.forward(&m.test_images)?;
+        let sum_ok = test_logits
+            .argmax(D::Minus1)? // Get the index of the highest logit for each image
+            .eq(&m.test_labels)? // Compare with the true labels
+            .to_dtype(candle_core::DType::F32)?
+            .sum_all()?
+            .to_scalar::<f32>()?;
+        
+        let test_accuracy = sum_ok / m.test_labels.dims()[0] as f32;
+        println!("Epoch: {:>3} | Test Accuracy: {:>5.2}%", epoch, 100. * test_accuracy);
+    }
+    
+    Ok(())
+}
+</code></pre>
+
+                <h4>The Training Loop in Action:</h4>
+                <ul>
+                    <li><strong><code>mnist::load()?</code></strong>: This handy function from `candle-datasets` downloads (if necessary) and loads the entire MNIST dataset into tensors for us.</li>
+                    <li><strong><code>VarMap</code> and `Optimizer`</strong>: The `VarMap` is a container that holds all the trainable parameters (weights and biases) of our model. We create an `Adam` optimizer and give it all the variables from the `VarMap` so it knows which tensors to update.</li>
+                    <li><strong>Batching</strong>: We don't show the model all 60,000 images at once. We show it small "batches" (e.g., 64 images at a time). This is more memory-efficient and helps the model learn better.</li>
+                    <li><strong><code>loss::cross_entropy(...)</code></strong>: This function compares the model's output (`logits`) with the correct answers (`batch_labels`) and computes a single `loss` value.</li>
+                    <li><strong><code>optimizer.backward_step(&loss)?</code></strong>: This is the most magical line. It performs both the backward pass (calculating all the gradients) and the optimizer step (updating all the weights) in one go.</li>
+                    <li><strong>Evaluation</strong>: After each full pass over the data (an "epoch"), we check the model's performance on the separate test dataset. This gives us an unbiased measure of how well the model is learning.</li>
+                </ul>
+                <p>Run <strong><code>cargo run --release</code></strong>. A release build is highly recommended for ML as it can be significantly faster. The first time, it will download the MNIST dataset. Then, you will see the training process begin! You'll watch the test accuracy climb with each epoch, from around 10% (random chance) to likely over 90%. The model is learning!</p>
+                <p>You have successfully trained a neural network in pure Rust. You've gone from the basic building block of a tensor to a complete, learning model, a monumental achievement in your programming journey.</p>
+
+                <a href="../index.html" class="back-link">&larr; Back to Curriculum Map</a>
+            </article>
+        </div>
+    </main>
+    
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 The Rust Adventure.</p>
+        </div>
+    </footer>
+
+</body>
+</html>

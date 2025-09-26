@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 71: What is WebAssembly? - The Rust Adventure</title>
+    <link rel="stylesheet" href="../style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <img src="https://www.rust-lang.org/static/images/rust-logo-blk.svg" alt="Rust Logo" class="logo">
+            <h1>Module 71: What is WebAssembly?</h1>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <article class="module-content">
+                <h2>Objective: To understand what WebAssembly (Wasm) is, why it's a game-changer for the web, and the role of the Rust toolchain in compiling Rust code to run in a browser.</h2>
+                <p>Welcome to Day 20! For the next few days, we're shifting our focus from the backend to the frontend. But we're not leaving Rust behind! We're going to learn how to run Rust code directly in a web browser using a revolutionary technology called <strong>WebAssembly</strong>, or <strong>Wasm</strong> for short.</p>
+                
+                <hr>
+
+                <h3>Step 1: What is WebAssembly?</h3>
+                <p>For decades, the only language that could run natively in web browsers was JavaScript. WebAssembly changes that. It's a new type of code that can be run in modern web browsers, designed to be a compilation target for high-level languages like Rust, C++, and Go.</p>
+                <ul>
+                    <li>It's a <strong>binary instruction format</strong> for a stack-based virtual machine. Think of it as "assembly language for the web."</li>
+                    <li>It's designed to be <strong>fast, efficient, and safe</strong>. Wasm code runs in a sandboxed environment, meaning it can't arbitrarily access the host system's memory.</li>
+                    <li>It's <strong>not</strong> a replacement for JavaScript. It's a complement. Wasm is designed to work alongside JavaScript, allowing you to have performance-critical parts of your web application written in a language like Rust.</li>
+                </ul>
+                <p><strong>Analogy: The High-Performance Engine.</strong> Your web application is like a car. JavaScript is the chassis, the body, the user interface, and the controls—it's fantastic for all the general-purpose parts. WebAssembly is a high-performance, finely-tuned engine that you can drop in to handle the really heavy lifting, like 3D graphics, physics simulations, or complex data processing, all at near-native speed.</p>
+
+                <h3>Step 2: The Rust and Wasm Toolchain</h3>
+                <p>Rust has first-class support for compiling to WebAssembly. The toolchain is designed to make the process as seamless as possible.</p>
+                <ol>
+                    <li><strong>The Compiler (`rustc`):</strong> The Rust compiler has a Wasm compilation target, `wasm32-unknown-unknown`. When you compile with this target, `rustc` emits a `.wasm` file instead of a native executable.</li>
+                    <li><strong><code>wasm-pack</code>:</strong> This is the essential build tool for creating Wasm packages. It's a one-stop-shop that will:
+                        <ul>
+                            <li>Compile your Rust code to Wasm.</li>
+                            <li>Run `wasm-bindgen` (more on this in the next module) to create the JavaScript "glue" code needed to talk to your Wasm module.</li>
+                            <li>Package everything up into a nice NPM-compatible package that you can easily use in any modern JavaScript project.</li>
+                        </ul>
+                    </li>
+                </ol>
+                
+                <h3>Practical Application: Your First Rust-to-Wasm Build</h3>
+                <p>Let's go through the process of setting up the toolchain and compiling a simple Rust library into a Wasm module. We won't *run* it in a browser just yet; the goal here is to understand the build process.</p>
+
+                <h4>1. Install the Wasm Target and `wasm-pack`</h4>
+                <p>First, we need to tell `rustup` to install the Wasm compilation target:</p>
+                <pre><code>rustup target add wasm32-unknown-unknown</code></pre>
+                <p>Next, install the `wasm-pack` build tool:</p>
+                <pre><code>cargo install wasm-pack</code></pre>
+
+                <h4>2. Create a New Rust Library</h4>
+                <p>We'll create a new library, not a binary, as Wasm modules are libraries that are loaded by a host (the browser).</p>
+                <pre><code>cargo new --lib wasm-hello
+cd wasm-hello
+</code></pre>
+                
+                <h4>3. Update `Cargo.toml`</h4>
+                <p>We need to tell Cargo that this library is meant to be compiled as a "cdylib" (a C-style dynamic library), which is the correct format for Wasm modules.</p>
+                <pre><code># In wasm-hello/Cargo.toml
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+# We'll need this in the next module
+wasm-bindgen = "0.2"
+</code></pre>
+                
+                <h4>4. Write a Simple Rust Function</h4>
+                <p>Replace the contents of `src/lib.rs` with this simple function. The `#[no_mangle]` attribute tells the Rust compiler not to change the name of the function, and `extern "C"` makes it follow the C ABI, which is a simple, standard way for it to be called from the outside world.</p>
+                <pre><code>// In src/lib.rs
+
+#[no_mangle]
+pub extern "C" fn add(a: i32, b: i32) -> i32 {
+    a + b
+}
+</code></pre>
+
+                <h4>5. Build with `wasm-pack`</h4>
+                <p>Now, run the build command from the `wasm-hello` directory:</p>
+                <pre><code>wasm-pack build --target web</code></pre>
+                <p>This command will perform a release build, targeting the web. After it finishes, look at your project directory. `wasm-pack` has created a new `pkg/` directory! Inside, you'll find:</p>
+                <ul>
+                    <li><strong><code>wasm_hello_bg.wasm</code></strong>: This is your compiled Rust code in the WebAssembly binary format!</li>
+                    <li><strong><code>wasm_hello.js</code></strong>: This is the JavaScript "glue" file generated by `wasm-bindgen`. It knows how to load and interact with your `.wasm` file.</li>
+                    <li><strong><code>package.json</code></strong>: A file that describes this package, making it easy to use in a JavaScript project.</li>
+                </ul>
+                
+                <p>You have just successfully compiled Rust code into WebAssembly! You've taken a high-level language known for its safety and performance and turned it into a format that can run in any modern web browser. In the next module, we'll learn how to use `wasm-bindgen` to create a much richer bridge between Rust and JavaScript, allowing us to pass more complex types than just simple numbers.</p>
+
+                <a href="../index.html" class="back-link">&larr; Back to Curriculum Map</a>
+            </article>
+        </div>
+    </main>
+    
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 The Rust Adventure.</p>
+        </div>
+    </footer>
+
+</body>
+</html>

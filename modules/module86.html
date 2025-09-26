@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 86: The Tauri Architecture - The Rust Adventure</title>
+    <link rel="stylesheet" href="../style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <img src="https://www.rust-lang.org/static/images/rust-logo-blk.svg" alt="Rust Logo" class="logo">
+            <h1>Module 86: The Tauri Architecture</h1>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <article class="module-content">
+                <h2>Objective: To understand the unique architecture of a Tauri application, which combines a frontend built with web technologies (HTML, CSS, JS) and a backend core written in Rust.</h2>
+                <p>Welcome to Day 25! We're now exploring how to build traditional desktop GUI (Graphical User Interface) applications. While there are pure Rust GUI toolkits, one of the most popular and powerful approaches is to use <strong>Tauri</strong>. Tauri allows you to build fast, secure, and small cross-platform desktop apps by leveraging the power of web technologies for the UI.</p>
+                
+                <hr>
+
+                <h3>Step 1: The Problem with Traditional GUI</h3>
+                <p>Building beautiful, complex, and cross-platform user interfaces is notoriously difficult. Traditional GUI toolkits can be complex, and making them look consistent on Windows, macOS, and Linux is a huge challenge. On the other hand, the web platform (HTML, CSS, JavaScript) has become an incredibly powerful and mature ecosystem for building UIs.</p>
+
+                <h3>Step 2: The Tauri Solution: A Hybrid Model</h3>
+                <p>Tauri combines the best of both worlds:</p>
+                <ol>
+                    <li><strong>The Frontend (The "Web View"):</strong> The entire user interface of a Tauri app is a web page. You build it with HTML, CSS, and your favorite JavaScript framework (or even the Rust/Wasm frameworks we learned about on Day 21!). This web page is not rendered in a browser like Chrome, but in a lightweight, system-provided "web view" control.</li>
+                    <li><strong>The Backend (The "Rust Core"):</strong> All the application's core logic, file system access, heavy computation, and state management is done in a powerful, safe, and performant Rust binary.</li>
+                </ol>
+                <p>These two parts run in separate processes and communicate over a secure, local inter-process communication (IPC) bridge that Tauri provides automatically.</p>
+                
+                <p><strong>Analogy: The Modern Bank.</strong> Your Tauri application is like a modern bank branch. The <strong>frontend</strong> is the beautiful, welcoming lobby that the customer interacts with—the touch-screen kiosks, the comfortable chairs, the clear signage (HTML, CSS, JS). The <strong>backend</strong> is the secure, high-performance vault in the basement (the Rust core). The customer in the lobby can't just walk into the vault. They must go through a certified bank teller (the Tauri IPC bridge) to make a secure request, like "withdraw money." The vault then performs the operation and sends the result back up to the teller to give to the customer.</p>
+
+                <pre><code>
++-------------------------------------------------------------+
+| Desktop Window (Your Application)                           |
+|                                                             |
+|  +-------------------------------------------------------+  |
+|  | Frontend: System WebView                              |  |
+|  |                                                       |  |
+|  |   - Renders HTML, CSS, JavaScript                     |  |
+|  |   - Handles all user interaction (clicks, forms)      |  |
+|  |   - (e.g., React, Svelte, Vue, or Yew)                |  |
+|  +-------------------------------------------------------+  |
+|                       ^          |                          |
+|                       |  Events  | Invoke Commands          |
+|                       |          v                          |
+|  +--------------------- IPC BRIDGE ----------------------+  |
+|                       ^          |                          |
+|                       |  Emit    | Respond to Commands      |
+|                       |  Events  v                          |
+|  +-------------------------------------------------------+  |
+|  | Backend: Rust Core                                    |  |
+|  |                                                       |  |
+|  |   - Main application entry point                      |  |
+|  |   - Handles file system, networking, database         |  |
+|  |   - Performs heavy computations                       |  |
+|  |   - Manages application state                         |  |
+|  +-------------------------------------------------------+  |
+|                                                             |
++-------------------------------------------------------------+
+                </code></pre>
+
+                <h3>Step 3: Setting Up the Tauri Environment</h3>
+                <p>Tauri has some system dependencies that need to be installed first. The official Tauri website has a comprehensive guide for this.</p>
+                <ol>
+                    <li>Visit <a href="https://tauri.app/v1/guides/getting-started/prerequisites" target="_blank">the Tauri prerequisites guide</a> and follow the instructions for your operating system (Windows, macOS, or Linux). This will involve installing things like the Rust toolchain, C compilers, and WebView2 (on Windows).</li>
+                    <li>Once the prerequisites are installed, you can create a new Tauri project using their interactive command-line tool.</li>
+                </ol>
+                
+                <h3>Practical Application: Creating a "Hello, Tauri!" Project</h3>
+                <p>Let's create our first Tauri project to see the file structure and the core components in action. We'll choose the simple "vanilla" JavaScript frontend for this example.</p>
+                
+                <h4>1. Create a New Project with `cargo create-tauri-app`</h4>
+                <p>Run this command in your terminal. It will ask you a series of questions.</p>
+                <pre><code>cargo create-tauri-app
+</code></pre>
+                <p>Answer the questions as follows:</p>
+                <ul>
+                    <li>What is your app name? -> <strong>tauri_hello</strong></li>
+                    <li>What will be your window title? -> <strong>Hello Tauri!</strong></li>
+                    <li>Choose your UI recipe -> <strong>vanilla (HTML, CSS, JS)</strong></li>
+                </ul>
+                <p>This will create a new `tauri_hello` directory with everything you need.</p>
+                
+                <h4>2. Explore the File Structure</h4>
+                <p>Navigate into the new directory (`cd tauri_hello`). You will see a few key things:</p>
+                <ul>
+                    <li><strong><code>src/</code>:</strong> This is the frontend code (HTML, CSS, and `main.js`).</li>
+                    <li><strong><code>src-tauri/</code>:</strong> This is a complete Cargo project for your Rust backend core!</li>
+                    <li><strong><code>src-tauri/src/main.rs</code>:</strong> This is the entry point for your Rust application. You'll see a `main` function and a `tauri::Builder`.</li>
+                    <li><strong><code>src-tauri/tauri.conf.json</code>:</strong> The main configuration file for your Tauri application, where you define things like the window size, app identifier, and permissions.</li>
+                </ul>
+
+                <h4>3. Run the Development App</h4>
+                <p>From the root of the `tauri_hello` project, run the development command:</p>
+                <pre><code>cargo tauri dev</code></pre>
+                <p>This command will:</p>
+                <ol>
+                    <li>Start a development server for your frontend code.</li>
+                    <li>Compile and run your Rust backend in debug mode.</li>
+                    <li>Open a native desktop window that loads the UI from the development server.</li>
+                </ol>
+                <p>A beautiful desktop window will appear with the default Tauri welcome screen! You have just built and run your first cross-platform desktop application. Notice that it feels like a real, native application, not just a browser window.</p>
+
+                <p>You now have a solid conceptual understanding of the powerful hybrid architecture that Tauri uses. You know how the frontend and backend are separated and how they communicate. In the next module, we will bridge that gap by defining a Rust command and invoking it from our JavaScript frontend.</p>
+
+                <a href="../index.html" class="back-link">&larr; Back to Curriculum Map</a>
+            </article>
+        </div>
+    </main>
+    
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 The Rust Adventure.</p>
+        </div>
+    </footer>
+
+</body>
+</html>

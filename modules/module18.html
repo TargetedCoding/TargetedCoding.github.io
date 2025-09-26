@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 18: The Power of `match` - The Rust Adventure</title>
+    <link rel="stylesheet" href="../style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <img src="https://www.rust-lang.org/static/images/rust-logo-blk.svg" alt="Rust Logo" class="logo">
+            <h1>Module 18: The Power of `match`</h1>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <article class="module-content">
+                <h2>Objective: To understand that `match` is far more than a simple `switch` statement and to learn the rich variety of patterns it can use.</h2>
+                <p>Welcome to Day 4! Today, we explore what many consider to be Rust's superpower: <strong>pattern matching</strong>. The primary tool for this is the <code>match</code> keyword. Unlike `switch` statements in other languages, `match` in Rust is exhaustive, meaning the compiler forces you to handle every single possibility. This eliminates a massive category of common bugs.</p>
+                
+                <hr>
+
+                <h3>Step 1: The Core Principle: Exhaustiveness</h3>
+                <p>When you `match` on a value, you provide a list of "match arms," each consisting of a pattern and some code to run. The compiler will check your arms and will not compile your program unless you have a pattern for every possible value.</p>
+                <p><strong>Analogy: The Sorting Hat.</strong> A `match` statement is like a powerful sorting hat. It takes a value (a new student) and looks at its very structure. You must provide a "house" (a match arm) for every single possible student. The headmaster (the compiler) will not let the ceremony begin until every possibility is accounted for, ensuring no one is left un-sorted.</p>
+                
+                <h3>Step 2: A Rich Variety of Patterns</h3>
+                <p><code>match</code> can do much more than check for simple equality.</p>
+                
+                <h4>Matching on Literals, Ranges, and Multiple Values</h4>
+                <pre><code>let number = 5;
+match number {
+    1 => println!("It's one!"),
+    2 | 3 | 5 | 7 | 11 => println!("This is a prime"), // `|` means OR
+    13..=19 => println!("A teen"), // `..=` is an inclusive range
+    _ => println!("It's something else"), // `_` is a wildcard for "any other value"
+}</code></pre>
+                
+                <h4>Binding Values and Match Guards</h4>
+                <p>You can also pull values out of enums or structs and add `if` conditions to your patterns.</p>
+                <pre><code>enum Message {
+    Quit,
+    Write(String),
+    ChangeColor(i32, i32, i32),
+}
+
+let msg = Message::ChangeColor(0, 160, 255);
+
+match msg {
+    Message::Quit => println!("Quitting."),
+    // Binds the inner value of Write to the variable `text`
+    Message::Write(text) => println!("Text message: {}", text),
+    // Destructures the tuple and adds an `if` condition (a "match guard")
+    Message::ChangeColor(r, g, b) if g > 150 => {
+        println!("Changing to a bright color!");
+    },
+    // Handles all other ChangeColor messages
+    Message::ChangeColor(r, g, b) => {
+        println!("Changing color to R:{}, G:{}, B:{}", r, g, b);
+    }
+}</code></pre>
+
+                <h3>Let's Build Our Todo App (Part 16)</h3>
+                <p>Let's make our command parsing logic even more robust and user-friendly. We'll use `match`'s OR pattern (`|`) to add some convenient aliases for our commands.</p>
+                <p>We only need to modify the parsing logic inside our <code>run</code> function. The rest of the architecture stays the same.</p>
+                <pre><code>// In src/main.rs, inside the `run` function's loop...
+
+fn run() -> Result<(), AppError> {
+    // ... (setup is the same) ...
+    loop {
+        println!("\n> Enter a command: add, complete, delete, list, sort, find, or quit");
+        // ... (input reading is the same) ...
+        
+        let mut parts = input.trim().split_whitespace();
+        let command_name = parts.next().unwrap_or("");
+        
+        // --- MODIFIED: The match statement ---
+        let command: Option<Box<dyn Command>> = match command_name {
+            // Use `|` to add aliases!
+            "add" | "a" => {
+                let description = parts.collect::<Vec<&str>>().join(" ");
+                if description.is_empty() {
+                    eprintln!("Error: 'add' command requires a description.");
+                    continue;
+                }
+                Some(Box::new(AddCommand { description }))
+            },
+            "complete" | "c" => {
+                // ... (parsing logic for complete is the same) ...
+            },
+            "delete" | "d" => {
+                // ... (parsing logic for delete is the same) ...
+            },
+            "list" | "ls" => {
+                // ... (parsing logic for list is the same) ...
+            },
+            "sort" | "s" => {
+                // ... (parsing logic for sort is the same) ...
+            },
+            "find" | "f" => {
+                // ... (parsing logic for find is the same) ...
+            },
+            "quit" | "q" => break,
+            "" => continue,
+            _ => {
+                eprintln!("Error: Unknown command '{}'", command_name);
+                continue;
+            }
+        };
+
+        // ... (command execution is the same) ...
+    }
+    Ok(())
+}
+// ... (the rest of the file is the same) ...
+</code></pre>
+
+                <h4>The Power of Patterns in Action:</h4>
+                <ul>
+                    <li><strong><code>"add" | "a"</code></strong>: By using the OR pattern, we've made our application easier to use without adding any complex `if` logic. The user can now type `add Finish module 18` or simply `a Finish module 18`.</li>
+                    <li><strong>Clarity and Conciseness</strong>: This approach is much cleaner than a long chain of `if-else if` statements. The `match` block clearly lays out all possible commands and their aliases in one readable block of code.</li>
+                    <li><strong>Exhaustiveness Still Applies</strong>: While we're not matching on an `enum` here, the wildcard arm `_` is still crucial. It ensures that any text the user types that we *don't* recognize is handled gracefully, preventing unexpected behavior.</li>
+                </ul>
+                <p>Run <code>cargo run</code> and try out the new command aliases like `a`, `c`, `ls`, and `q`. Your application is now more user-friendly, and your code is more expressive and idiomatic, all thanks to the power of `match`.</p>
+
+                <a href="../index.html" class="back-link">&larr; Back to Curriculum Map</a>
+            </article>
+        </div>
+    </main>
+    
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 The Rust Adventure.</p>
+        </div>
+    </footer>
+
+</body>
+</html>

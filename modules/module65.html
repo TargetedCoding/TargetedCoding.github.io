@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 65: Setting up `sqlx` and Writing Migrations - The Rust Adventure</title>
+    <link rel="stylesheet" href="../style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <img src="https://www.rust-lang.org/static/images/rust-logo-blk.svg" alt="Rust Logo" class="logo">
+            <h1>Module 65: Setting up `sqlx` and Writing Migrations</h1>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <article class="module-content">
+                <h2>Objective: To connect our Axum application to a real SQL database using the `sqlx` crate and to manage our database schema professionally with `sqlx-cli`.</h2>
+                <p>Welcome to Day 18! Our in-memory `HashMap` was great for learning, but it has a fatal flaw: every time we restart our server, all the data is lost. It's time to add a persistent database. We'll use <strong><code>sqlx</code></strong>, a modern, async-first, and remarkably safe SQL library for Rust. Its killer feature is compile-time query checking, which we'll explore in the next module.</p>
+                
+                <hr>
+
+                <h3>Step 1: Why `sqlx`?</h3>
+                <p>`sqlx` is not an ORM (Object-Relational Mapper). It encourages you to write SQL, but with a safety net. It's:</p>
+                <ul>
+                    <li><strong>Asynchronous:</strong> Built from the ground up to work perfectly with `tokio` and `async/await`.</li>
+                    <li><strong>Type-Safe:</strong> It checks your SQL queries against your live database *at compile time*, catching errors before you even run your program.</li>
+                    <li><strong>Pure Rust:</strong> It doesn't wrap a C library; its drivers are implemented in pure Rust.</li>
+                </ul>
+
+                <h3>Step 2: Setting Up the Environment</h3>
+                <p>We'll use SQLite for simplicity, as it's a simple file-based database that doesn't require a separate server. The concepts are identical for PostgreSQL or MySQL.</p>
+                
+                <h4>1. Install `sqlx-cli`</h4>
+                <p>This is a command-line tool for managing your database. You only need to install it once.</p>
+                <pre><code>cargo install sqlx-cli</code></pre>
+
+                <h4>2. Update `Cargo.toml` in your `todo_api` project</h4>
+                <pre><code>[dependencies]
+# ... (axum, serde, tokio)
+sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "sqlite"] }
+dotenvy = "0.15" # For managing database URLs from a .env file
+</code></pre>
+
+                <h4>3. Create a `.env` file</h4>
+                <p>In the root of your `todo_api` project, create a file named `.env` to store your database connection string.</p>
+                <pre><code># In .env
+DATABASE_URL="sqlite:tasks.db"
+</code></pre>
+                <p>Also create a file named `.gitignore` and add `.env` and `tasks.db` to it, as we don't want to commit secrets or database files to version control.</p>
+
+                <h4>4. Prepare the Database with `sqlx-cli`</h4>
+                <p>Run these commands from your terminal in the `todo_api` project root:</p>
+                <pre><code># Create the database file (tasks.db) and a `migrations` directory
+sqlx database create
+
+# Create our first migration file
+sqlx migrate add create_tasks_table
+</code></pre>
+                <p>This will create a new file in a `migrations/` directory. It will have a timestamp in the name. Open that file.</p>
+
+                <h3>Step 3: Writing a Migration</h3>
+                <p>A migration is a file containing SQL statements that apply a set of changes to your database schema. This is how you manage your database structure in a repeatable, version-controlled way.</p>
+                
+                <h4>Edit your new migration file (e.g., `migrations/20250924..._create_tasks_table.sql`)</h4>
+                <pre><code>-- Add migration script here
+CREATE TABLE IF NOT EXISTS tasks (
+    id INTEGER PRIMARY KEY NOT NULL,
+    description TEXT NOT NULL,
+    completed BOOLEAN NOT NULL DEFAULT 0
+);
+</code></pre>
+                
+                <h4>Apply the Migration</h4>
+                <p>Run this command to execute the SQL and create the table in your `tasks.db` file:</p>
+                <pre><code>sqlx migrate run</code></pre>
+                <p>Your database is now ready!</p>
+
+                <h3>Practical Application: Connecting Axum to the Database</h3>
+                <p>Let's refactor our `main.rs` to replace the `Arc<Mutex<HashMap>>` with a real database connection pool.</p>
+                <pre><code>// In src/main.rs
+use axum::{ /* ... */ };
+use serde::{ /* ... */ };
+use std::net::SocketAddr;
+use sqlx::sqlite::{SqlitePool, SqlitePoolOptions}; // Use the specific pool for SQLite
+use dotenvy::dotenv;
+use std::env;
+
+// --- Task Struct (needs an update for database mapping) ---
+// `sqlx::FromRow` allows us to map a database row to this struct.
+#[derive(Serialize, Deserialize, Debug, Clone, sqlx::FromRow)]
+pub struct Task {
+    id: i64, // SQLite's autoincrementing ID is a 64-bit integer.
+    description: String,
+    completed: bool,
+}
+
+// ... (CreateTask struct is the same) ...
+
+// --- SHARED APPLICATION STATE ---
+// We replace the HashMap with a database pool.
+#[derive(Clone)]
+struct AppState {
+    db_pool: SqlitePool,
+}
+
+#[tokio::main]
+async fn main() {
+    // Load environment variables from .env file
+    dotenv().ok();
+
+    // Get the database URL from the environment.
+    let db_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
+
+    // 1. Create the database connection pool.
+    let pool = SqlitePoolOptions::new()
+        .max_connections(5)
+        .connect(&db_url)
+        .await
+        .expect("Failed to create database pool.");
+
+    println!("Database connection pool created.");
+
+    // 2. Create the shared state.
+    let shared_state = AppState { db_pool: pool };
+    
+    // ... (Router setup is the same) ...
+    let app = Router::new()
+        // ... routes ...
+        .with_state(shared_state);
+
+    // ... (Run the server) ...
+}
+
+// --- HANDLER FUNCTIONS (placeholders for now) ---
+async fn create_task(State(state): State<AppState>, Json(payload): Json<CreateTask>) -> String {
+    // We'll implement the database logic in the next module.
+    format!("Received task to create: {}", payload.description)
+}
+async fn list_tasks(State(state): State<AppState>) -> String { "Listing tasks..." }
+async fn get_task(State(state): State<AppState>, Path(id): Path<u64>) -> String { format!("Getting task {}", id) }
+</code></pre>
+
+                <h4>The Database-Backed Architecture:</h4>
+                <ul>
+                    <li><strong><code>sqlx-cli</code></strong>: We now have a professional workflow for managing our database schema. `sqlx migrate` is our single source of truth for the database structure.</li>
+                    <li><strong><code>.env</code> file</strong>: We've separated our configuration (the database URL) from our code, which is a critical best practice.</li>
+                    <li><strong><code>SqlitePool</code></strong>: Instead of our `HashMap`, the shared `AppState` now holds a `SqlitePool`. A connection pool is a collection of ready-to-use database connections. This is much more efficient than creating a new connection for every single request.</li>
+                    <li><strong><code>#[derive(sqlx::FromRow)]</code></strong>: This derive macro from `sqlx` is what allows us to automatically convert a row from a database query result into our Rust `Task` struct, as long as the column names match the struct field names.</li>
+                </ul>
+                <p>Your application is now successfully connected to a persistent database! The in-memory state is gone, replaced by a professional, production-ready connection pool. In the next module, we will write the `sqlx` queries to make our API handlers actually interact with the database.</p>
+
+                <a href="../index.html" class="back-link">&larr; Back to Curriculum Map</a>
+            </article>
+        </div>
+    </main>
+    
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 The Rust Adventure.</p>
+        </div>
+    </footer>
+
+</body>
+</html>

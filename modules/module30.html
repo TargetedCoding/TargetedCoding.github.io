@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 30: Professional Argument Parsing with `clap` - The Rust Adventure</title>
+    <link rel="stylesheet" href="../style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <img src="https://www.rust-lang.org/static/images/rust-logo-blk.svg" alt="Rust Logo" class="logo">
+            <h1>Module 30: Professional Argument Parsing with `clap`</h1>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <article class="module-content">
+                <h2>Objective: To replace our manual, brittle command parsing with a powerful and industry-standard crate, `clap`.</h2>
+                <p>Welcome to Day 7! Our application is powerful, but its user interface—a simple interactive loop—is not how standard command-line tools work. Real tools take their commands and arguments directly from the command line (e.g., <code>git commit -m "A message"</code>). Parsing this by hand is tedious and error-prone. We're going to use the most popular crate for this in the Rust ecosystem: <strong><code>clap</code></strong>.</p>
+                
+                <hr>
+
+                <h3>Step 1: Why `clap`?</h3>
+                <p><code>clap</code> (Command Line Argument Parser) lets you declaratively define your entire command-line interface. It will then:</p>
+                <ul>
+                    <li>Parse the arguments for you.</li>
+                    <li>Validate them (e.g., ensure a number is a number).</li>
+                    <li>Generate professional <code>--help</code> and <code>--version</code> messages automatically.</li>
+                    <li>Handle subcommands (like <code>git add</code>, <code>git commit</code>) in a structured way.</li>
+                </ul>
+                <p><strong>Analogy: The Custom Order Form.</strong> Manual parsing is like trying to understand a customer's order from a messy, handwritten note. Using `clap` is like giving the customer a professionally printed order form with clear fields and checkboxes. You get exactly what you need in a perfectly structured format, and the form itself tells the customer if they filled it out wrong.</p>
+
+                <h3>Step 2: Let's Build Our Todo App (Part 24) - The `clap` Refactor</h3>
+                <p>This is a major refactoring that will completely change how our application starts up. We will eliminate the main `loop` and the `Command` trait pattern, as `clap` provides a new, cleaner structure.</p>
+                
+                <h4>1. Update `Cargo.toml`</h4>
+                <p>First, add `clap` with the "derive" feature to your dependencies:</p>
+                <pre><code>[dependencies]
+# ... (other dependencies)
+clap = { version = "4.0", features = ["derive"] }</code></pre>
+                
+                <h4>2. Define the CLI Structure</h4>
+                <p>We'll create a struct and an enum that mirror our command structure. `clap` will use these definitions to generate the parser. This code will replace our `Command` trait and structs.</p>
+                <pre><code>// In src/main.rs
+use clap::{Parser, Subcommand};
+
+/// A simple command-line todo application
+#[derive(Parser, Debug)]
+#[command(author, version, about, long_about = None)]
+struct Cli {
+    #[command(subcommand)]
+    command: Commands,
+}
+
+#[derive(Subcommand, Debug)]
+enum Commands {
+    /// Add a new task
+    Add {
+        /// The description of the task
+        description: String,
+        
+        #[arg(short, long)] // Defines a command-line flag: --priority or -p
+        priority: Option<String>,
+    },
+    /// List all tasks
+    List {
+        #[arg(short, long)] // --filter or -f
+        filter: Option<String>,
+    },
+    /// Mark a task as complete
+    Complete { id: u32 },
+    // ... we would add structs for Delete, Sort, etc. here ...
+}
+</code></pre>
+
+                <h4>3. The New `main` Function</h4>
+                <p>Our <code>main</code> and <code>run</code> functions will be completely transformed. The interactive loop is gone. The program now does one thing and exits.</p>
+                <pre><code>fn main() {
+    // 1. Clap parses the arguments from the command line.
+    let cli = Cli::parse();
+    
+    // For now, we'll just print the result of the parsing.
+    // In the next modules, we'll load data, execute the command, and save.
+    println!("App starting...");
+
+    // 2. We match on the parsed command enum.
+    match cli.command {
+        Commands::Add { description, priority } => {
+            println!("Adding a new task!");
+            println!("  Description: {}", description);
+            if let Some(p) = priority {
+                println!("  Priority: {}", p);
+            }
+            // In a real app, we'd call our "add task" logic here.
+        },
+        Commands::List { filter } => {
+            println!("Listing tasks!");
+            if let Some(f) = filter {
+                println!("  Filter: {}", f);
+            }
+            // Call "list tasks" logic here.
+        },
+        Commands::Complete { id } => {
+            println!("Completing task with ID: {}", id);
+            // Call "complete task" logic here.
+        }
+    }
+    
+    println!("...App finished.");
+}
+</code></pre>
+
+                <h4>The `clap`-Powered Experience:</h4>
+                <p>Save your `main.rs` file. Now, go to your terminal and try these commands from your project's root directory:</p>
+                <ul>
+                    <li><strong><code>cargo run -- --help</code></strong><br>
+                    (Note the extra <code>--</code> which tells Cargo to pass the following arguments to our program, not to Cargo itself). You will see a beautiful, professionally generated help message.</li>
+                    <li><strong><code>cargo run -- add "Write module 30"</code></strong><br>
+                    This will run the `Add` command arm.</li>
+                    <li><strong><code>cargo run -- add "An important task" -p high</code></strong><br>
+                    This shows how `clap` parses named arguments (flags).</li>
+                    <li><strong><code>cargo run -- list</code></strong></li>
+                    <li><strong><code>cargo run -- complete 3</code></strong></li>
+                    <li><strong><code>cargo run -- add</code></strong><br>
+                    This will fail! `clap` knows the `description` is required and will print a helpful error message telling the user how to fix it. This is incredibly powerful.</li>
+                </ul>
+                <p>You have just transformed your application's entire user interface. It is no longer a simple interactive prompt; it is a robust, self-documenting, and professional command-line utility. In the next modules, we will re-integrate our application logic (loading, saving, and modifying tasks) into this new structure.</p>
+
+                <a href="../index.html" class="back-link">&larr; Back to Curriculum Map</a>
+            </article>
+        </div>
+    </main>
+    
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 The Rust Adventure.</p>
+        </div>
+    </footer>
+
+</body>
+</html>

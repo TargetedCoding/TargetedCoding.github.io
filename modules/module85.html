@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 85: User Input and Simple Game Logic - The Rust Adventure</title>
+    <link rel="stylesheet" href="../style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <img src="https://www.rust-lang.org/static/images/rust-logo-blk.svg" alt="Rust Logo" class="logo">
+            <h1>Module 85: User Input and Simple Game Logic</h1>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <article class="module-content">
+                <h2>Objective: To write a Bevy "system" that runs every frame, queries for the player entity, reads keyboard input, and modifies the player's `Transform` component to make them move.</h2>
+                <p>A static sprite is a good start, but a game needs interaction! In this module, we'll write our first real game logic system. This system will run on every single frame of the game, check for keyboard presses, and update our player's position component accordingly. This is the core loop of game development in action.</p>
+                
+                <hr>
+
+                <h3>Step 1: Systems that Run Every Frame</h3>
+                <p>In the last module, we added a system to the <code>Startup</code> schedule. To make things happen continuously, we add systems to the <strong><code>Update</code></strong> schedule. This is the default schedule, and systems added to it will be run once per frame, every frame.</p>
+
+                <h3>Step 2: Querying for Components</h3>
+                <p>How does a system find the entities it needs to operate on? It uses a <strong><code>Query</code></strong>. A `Query` is another special system parameter that lets you ask Bevy for all entities that have a certain set of components.</p>
+                <p>For example, <code>Query<&mut Transform, With<Player>></code> is a query that asks for:</p>
+                <ul>
+                    <li><strong><code>&mut Transform</code></strong>: Mutable access to the `Transform` component of every matching entity.</li>
+                    <li><strong><code>With<Player></code></strong>: A filter that says "only give me entities that also have a `Player` component." This is how we find our specific player entity.</li>
+                </ul>
+                
+                <h3>Step 3: Accessing Resources</h3>
+                <p>Besides components, Bevy has "Resources." A resource is a global, unique piece of data. Common resources include <code>Time</code> (which tells you the time since the last frame) and <code>Input<KeyCode></code> (which holds the current state of every key on the keyboard).</p>
+
+                <h3>Practical Application: Moving the Player</h3>
+                <p>Let's add a `player_movement_system` to our Bevy project to bring our character to life.</p>
+                
+                <h4>1. Project Setup</h4>
+                <p>Continue in your `bevy_player` project from the previous module.</p>
+                
+                <h4>2. The Complete `src/main.rs` with Movement</h4>
+                <pre><code>use bevy::prelude::*;
+
+const PLAYER_SPEED: f32 = 500.0;
+
+fn main() {
+    App::new()
+        .add_plugins(DefaultPlugins.set(ImagePlugin::default_nearest()))
+        .add_systems(Startup, setup_system)
+        // --- NEW: Add our movement system to the `Update` schedule ---
+        .add_systems(Update, player_movement_system)
+        .run();
+}
+
+// --- COMPONENTS ---
+#[derive(Component)]
+struct Player;
+
+// --- SYSTEMS ---
+fn setup_system(mut commands: Commands, asset_server: Res<AssetServer>) {
+    commands.spawn(Camera2dBundle::default());
+    commands.spawn((
+        SpriteBundle {
+            texture: asset_server.load("player.png"),
+            transform: Transform::from_xyz(0., 0., 0.).with_scale(Vec3::splat(3.0)),
+            ..default()
+        },
+        Player,
+    ));
+}
+
+/// --- NEW: The player movement system ---
+/// This system runs on every frame of the game.
+fn player_movement_system(
+    // A resource that holds the state of the keyboard.
+    keyboard_input: Res<Input<KeyCode>>,
+    // A query to find our player entity.
+    mut player_query: Query<&mut Transform, With<Player>>,
+    // The `Time` resource to make movement frame-rate independent.
+    time: Res<Time>,
+) {
+    // `get_single_mut` gets the one and only entity matching the query.
+    // It returns a `Result`, so we use `if let Ok(...)` to handle it.
+    if let Ok(mut player_transform) = player_query.get_single_mut() {
+        let mut direction = Vec3::ZERO;
+
+        // Check for keyboard input and update the direction vector.
+        if keyboard_input.pressed(KeyCode::Left) || keyboard_input.pressed(KeyCode::A) {
+            direction.x -= 1.0;
+        }
+        if keyboard_input.pressed(KeyCode::Right) || keyboard_input.pressed(KeyCode::D) {
+            direction.x += 1.0;
+        }
+        if keyboard_input.pressed(KeyCode::Up) || keyboard_input.pressed(KeyCode::W) {
+            direction.y += 1.0;
+        }
+        if keyboard_input.pressed(KeyCode::Down) || keyboard_input.pressed(KeyCode::S) {
+            direction.y -= 1.0;
+        }
+        
+        // Normalize the direction vector if it's not zero.
+        // This prevents faster movement diagonally.
+        if direction != Vec3::ZERO {
+            direction = direction.normalize();
+        }
+
+        // Update the player's position.
+        // We multiply by `time.delta_seconds()` to ensure the player moves at the
+        // same speed regardless of the game's frame rate.
+        player_transform.translation += direction * PLAYER_SPEED * time.delta_seconds();
+    }
+}
+</code></pre>
+
+                <h4>The Game Loop in Action:</h4>
+                <ul>
+                    <li><strong><code>.add_systems(Update, ...)</code></strong>: We register our new system to run every frame.</li>
+                    <li><strong>System Parameters</strong>: Our `player_movement_system` "asks for" the three things it needs to do its job: the keyboard state (`Res<Input<KeyCode>>`), a way to find and modify the player (`Query<...>` ), and the time delta (`Res<Time>`). Bevy provides these automatically.</li>
+                    <li><strong><code>player_query.get_single_mut()</code></strong>: Since we know there is only one player, this is the easiest way to get it. If there were many movable objects, we would use `.iter_mut()` to loop over all of them.</li>
+                    <li><strong><code>keyboard_input.pressed(...)</code></strong>: We check if specific keys (WASD or Arrow Keys) are being held down.</li>
+                    <li><strong>Frame-Rate Independence</strong>: Multiplying our movement by <code>time.delta_seconds()</code> is crucial. It's the fraction of a second that has passed since the last frame. This means our player will move `PLAYER_SPEED` units per *second*, not per *frame*. Without this, the player would move much faster on a powerful computer with a high frame rate and slower on a less powerful one.</li>
+                </ul>
+
+                <h3>Step 3: Run Your Interactive Game!</h3>
+                <p>From your terminal, run the application:</p>
+                <pre><code>cargo run</code></pre>
+                <p>A window will appear with your sprite. Now, use the WASD keys or the arrow keys on your keyboard. Your player sprite will move around the screen! You have successfully implemented a core game loop: reading input, updating state (the `Transform` component), and having the engine render the result.</p>
+                <p>Congratulations on completing Day 24 and building your first interactive game in Rust!</p>
+
+                <a href="../index.html" class="back-link">&larr; Back to Curriculum Map</a>
+            </article>
+        </div>
+    </main>
+    
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 The Rust Adventure.</p>
+        </div>
+    </footer>
+
+</body>
+</html>

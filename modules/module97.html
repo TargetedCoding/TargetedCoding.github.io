@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 97: Blinky in an Emulator - The Rust Adventure</title>
+    <link rel="stylesheet" href="../style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <img src="https://www.rust-lang.org/static/images/rust-logo-blk.svg" alt="Rust Logo" class="logo">
+            <h1>Module 97: Blinky in an Emulator</h1>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <article class="module-content">
+                <h2>Objective: To write a complete "blinky" program, cross-compile it to a UF2 file, and run it on a virtual Raspberry Pi Pico using the Wokwi web-based emulator.</h2>
+                <p>The time has come to see our code in action! We will write the full code to blink the onboard LED of a Raspberry Pi Pico. Even if you don't have a physical device, you can still complete this module by using <strong>Wokwi</strong>, an incredible free online simulator for microcontrollers. This provides a fast, easy, and hardware-free way to verify that our embedded program works.</p>
+                
+                <hr>
+                
+                <h3>Step 1: The Full Blinky Code</h3>
+                <p>The project template we generated already contains most of the code we need. The main missing piece is a delay. A microcontroller's CPU is so fast that if we just turned the LED on and off in a loop, it would blink millions of times per second and appear to be dimly lit. We need to introduce a pause.</p>
+
+                <h3>Practical Application: Let's Make an LED Blink!</h3>
+
+                <h4>1. Project Setup</h4>
+                <p>Continue in your `pico_blinky` project from Module 95.</p>
+                
+                <h4>2. The Complete `src/main.rs`</h4>
+                <p>Open `pico_blinky/src/main.rs` and replace its contents with this complete, working code.</p>
+                <pre><code>#![no_std]
+#![no_main]
+
+// The macro for our entry point
+use cortex_m_rt::entry;
+
+// Ensure we halt the program on panic (if we don't have a debugger attached)
+use panic_halt as _;
+
+// Alias for our HAL crate
+use rp2040_hal as hal;
+use hal::pac;
+
+// A shorter alias for the Peripheral Access Crate, which provides basic register access
+use hal::pac as PAC;
+
+// We need this trait to use the `set_high` and `set_low` methods on the LED pin.
+use embedded_hal::digital::v2::OutputPin;
+
+// A shorter alias for the Boot Stage 2 bootloader
+#[link_section = ".boot2"]
+#[used]
+pub static BOOT2: [u8; 256] = rp2040_boot2::BOOT_LOADER_GENERIC_03H;
+
+#[entry]
+fn main() -> ! {
+    // Grab our singleton objects
+    let mut pac = PAC::Peripherals::take().unwrap();
+    let core = PAC::CorePeripherals::take().unwrap();
+    
+    // Set up the watchdog driver - needed by the clock setup
+    let mut watchdog = hal::Watchdog::new(pac.WATCHDOG);
+    
+    // Configure the clocks
+    let clocks = hal::clocks::init_clocks_and_plls(
+        12_000_000u32, // The crystal frequency on the Pico board
+        pac.XOSC,
+        pac.CLOCKS,
+        pac.PLL_SYS,
+        pac.PLL_USB,
+        &mut pac.RESETS,
+        &mut watchdog,
+    )
+    .ok()
+    .unwrap();
+
+    // The single-cycle I/O block controls our GPIO pins
+    let sio = hal::Sio::new(pac.SIO);
+
+    // Set the pins up according to their function on this particular board
+    let pins = hal::gpio::Pins::new(
+        pac.IO_BANK0,
+        pac.PADS_BANK0,
+        sio.gpio_bank0,
+        &mut pac.RESETS,
+    );
+
+    // --- This is our core "blinky" logic ---
+
+    // 1. Configure GPIO25 (the onboard LED) as an output
+    let mut led_pin = pins.gpio25.into_push_pull_output();
+
+    // 2. Create a delay provider based on the configured clocks
+    let mut delay = cortex_m::delay::Delay::new(core.SYST, clocks.system_clock.freq().to_Hz());
+
+    // 3. Loop forever
+    loop {
+        led_pin.set_high().unwrap();
+        delay.delay_ms(500); // Wait for 500 milliseconds
+        led_pin.set_low().unwrap();
+        delay.delay_ms(500); // Wait for 500 milliseconds
+    }
+}
+</code></pre>
+
+                <h4>3. Cross-Compile the Binary</h4>
+                <p>Now, run the build command. We'll use the `--release` flag because debug builds on embedded can sometimes be too large or slow.</p>
+                <pre><code>cargo build --release</code></pre>
+                <p>After this finishes, you will have a compiled ELF file located at:</p>
+                <p><code>target/thumbv6m-none-eabi/release/pico_blinky</code></p>
+                
+                <h4>4. Convert the ELF file to UF2</h4>
+                <p>The Raspberry Pi Pico uses a special `UF2` file format for flashing. We'll use the `elf2uf2-rs` tool we installed earlier to perform this conversion.</p>
+                <pre><code>elf2uf2-rs target/thumbv6m-none-eabi/release/pico_blinky
+</code></pre>
+                <p>This will create a new file: <code>target/thumbv6m-none-eabi/release/pico_blinky.uf2</code>. This is the file we will use in the emulator.</p>
+
+                <h3>Step 4: Running in the Wokwi Emulator</h3>
+                <ol>
+                    <li>Go to the Wokwi for Rust website: <a href="https://wokwi.com/rust" target="_blank">https://wokwi.com/rust</a>.</li>
+                    <li>You will see a default project. On the left-hand side, find the file list. You can delete the default `src/main.rs`.</li>
+                    <li>Click the "Upload Files" button (the up-arrow icon) and upload your newly created <strong><code>pico_blinky.uf2</code></strong> file.</li>
+                    <li>You will see a diagram of a Raspberry Pi Pico on the right. Click the big green "Play" button to start the simulation.</li>
+                </ol>
+                <p><strong>You should now see the green LED on the virtual Raspberry Pi Pico blinking on and off once per second!</strong></p>
+                <img src="https://i.imgur.com/r6oJt4c.gif" alt="Blinking LED in Wokwi Simulator" style="width:100%;max-width:400px;display:block;margin:auto;">
+                
+                <h4>The Embedded Workflow in Action:</h4>
+                <ul>
+                    <li><strong>Hardware Initialization</strong>: The first part of our `main` function is all about setting up the hardware. We configure the system clocks and set up the GPIO pins. This is a standard procedure for most embedded applications.</li>
+                    <li><strong>Delay Provider</strong>: We create a `Delay` object from the `cortex-m` crate, which provides a standard way to create blocking delays.</li>
+                    <li><strong>The Main Loop (`loop { ... }`)</strong>: This is the heart of most embedded programs. They never exit. The loop continuously turns the LED on (`set_high`), waits, turns it off (`set_low`), and waits again.</li>
+                    <li><strong>Build -> Convert -> Run</strong>: You have just completed the full embedded development cycle. You wrote high-level, safe Rust code, cross-compiled it for a completely different computer architecture, converted it into a device-specific format, and ran it on a (simulated) piece of hardware.</li>
+                </ul>
+                <p>Congratulations on completing Day 28! You have successfully written, compiled, and run a program for a bare-metal microcontroller, a task that demonstrates the true power and versatility of the Rust language.</p>
+
+                <a href="../index.html" class="back-link">&larr; Back to Curriculum Map</a>
+            </article>
+        </div>
+    </main>
+    
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 The Rust Adventure.</p>
+        </div>
+    </footer>
+
+</body>
+</html>

@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 22: Methods and Associated Functions (`impl`) - The Rust Adventure</title>
+    <link rel="stylesheet" href="../style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <img src="https://www.rust-lang.org/static/images/rust-logo-blk.svg" alt="Rust Logo" class="logo">
+            <h1>Module 22: Methods and Associated Functions (`impl`)</h1>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <article class="module-content">
+                <h2>Objective: To learn how to attach functions directly to structs, distinguishing between methods that act on an instance and associated functions that act like constructors.</h2>
+                <p>Welcome to Day 5! We're now moving into software design. A core principle of good design is "encapsulation"—keeping data and the behavior that acts on that data together. In Rust, the tool for this is the <strong><code>impl</code></strong> (implementation) block.</p>
+                
+                <hr>
+
+                <h3>Step 1: The `impl` Block</h3>
+                <p>An `impl` block is where you define functions specifically for a struct or enum. There are two kinds of functions you can define inside an `impl` block:</p>
+                <ul>
+                    <li><strong>Methods:</strong> Functions that operate on a specific *instance* of a struct. Their first parameter is always `self`, `&self`, or `&mut self`.</li>
+                    <li><strong>Associated Functions:</strong> Functions that are associated with the type itself, but not a specific instance. They are often used as constructors. They do *not* take `self` as the first parameter.</li>
+                </ul>
+                <p><strong>Analogy: The Dog Blueprint.</strong> A <code>struct Dog</code> is a blueprint. An **associated function** like <code>Dog::new("Fido")</code> is like the factory that reads the blueprint to create a new dog. A **method** like <code>fido.bark()</code> is something that a specific dog *instance* can do.</p>
+                
+                <h4>Example Syntax</h4>
+                <pre><code>struct Circle { radius: f64 }
+
+impl Circle {
+    // This is an ASSOCIATED FUNCTION (a constructor)
+    // It doesn't take `self`. Call it with `Circle::new(...)`.
+    pub fn new(radius: f64) -> Circle {
+        Circle { radius }
+    }
+
+    // This is a METHOD
+    // It takes `&self` to read data from the instance.
+    // Call it on an instance: `my_circle.area()`.
+    pub fn area(&self) -> f64 {
+        std::f64::consts::PI * self.radius * self.radius
+    }
+}</code></pre>
+
+                <h3>Let's Build Our Todo App (Part 19)</h3>
+                <p>Our Todo app's logic is currently spread out inside the `Command` structs. Let's refactor it to move the core logic for a `Task` into an `impl` block for the `Task` struct itself. This makes our code cleaner, more reusable, and easier to understand.</p>
+                <p>We will add an `impl Task` block and then simplify our `AddCommand` and `CompleteCommand` to use the new methods.</p>
+                <pre><code>// In src/main.rs
+
+// --- The Task struct is the same, but we will add behavior to it ---
+struct Task {
+    description: String,
+    completed: bool,
+    edit_count: u32,
+}
+
+// --- NEW: The impl block for our Task struct ---
+impl Task {
+    // An associated function that acts as a constructor.
+    fn new(description: String) -> Task {
+        Task {
+            description,
+            completed: false,
+            edit_count: 0,
+        }
+    }
+    
+    // A method that modifies the instance.
+    // It takes `&mut self` because it needs to change the instance's data.
+    fn complete(&mut self) {
+        self.completed = true;
+        self.edit_count += 1;
+    }
+}
+
+// ... (AppError, Command trait are the same) ...
+
+// --- REFACTORED: AddCommand is now much simpler ---
+struct AddCommand { description: String }
+impl Command for AddCommand {
+    fn execute(&self, tasks: &mut HashMap<u32, Task>, next_id: &mut u32) -> Result<(), AppError> {
+        // Use our new constructor!
+        let new_task = Task::new(self.description.clone());
+        
+        tasks.insert(*next_id, new_task);
+        println!("Added task {}: '{}'", next_id, self.description);
+        *next_id += 1;
+        Ok(())
+    }
+}
+
+// --- REFACTORED: CompleteCommand is now much simpler ---
+struct CompleteCommand { id: u32 }
+impl Command for CompleteCommand {
+    fn execute(&self, tasks: &mut HashMap<u32, Task>, _next_id: &mut u32) -> Result<(), AppError> {
+        let task = tasks.get_mut(&self.id)
+            .ok_or_else(|| AppError::NotFound(format!("Task with ID {} not found.", self.id)))?;
+        
+        // Call our new method! The logic is now encapsulated inside Task.
+        task.complete();
+        
+        println!("Completed task {}: '{}' (edited {} times)", self.id, task.description, task.edit_count);
+        Ok(())
+    }
+}
+// ... (The rest of the file, including the `run` loop and other commands, remains the same) ...
+</code></pre>
+
+                <h4>The Design Improvement:</h4>
+                <ul>
+                    <li><strong><code>Task::new(...)</code></strong>: Creating a new task is now cleaner and less error-prone. The logic for setting default values (`completed: false`, `edit_count: 0`) is in one single place. If we ever change how a new task is created, we only have to edit this one function.</li>
+                    <li><strong><code>task.complete()</code></strong>: The `CompleteCommand` no longer needs to know the *internal details* of how to complete a task (that it has to set a boolean and increment a counter). It just calls the `complete` method. This is encapsulation. The `Task` struct is now responsible for its own state.</li>
+                    <li><strong>Readability</strong>: The code inside our `Command` structs is now higher-level. It describes *what* it's doing (`Task::new`, `task.complete`) rather than *how* it's doing it. This makes the overall application flow much easier to follow.</li>
+                </ul>
+                <p>This refactoring doesn't change what our application does, but it dramatically improves the quality of our code. This is a huge step towards writing professional, maintainable Rust programs.</p>
+
+                <a href="../index.html" class="back-link">&larr; Back to Curriculum Map</a>
+            </article>
+        </div>
+    </main>
+    
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 The Rust Adventure.</p>
+        </div>
+    </footer>
+
+</body>
+</html>

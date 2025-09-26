@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 64: API State Management - The Rust Adventure</title>
+    <link rel="stylesheet" href="../style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <img src="https://www.rust-lang.org/static/images/rust-logo-blk.svg" alt="Rust Logo" class="logo">
+            <h1>Module 64: API State Management</h1>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <article class="module-content">
+                <h2>Objective: To learn how to create and share application state (like a database connection pool or an in-memory store) safely across multiple handlers and requests.</h2>
+                <p>Our API is functional, but it has a major flaw: it's stateless! Every request is independent. Tasks "created" in one request disappear immediately because they aren't stored anywhere. To build a real application, our handlers need a way to access a shared piece of state. Axum provides a simple and safe way to manage this.</p>
+                
+                <hr>
+
+                <h3>Step 1: The Problem of Shared State</h3>
+                <p>Because Axum uses `tokio`, it handles many requests concurrently, often on multiple threads. If we just created a `HashMap` and tried to let every handler use it, we would instantly run into data races and ownership problems. The state must be shareable and safe to access from multiple threads.</p>
+                <p>The solution is the same pattern we learned about on Day 9 for shared-state concurrency: <strong><code>Arc&lt;Mutex&lt;T&gt;&gt;</code></strong>.</p>
+                <ul>
+                    <li><strong><code>Arc</code></strong> allows multiple threads to have shared ownership of our state.</li>
+                    <li><strong><code>Mutex</code></strong> ensures that only one thread can *modify* the state at any given time, preventing data races.</li>
+                </ul>
+
+                <h3>Step 2: The `State` Extractor</h3>
+                <p>Axum's solution is elegant. You define a struct for your application's shared state. You then "add" this state to your `Router`. From that point on, you can use the <strong><code>axum::extract::State</code></strong> extractor in your handlers to get a thread-safe handle to your shared state.</p>
+                
+                <h3>Practical Application: Making our Todo API Stateful</h3>
+                <p>Let's refactor our application to use a shared, in-memory `HashMap` to store our tasks. A task created with a `POST` request will now be visible to a later `GET` request.</p>
+
+                <h4>1. Add `tokio::sync::Mutex`</h4>
+                <p>We'll use `tokio`'s async-aware `Mutex` for better performance in an async context.</p>
+
+                <h4>2. The Complete `src/main.rs`</h4>
+                <pre><code>use axum::{
+    extract::{Path, State},
+    routing::{get, post},
+    Json, Router,
+};
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::net::SocketAddr;
+use std::sync::{Arc, atomic::{AtomicU64, Ordering}};
+use tokio::sync::Mutex; // Use tokio's async-aware Mutex
+
+// --- DATA STRUCTURES ---
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct Task {
+    id: u64,
+    description: String,
+    completed: bool,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct CreateTask {
+    description: String,
+}
+
+// --- SHARED APPLICATION STATE ---
+// This struct will hold all the shared state for our application.
+// It needs to be clonable so Axum can give a copy to each handler.
+#[derive(Clone)]
+struct AppState {
+    // We use Arc<Mutex<...>> for our tasks to allow safe concurrent access.
+    tasks: Arc<Mutex<HashMap<u64, Task>>>,
+    // A simple atomic counter to generate unique IDs.
+    next_id: Arc<AtomicU64>,
+}
+
+#[tokio::main]
+async fn main() {
+    // 1. Create the shared state.
+    let shared_state = AppState {
+        tasks: Arc::new(Mutex::new(HashMap::new())),
+        next_id: Arc::new(AtomicU64::new(1)),
+    };
+
+    let app = Router::new()
+        .route("/tasks", post(create_task))
+        .route("/tasks", get(list_tasks))
+        .route("/tasks/:id", get(get_task))
+        // 2. Add the state to the router.
+        .with_state(shared_state);
+
+    let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
+    println!("Server listening on {}", addr);
+    axum::Server::bind(&addr)
+        .serve(app.into_make_service())
+        .await
+        .unwrap();
+}
+
+// --- HANDLER FUNCTIONS (now with State) ---
+
+async fn create_task(
+    State(state): State<AppState>, // Use the State extractor
+    Json(payload): Json<CreateTask>,
+) -> Json<Task> {
+    // Generate a new unique ID.
+    let id = state.next_id.fetch_add(1, Ordering::SeqCst);
+    
+    let task = Task {
+        id,
+        description: payload.description,
+        completed: false,
+    };
+
+    // Lock the mutex and insert the new task.
+    // The lock is released automatically when `tasks_guard` goes out of scope.
+    let mut tasks_guard = state.tasks.lock().await;
+    tasks_guard.insert(id, task.clone());
+    
+    Json(task)
+}
+
+async fn list_tasks(
+    State(state): State<AppState>,
+) -> Json<Vec<Task>> {
+    let tasks_guard = state.tasks.lock().await;
+    // Clone the values to create a Vec to return.
+    let tasks = tasks_guard.values().cloned().collect();
+    Json(tasks)
+}
+
+async fn get_task(
+    State(state): State<AppState>,
+    Path(id): Path<u64>,
+) -> Result<Json<Task>, axum::http::StatusCode> { // Return a Result for error handling
+    let tasks_guard = state.tasks.lock().await;
+    
+    if let Some(task) = tasks_guard.get(&id).cloned() {
+        Ok(Json(task))
+    } else {
+        // If the task is not found, return a 404 Not Found error.
+        Err(axum::http::StatusCode::NOT_FOUND)
+    }
+}
+</code></pre>
+
+                <h4>The Stateful API Architecture:</h4>
+                <ul>
+                    <li><strong><code>AppState</code></strong>: We define a single struct to hold all our application's shared data. This can be easily expanded later with a database connection pool. It must derive `Clone`.</li>
+                    <li><strong><code>Arc<Mutex<...>></code></strong>: We wrap our `HashMap` in this classic combo to ensure it's safe to share across all the concurrent tasks that Axum spawns to handle requests.</li>
+                    <li><strong><code>.with_state(shared_state)</code></strong>: This is the key Axum method. We create our state once when the app starts and give it to the router.</li>
+                    <li><strong><code>State(state): State<AppState></code></strong>: This argument in our handlers is the `State` extractor. It gives us a clone of the `Arc` pointing to our state, allowing us to access it.</li>
+                    <li><strong><code>state.tasks.lock().await</code></strong>: Inside our async handlers, we `await` the lock on the `Mutex`. `tokio::sync::Mutex` ensures that if we have to wait for the lock, our async task will yield and allow other tasks to run, which is highly efficient.</li>
+                </ul>
+
+                <h3>Step 3: Test Your Stateful API!</h3>
+                <p>Run your server with <code>cargo run</code>. Now, use `curl` in sequence:</p>
+                <pre><code># 1. Initially, the list is empty.
+curl http://127.0.0.1:3000/tasks
+# Expected output: []
+
+# 2. Create a new task. The server will respond with the created task.
+curl -X POST -H "Content-Type: application/json" -d '{"description": "Learn state management"}' http://127.0.0.1:3000/tasks
+# Expected output: {"id":1,"description":"Learn state management","completed":false}
+
+# 3. List the tasks again.
+curl http://127.0.0.1:3000/tasks
+# Expected output: [{"id":1,"description":"Learn state management","completed":false}]
+# IT'S THERE! The state was shared between requests.
+
+# 4. Get the specific task by its ID.
+curl http://127.0.0.1:3000/tasks/1
+</code></pre>
+                <p>You have successfully built a stateful API. Your application now has a memory that persists between requests. This is the final and most important pattern for building any real web service, whether it's an in-memory store like this or a more robust database connection pool, which we'll cover next.</p>
+
+                <a href="../index.html" class="back-link">&larr; Back to Curriculum Map</a>
+            </article>
+        </div>
+    </main>
+    
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 The Rust Adventure.</p>
+        </div>
+    </footer>
+
+</body>
+</html>

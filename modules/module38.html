@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 38: Communication via Message Passing with Channels - The Rust Adventure</title>
+    <link rel="stylesheet" href="../style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <img src="https://www.rust-lang.org/static/images/rust-logo-blk.svg" alt="Rust Logo" class="logo">
+            <h1>Module 38: Communication via Message Passing with Channels</h1>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <article class="module-content">
+                <h2>Objective: To learn a safe and easy way for threads to communicate with each other without sharing memory directly, using channels.</h2>
+                <p>Spawning threads is great, but how do they report their results back to the main thread? One of the core philosophies of safe concurrency is: "Do not communicate by sharing memory; instead, share memory by communicating." Rust's primary tool for this is the <strong>channel</strong>.</p>
+                
+                <hr>
+
+                <h3>Step 1: What is a Channel?</h3>
+                <p>A channel is a one-way communication conduit between threads. It has two halves: a transmitter (sender) and a receiver. You send values in one end, and they come out the other. Crucially, when you send a value, its ownership is transferred to the other side. This is Rust's secret weapon for preventing you from accidentally using data in two places at once.</p>
+                <p><strong>Analogy: The Assembly Line Conveyor Belt.</strong> A channel is a conveyor belt. One or more "producer" threads (workers) can place items on the belt. A single "consumer" thread (the foreman) can take items off the end of the belt. Once a worker places an item on the belt, it's no longer theirs to touch—ownership has been transferred. This prevents two workers from trying to modify the same item simultaneously.</p>
+
+                <h3>Step 2: Using `mpsc` Channels</h3>
+                <p>Rust's standard library provides an `mpsc` channel, which stands for <strong>m</strong>ultiple <strong>p</strong>roducer, <strong>s</strong>ingle <strong>c</strong>onsumer. This means you can have many threads sending data, but only one thread receiving it.</p>
+                <ul>
+                    <li><code>mpsc::channel()</code>: This function creates a new channel, returning a tuple of <code>(transmitter, receiver)</code>, often called <code>(tx, rx)</code>.</li>
+                    <li><code>tx.send(value)</code>: Sends a value down the channel. This transfers ownership.</li>
+                    <li><code>rx.recv()</code>: Waits (blocks) until a value arrives, and returns it wrapped in a <code>Result</code>.</li>
+                    <li>The transmitter (`tx`) can be cloned, allowing you to give a sender to each of your spawned threads. The receiver (`rx`) cannot be cloned.</li>
+                </ul>
+
+                <h3>Practical Application: A Parallel Word Counter</h3>
+                <p>Let's build a program that demonstrates a classic "map-reduce" pattern. We'll give a large amount of text to several worker threads. Each thread will count the words in its chunk (the "map" step), and the main thread will collect and combine the results (the "reduce" step).</p>
+                <p>Create a new project or replace your <code>main.rs</code> temporarily to run this exercise.</p>
+                <pre><code>// In a new main.rs
+use std::collections::HashMap;
+use std::sync::mpsc;
+use std::thread;
+
+fn main() {
+    let text_chunks = vec![
+        "hello world rust world",
+        "hello adventure fearless concurrency",
+        "rust is safe and fast",
+    ];
+
+    // 1. Create a channel. `tx` is the transmitter, `rx` is the receiver.
+    let (tx, rx) = mpsc::channel();
+    
+    // Process each chunk of text in a separate thread.
+    for (i, chunk) in text_chunks.into_iter().enumerate() {
+        // Clone the transmitter for each thread.
+        let thread_tx = tx.clone();
+
+        thread::spawn(move || {
+            let mut word_counts = HashMap::new();
+            for word in chunk.split_whitespace() {
+                // Get the entry for the word, insert 0 if vacant, and add 1.
+                *word_counts.entry(word.to_string()).or_insert(0) += 1;
+            }
+            println!("Thread {} finished processing.", i);
+            // Send the final result from this thread back to the main thread.
+            thread_tx.send(word_counts).unwrap();
+        });
+    }
+
+    // Drop the original transmitter so the receiver knows when to stop.
+    // The `rx` loop will end when all transmitters have been dropped.
+    drop(tx);
+
+    // 3. Main thread acts as the reducer.
+    let mut final_counts = HashMap::new();
+    // The receiver can be used as an iterator! It will block and wait for each result.
+    for received_map in rx {
+        println!("Main thread received a result!");
+        for (word, count) in received_map {
+            *final_counts.entry(word).or_insert(0) += count;
+        }
+    }
+
+    println!("\n--- Final Word Counts ---");
+    println!("{:#?}", final_counts);
+}
+</code></pre>
+
+                <h4>The Message Passing Architecture:</h4>
+                <ul>
+                    <li><strong><code>let (tx, rx) = mpsc::channel();</code></strong>: We create the two ends of our "conveyor belt."</li>
+                    <li><strong><code>let thread_tx = tx.clone();</code></strong>: Before spawning a thread, we clone the transmitter. This gives each "worker" its own handle to place items on the belt.</li>
+                    <li><strong><code>thread_tx.send(word_counts).unwrap();</code></strong>: After a worker thread is done, it sends its entire `HashMap` of results back to the main thread. Ownership of the `HashMap` is moved into the channel.</li>
+                    <li><strong><code>for received_map in rx</code></strong>: The receiver, `rx`, can be used as an iterator. The main thread's `for` loop will automatically wait at this line until a message arrives. When all transmitters (the original `tx` and all its clones) have been dropped, the channel is considered "closed," and the loop will end.</li>
+                </ul>
+                <p>This pattern is incredibly powerful and safe. The threads don't share any mutable state directly. They are completely isolated, and they only communicate by sending self-contained messages. This eliminates an entire class of concurrency bugs by design.</p>
+
+                <a href="../index.html" class="back-link">&larr; Back to Curriculum Map</a>
+            </article>
+        </div>
+    </main>
+    
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 The Rust Adventure.</p>
+        </div>
+    </footer>
+
+</body>
+</html>

@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 73: Manipulating the DOM - The Rust Adventure</title>
+    <link rel="stylesheet" href="../style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <img src="https://www.rust-lang.org/static/images/rust-logo-blk.svg" alt="Rust Logo" class="logo">
+            <h1>Module 73: Manipulating the DOM</h1>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <article class="module-content">
+                <h2>Objective: To use the `web-sys` crate to directly interact with Web APIs and manipulate the HTML Document Object Model (DOM) from within Rust.</h2>
+                <p>Calling `alert` is fun, but real web applications need to interact with the page itself—creating paragraphs, adding buttons, and responding to user clicks. The <strong><code>web-sys</code></strong> crate is the bridge that makes this possible. It provides raw, one-to-one bindings to virtually all the Web APIs that you know from JavaScript.</p>
+                
+                <hr>
+
+                <h3>Step 1: What is `web-sys`?</h3>
+                <p>`web-sys` is a massive crate, automatically generated from the official Web API specification. It provides the Rust function signatures for calling browser APIs like <code>window</code>, <code>document</code>, <code>console.log</code>, <code>document.createElement</code>, and thousands more. It's the foundational layer for almost all Rust Wasm frontend development.</p>
+                <p>Because it's so large, you must enable specific APIs as "features" in your `Cargo.toml`. This allows the compiler to only include the parts you actually need, keeping your final Wasm binary small.</p>
+
+                <h3>Step 2: The Core Pattern of DOM Manipulation</h3>
+                <p>Interacting with the DOM from `web-sys` usually follows this pattern:</p>
+                <ol>
+                    <li>Get the global <code>window</code> object.</li>
+                    <li>From the `window`, get the <code>document</code> object.</li>
+                    <li>From the `document`, get the `body` or another element to attach things to.</li>
+                    <li>Use <code>document.createElement("p")</code> to create a new element (like a paragraph).</li>
+                    <li>Set its properties (like <code>.set_inner_html(...)</code>).</li>
+                    <li>Append the new element to the body with <code>body.append_child(...)</code>.</li>
+                </ol>
+                <p>This will feel very familiar if you've done DOM manipulation in JavaScript, but with the full power and type safety of Rust!</p>
+
+                <h3>Practical Application: A Rust-Powered "Hello" Button</h3>
+                <p>Let's modify our `wasm-hello` project to dynamically add a button to the page. When the button is clicked, it will call our `greet` function from the previous module. This demonstrates both DOM manipulation and handling user events.</p>
+
+                <h4>1. Update `Cargo.toml` with `web-sys` features</h4>
+                <p>We need to enable the specific APIs we're going to use.</p>
+                <pre><code># In wasm-hello/Cargo.toml
+[dependencies]
+wasm-bindgen = "0.2"
+
+[dependencies.web-sys]
+version = "0.3.4"
+features = [
+  'Document',
+  'Element',
+  'HtmlButtonElement',
+  'HtmlElement',
+  'Node',
+  'Window',
+]
+</code></pre>
+                
+                <h4>2. Update `src/lib.rs`</h4>
+                <p>We'll add a new "startup" function that will be called when our Wasm module loads.</p>
+                <pre><code>use wasm_bindgen::prelude::*;
+
+// ... (the extern "C" block for `alert` and the `greet` function are the same as before) ...
+
+// This is our new startup function.
+// `#[wasm_bindgen(start)]` tells wasm-bindgen to call this function automatically
+// when the Wasm module is loaded.
+#[wasm_bindgen(start)]
+pub fn run() -> Result<(), JsValue> {
+    // 1. Get the `window`, `document`, and `body`
+    let window = web_sys::window().expect("no global `window` exists");
+    let document = window.document().expect("should have a document on window");
+    let body = document.body().expect("document should have a body");
+
+    // 2. Create a new <p> element
+    let p = document.create_element("p")?;
+    p.set_inner_html("Click the button to call a Rust function!");
+
+    // 3. Create a new <button> element
+    let button: web_sys::HtmlButtonElement = document.create_element("button")?
+        .dyn_into::<web_sys::HtmlButtonElement>()?;
+    button.set_inner_html("Greet!");
+    
+    // 4. Create a closure to be called when the button is clicked.
+    // `Closure::wrap` turns a Rust closure into something JavaScript can understand.
+    let onclick = Closure::wrap(Box::new(move || {
+        // Call our existing Rust function!
+        greet("from the button click");
+    }) as Box<dyn FnMut()>);
+
+    // 5. Attach the event listener.
+    button.set_onclick(Some(onclick.as_ref().unchecked_ref()));
+    
+    // `forget` the closure. This is necessary to keep it alive in memory
+    // after the `run` function finishes.
+    onclick.forget();
+
+    // 6. Append the new elements to the body.
+    body.append_child(&p)?;
+    body.append_child(&button)?;
+
+    Ok(())
+}
+</code></pre>
+
+                <h4>3. Update `index.html`</h4>
+                <p>Our JavaScript can be much simpler now, as the `run` function handles setting everything up.</p>
+                <pre><code>&lt;!DOCTYPE html&gt;
+&lt;html&gt;
+  &lt;head&gt;
+    &lt;meta charset="utf-8" /&gt;
+    &lt;title&gt;Rust Wasm Adventure&lt;/title&gt;
+  &lt;/head&gt;
+  &lt;body&gt;
+    &lt;h1&gt;Rust and WebAssembly Integration&lt;/h1&gt;
+    &lt;script type="module"&gt;
+      import init from "./pkg/wasm_hello.js";
+
+      // Just initialize the module. The `#[wasm_bindgen(start)]`
+      // function will take care of the rest.
+      init();
+    &lt;/script&gt;
+  &lt;/body&gt;
+&lt;/html&gt;
+</code></pre>
+
+                <h4>4. Build and Serve</h4>
+                <p>Re-run `wasm-pack build --target web` and restart your local web server. Now, when you visit <a href="http://localhost:8000" target="_blank">http://localhost:8000</a>, you will see your new paragraph and button! Click the button, and the alert from our Rust `greet` function will pop up.</p>
+
+                <h4>The DOM Manipulation Architecture:</h4>
+                <ul>
+                    <li><strong>Feature Flags:</strong> The `web-sys` features in `Cargo.toml` are critical for keeping the compiled Wasm small.</li>
+                    <li><strong><code>#[wasm_bindgen(start)]</code></strong>: A convenient attribute that designates an entry point for your Wasm library, similar to `main` in a binary.</li>
+                    <li><strong>Type Casting with <code>.dyn_into()</code></strong>: `document.create_element()` returns a generic `Element`. We need to cast it into a more specific type like `HtmlButtonElement` to access button-specific properties like `set_onclick`.</li>
+                    <li><strong><code>Closure::wrap</code></strong>: This is the key to handling events. It wraps a Rust closure in a way that allows it to be stored and called by JavaScript's event system. <code>.forget()</code> is necessary to prevent Rust from deallocating the closure's memory when `run` finishes.</li>
+                </ul>
+                <p>You have now achieved full integration between Rust and the web browser. You can create UI elements, handle events, and call your core application logic, all from the safety and performance of Rust. This is the foundation for building entire single-page web applications, which we'll explore next.</p>
+
+                <a href="../index.html" class="back-link">&larr; Back to Curriculum Map</a>
+            </article>
+        </div>
+    </main>
+    
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 The Rust Adventure.</p>
+        </div>
+    </footer>
+
+</body>
+</html>

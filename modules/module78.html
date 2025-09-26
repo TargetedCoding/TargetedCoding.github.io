@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 78: Writing a `Dockerfile` - The Rust Adventure</title>
+    <link rel="stylesheet" href="../style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <img src="https://www.rust-lang.org/static/images/rust-logo-blk.svg" alt="Rust Logo" class="logo">
+            <h1>Module 78: Writing a `Dockerfile`</h1>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <article class="module-content">
+                <h2>Objective: To write a multi-stage `Dockerfile` to containerize our optimized Rust backend, creating a small, secure, and reproducible production image.</h2>
+                <p>Now that we have a small, fast binary, how do we run it in production? The modern answer is to package it into a <strong>container</strong>. A container bundles our application and all its dependencies into a single, isolated unit that can run anywhere. We define how to build this container using a special file called a <strong><code>Dockerfile</code></strong>.</p>
+                
+                <hr>
+
+                <h3>Step 1: Why Containers?</h3>
+                <ul>
+                    <li><strong>Consistency:</strong> A container runs the exact same way on your laptop as it does on a production server. No more "but it works on my machine!"</li>
+                    <li><strong>Isolation:</strong> The application inside a container is sandboxed from the host system, which is great for security.</li>
+                    <li><strong>Scalability:</strong> It's easy to start and stop many copies of your container to handle changing traffic loads.</li>
+                </ul>
+                <p><strong>Analogy: The Shipping Container.</strong> Your application is a valuable piece of cargo. A container is a standard-sized, sealed metal shipping container. You can put any cargo inside, and once it's sealed, you know it can be transported by any truck, train, or ship in the world without having to worry about what's inside. It's a standard, reproducible unit of deployment.</p>
+
+                <h3>Step 2: Multi-Stage Builds</h3>
+                <p>The key to creating small and secure Docker images for compiled languages like Rust is the <strong>multi-stage build</strong>. We use two stages:</p>
+                <ol>
+                    <li><strong>The `builder` Stage:</strong> We start with a large Docker image that has the entire Rust toolchain installed. We use this stage to compile our application and produce the optimized binary.</li>
+                    <li><strong>The `runtime` Stage:</strong> We start with a tiny, minimal base image (like `debian:slim` or even `scratch`). We then copy *only* the compiled binary from the `builder` stage into this final image. We don't need the Rust compiler, Cargo, or any of the source code in our final image, which makes it incredibly small and secure.</li>
+                </ol>
+
+                <h3>Practical Application: Containerizing our `todo_api`</h3>
+                <p>Let's write a `Dockerfile` for our API. You'll need to have Docker installed on your system for this module.</p>
+
+                <h4>1. Create a `Dockerfile`</h4>
+                <p>In the root directory of your `todo_api` project, create a new file named `Dockerfile` (no extension).</p>
+                <pre><code># --- Stage 1: The Builder ---
+# We start with the official Rust image, which has the full toolchain.
+FROM rust:1.70 as builder
+
+# Set the working directory inside the container.
+WORKDIR /usr/src/todo_api
+
+# Copy our project files into the container.
+COPY . .
+
+# --- NEW: `sqlx` Offline Build ---
+# We need to install sqlx-cli to prepare our query metadata.
+RUN cargo install sqlx-cli
+# Run `sqlx prepare` to generate the `.sqlx` directory. This allows us
+# to build without a live database connection.
+RUN sqlx prepare
+
+# Build the application in release mode.
+RUN cargo build --release
+
+
+# --- Stage 2: The Runtime ---
+# We start with a minimal Debian image, which is much smaller than the Rust image.
+FROM debian:bullseye-slim
+
+# Copy the compiled binary from the `builder` stage.
+# Also copy the migrations and .env file needed at runtime.
+COPY --from=builder /usr/src/todo_api/target/release/todo_api /usr/local/bin/todo_api
+COPY migrations /app/migrations
+COPY .env /app/.env
+
+# Set the working directory for the final image.
+WORKDIR /app
+
+# Expose the port our application listens on.
+EXPOSE 3000
+
+# The command to run when the container starts.
+CMD ["/usr/local/bin/todo_api"]
+</code></pre>
+
+                <h4>2. Create a `.dockerignore` File</h4>
+                <p>To speed up our builds, we should tell Docker to ignore files and directories that aren't needed. Create a file named `.dockerignore`.</p>
+                <pre><code># In .dockerignore
+.git
+target/
+tasks.db
+</code></pre>
+
+                <h3>Step 3: Build and Run the Container</h3>
+                
+                <h4>1. Build the Image</h4>
+                <p>From your terminal in the `todo_api` root, run the build command. We'll "tag" our image with the name `todo-api`.</p>
+                <pre><code>docker build -t todo-api .</code></pre>
+                <p>Docker will now execute the steps in your `Dockerfile`. This will take some time on the first run as it downloads the base images and compiles your code.</p>
+                
+                <h4>2. Run the Container</h4>
+                <p>Once the build is complete, you can run your application inside the container!</p>
+                <pre><code># -it: Run in interactive mode so we can see logs
+# --rm: Automatically remove the container when it stops
+# -p 3000:3000: Map port 3000 on our host machine to port 3000 inside the container
+docker run -it --rm -p 3000:3000 todo-api
+</code></pre>
+                <p>Your server is now running, but it's completely isolated inside a Docker container! You can open a new terminal and use `curl` to interact with it just like before:</p>
+                <pre><code>curl http://localhost:3000/tasks</code></pre>
+
+                <h4>The Production-Ready Image:</h4>
+                <ul>
+                    <li><strong>Small Size:</strong> Run `docker images todo-api` to see the size of your final image. Because we used a multi-stage build, it will be very small (perhaps under 20MB), whereas the `builder` stage was over 1GB.</li>
+                    <li><strong>Secure:</strong> The final image contains *only* our compiled binary and the necessary runtime files. It does not contain the Rust compiler, our source code, or any build artifacts, which drastically reduces the attack surface.</li>
+                    <li><strong>Reproducible:</strong> Anyone with Docker and our source code can run `docker build` and get the exact same image, guaranteeing a consistent environment everywhere.</li>
+                </ul>
+                <p>You have successfully containerized your Rust application. You now have a standard, portable, and secure artifact that is ready for deployment in any modern cloud environment. In the next module, we'll learn how to manage our API and its database together using `docker-compose`.</p>
+
+                <a href="../index.html" class="back-link">&larr; Back to Curriculum Map</a>
+            </article>
+        </div>
+    </main>
+    
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 The Rust Adventure.</p>
+        </div>
+    </footer>
+
+</body>
+</html>

@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 36: Advanced Module Organization - The Rust Adventure</title>
+    <link rel="stylesheet" href="../style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <img src="https://www.rust-lang.org/static/images/rust-logo-blk.svg" alt="Rust Logo" class="logo">
+            <h1>Module 36: Advanced Module Organization</h1>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <article class="module-content">
+                <h2>Objective: To learn how to structure a larger Rust project by splitting code into multiple files and directories beyond a simple `mod storage;`.</h2>
+                <p>Congratulations on reaching the final module of Day 8! Our application is now tested and documented, but all our logic is crowded into one giant <code>main.rs</code> file. As projects grow, this becomes unmanageable. The final step in professionalizing our project is to organize our code into a logical, hierarchical module structure.</p>
+                
+                <hr>
+
+                <h3>Step 1: The Rust Module System</h3>
+                <p>Rust's module system is designed to control the organization, scope, and privacy of your code.</p>
+                <ul>
+                    <li><strong><code>main.rs</code> or <code>lib.rs</code></strong>: These files are the "crate root." They are the top level of your module hierarchy.</li>
+                    <li><strong><code>mod my_module;</code></strong>: This declaration tells Rust to look for the code for `my_module` in either <code>src/my_module.rs</code> or <code>src/my_module/mod.rs</code>.</li>
+                    <li><strong>Visibility:</strong> By default, everything in Rust is private. If you want to use a struct, enum, or function from another module, it must be marked with the <strong><code>pub</code></strong> keyword.</li>
+                </ul>
+                <p><strong>Analogy: The Filing Cabinet.</strong> A single file is a messy pile of papers. A well-organized module structure is a filing cabinet. <code>src/</code> is the cabinet. Each file (`cli.rs`, `task.rs`) is a drawer. You use <code>mod</code> to tell the main file about the drawers, and <code>pub</code> to label what's accessible inside each drawer.</p>
+
+                <h3>Let's Build Our Todo App (Part 29) - The Final Refactor</h3>
+                <p>We will now perform the final refactoring of our application's file structure. We'll create separate files for our CLI logic, our core data structures, and our storage logic.</p>
+
+                <h4>1. Create the New File Structure</h4>
+                <p>Your `src/` directory will now look like this:</p>
+                <pre><code>src/
+├── cli.rs
+├── main.rs
+├── storage.rs
+└── task.rs
+</code></pre>
+
+                <h4>2. Create `src/task.rs`</h4>
+                <p>Move the `Task` and `Priority` definitions and their `impl` blocks into this new file. Crucially, add `pub` to make them accessible to other modules.</p>
+                <pre><code>// In src/task.rs
+use serde::{Serialize, Deserialize};
+use std::cmp::Ordering;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+pub enum Priority { Low, Medium, High }
+// ... (impl Priority is the same, but doesn't need to be pub) ...
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Task {
+    pub description: String,
+    pub completed: bool,
+    pub priority: Priority,
+}
+// ... (impl Task, impl PartialEq, etc., are the same) ...
+</code></pre>
+                
+                <h4>3. Create `src/cli.rs`</h4>
+                <p>Move the `clap` struct (`Cli`) and enum (`Commands`) into this new file. Make them public.</p>
+                <pre><code>// In src/cli.rs
+use clap::{Parser, Subcommand};
+
+#[derive(Parser, Debug)]
+#[command(author, version, about, long_about = None)]
+pub struct Cli {
+    #[command(subcommand)]
+    pub command: Commands,
+}
+
+#[derive(Subcommand, Debug)]
+pub enum Commands {
+    // ... (same as before) ...
+}
+</code></pre>
+                
+                <h4>4. Update `src/storage.rs`</h4>
+                <p>This file needs to know where `Task` and `Priority` come from now. Change `crate::Task` to `crate::task::Task`.</p>
+                <pre><code>// In src/storage.rs
+use crate::task::{Task, Priority}; // Use the types from the new `task` module
+// ... (the rest of the file is the same)
+</code></pre>
+                
+                <h4>5. Simplify `src/main.rs`</h4>
+                <p>Your `main.rs` is now beautifully clean! Its only job is to declare the modules and run the application logic.</p>
+                <pre><code>// In src/main.rs
+use std::collections::HashMap;
+use std::fs::File;
+use std::io::{BufReader, BufWriter};
+use clap::Parser;
+
+// Declare the modules. This makes their content available via `cli::`, `task::`, etc.
+pub mod cli;
+pub mod storage;
+pub mod task;
+
+// Bring the necessary types into scope.
+use cli::{Cli, Commands};
+use storage::StorageError;
+use task::{Task, Priority};
+
+fn main() -> Result<(), StorageError> {
+    let cli = Cli::parse();
+    // ... (The rest of your main function logic is exactly the same!)
+    // Just make sure you are using `Commands::Add`, `task::Task`, etc.
+    Ok(())
+}
+</code></pre>
+
+                <h4>The Professional Structure:</h4>
+                <ul>
+                    <li><strong>Clear Separation of Concerns:</strong> The roles of each file are now crystal clear. `cli.rs` handles the user interface. `task.rs` defines the core data model. `storage.rs` handles persistence. `main.rs` coordinates everything.</li>
+                    <li><strong>Scalability:</strong> This structure is now ready to grow. If we were to add networking logic, we could simply create a `src/network.rs` module. The project is no longer limited by a single file.</li>
+                    <li><strong>Maintainability:</strong> When you need to fix a bug in how tasks are displayed, you know to look in `task.rs` or `cli.rs`, not hunt through a thousand-line `main.rs` file.</li>
+                </ul>
+                <p>Run <strong><code>cargo run -- --help</code></strong> and <strong><code>cargo test</code></strong> one last time. Everything will work exactly as it did before. You haven't changed what the program does, but you have fundamentally improved its structure to a professional, maintainable, and scalable standard.</p>
+                <p>Congratulations on completing Day 8. You now have the skills to build high-quality, robust, and well-organized Rust applications.</p>
+
+                <a href="../index.html" class="back-link">&larr; Back to Curriculum Map</a>
+            </article>
+        </div>
+    </main>
+    
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 The Rust Adventure.</p>
+        </div>
+    </footer>
+
+</body>
+</html>

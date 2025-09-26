@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 50: The `unsafe` Keyword and Raw Pointers - The Rust Adventure</title>
+    <link rel="stylesheet" href="../style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <img src="https://www.rust-lang.org/static/images/rust-logo-blk.svg" alt="Rust Logo" class="logo">
+            <h1>Module 50: The `unsafe` Keyword and Raw Pointers</h1>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <article class="module-content">
+                <h2>Objective: To provide a safe, structured introduction to what the `unsafe` keyword is, what superpowers it unlocks, and why it is a necessary part of a systems programming language.</h2>
+                <p>Welcome to Day 13! Today we explore one of Rust's most misunderstood features: the <strong><code>unsafe</code></strong> keyword. Rust's primary promise is memory safety, guaranteed by the compiler. However, sometimes the compiler is too conservative and cannot verify that code is safe, even when the programmer knows it is. `unsafe` is a way for you to tell the compiler, "Trust me, I know what I'm doing for this small block of code."</p>
+                
+                <hr>
+
+                <h3>Step 1: What `unsafe` Does (and Doesn't) Do</h3>
+                <p>Entering an `unsafe` block does <strong>not</strong> turn off the borrow checker or the ownership rules. All the normal safety checks are still in place. Instead, `unsafe` gives you access to five new "superpowers" that are not normally available:</p>
+                <ol>
+                    <li>Dereferencing a raw pointer.</li>
+                    <li>Calling an `unsafe` function or method (including functions from other languages).</li>
+                    <li>Accessing or modifying a mutable `static` variable.</li>
+                    <li>Implementing an `unsafe` trait.</li>
+                    <li>Accessing fields of a `union`.</li>
+                </ol>
+                <p><strong>Analogy: The Electric Fence Switch.</strong> Safe Rust is like working in a field with a protective electric fence. The fence (the compiler) prevents you from wandering into dangerous territory. The `unsafe` keyword is like a special, clearly-labeled switch that temporarily turns off a small section of the fence. You are now responsible for your own safety in that specific area, but the rest of the fence is still active. The goal is to keep these `unsafe` sections as small and as well-justified as possible.</p>
+
+                <h3>Step 2: Raw Pointers</h3>
+                <p>The most common reason to use `unsafe` is to work with raw pointers. Unlike Rust's safe references (`&T`) and smart pointers (`Box<T>`), raw pointers:</p>
+                <ul>
+                    <li>Can be null.</li>
+                    <li>Are not guaranteed to point to valid memory.</li>
+                    <li>Do not have any automatic cleanup (no ownership).</li>
+                    <li>Can ignore the borrowing rules (you can have multiple mutable raw pointers to the same data).</li>
+                </ul>
+                <p>There are two kinds: <code>*const T</code> (an immutable raw pointer) and <code>*mut T</code> (a mutable raw pointer). The only way to get the data they point to is to dereference them (using the `*` operator) inside an `unsafe` block.</p>
+
+                <h3>Practical Application: A Safe Abstraction Over `unsafe` Code</h3>
+                <p>The idiomatic way to use `unsafe` in Rust is to wrap it within a safe abstraction. We will create a small program that demonstrates how to split a mutable slice into two halves, a function that is safe but requires `unsafe` to implement.</p>
+
+                <h4>1. Create a New Project</h4>
+                <pre><code>cargo new unsafe_demo
+cd unsafe_demo
+</code></pre>
+                
+                <h4>2. The Complete `src/main.rs`</h4>
+                <pre><code>use std::slice;
+
+/// A safe function that splits a mutable slice into two at a given index.
+/// The standard library already provides `split_at_mut`, but we'll implement it
+/// ourselves to demonstrate a safe abstraction over `unsafe` code.
+fn my_split_at_mut<T>(slice: &mut [T], mid: usize) -> (&mut [T], &mut [T]) {
+    let len = slice.len();
+    let ptr = slice.as_mut_ptr(); // Get a raw mutable pointer to the slice's data.
+
+    // Assert that the midpoint is within the bounds of the slice.
+    // This is a crucial part of creating a safe abstraction.
+    assert!(mid <= len);
+
+    // This is where we need `unsafe`. The borrow checker can't know that
+    // the two slices we are about to create do not overlap. But we, the
+    // programmers, can guarantee it because of our `assert!` check.
+    unsafe {
+        (
+            // `slice::from_raw_parts_mut` creates a mutable slice from a raw pointer and a length.
+            // It's an `unsafe` function because it trusts the programmer that the pointer is valid.
+            slice::from_raw_parts_mut(ptr, mid),
+            slice::from_raw_parts_mut(ptr.add(mid), len - mid),
+        )
+    }
+}
+
+fn main() {
+    let mut numbers = vec![1, 2, 3, 4, 5, 6];
+    
+    // We call our safe function. The user doesn't need to know `unsafe` is used internally.
+    let (left, right) = my_split_at_mut(&mut numbers, 3);
+    
+    println!("Left side: {:?}", left);
+    println!("Right side: {:?}", right);
+
+    // Let's prove they are mutable and don't overlap.
+    left[0] = 100;
+    right[0] = 400;
+
+    println!("After mutation: {:?}", numbers);
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_split() {
+        let mut data = [0, 1, 2, 3, 4, 5];
+        let (left, right) = my_split_at_mut(&mut data, 2);
+        assert_eq!(left, &mut [0, 1]);
+        assert_eq!(right, &mut [2, 3, 4, 5]);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_split_out_of_bounds() {
+        let mut data = [0, 1, 2];
+        // This should panic because of our `assert!`.
+        my_split_at_mut(&mut data, 5);
+    }
+}
+</code></pre>
+
+                <h4>The Safe Abstraction:</h4>
+                <ul>
+                    <li><strong>The Safe Part:</strong> Our function `my_split_at_mut` has a safe signature. It takes a safe mutable slice (`&mut [T]`) and returns two safe mutable slices. The borrow checker would normally forbid this, as it would see it as creating two mutable references to the same data.</li>
+                    <li><strong>The `unsafe` Block:</strong> Inside the function, we enter a small `unsafe` block. We use raw pointers (`.as_mut_ptr()`, `.add()`) and an `unsafe` function (`slice::from_raw_parts_mut`) to do something the borrow checker can't understand.</li>
+                    <li><strong>Upholding the Contract:</strong> We are telling the compiler, "I am manually upholding the borrowing rules." Our `assert!(mid <= len)` check is our proof. Because we've checked the bounds, we can guarantee to the compiler that the two resulting slices will never point to the same memory.</li>
+                    <li><strong>The Result:</strong> The user of our function gets to call a completely safe function, and all the dangerous, tricky pointer logic is contained within a small, well-documented `unsafe` block. This is the heart of idiomatic `unsafe` Rust.</li>
+                </ul>
+                <p>You have now learned that `unsafe` is not about disabling Rust's safety features, but about telling the compiler where you are taking on the responsibility for guaranteeing safety yourself. It's a powerful tool that is essential for low-level systems programming and interoperating with other languages.</p>
+
+                <a href="../index.html" class="back-link">&larr; Back to Curriculum Map</a>
+            </article>
+        </div>
+    </main>
+    
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 The Rust Adventure.</p>
+        </div>
+    </footer>
+
+</body>
+</html>

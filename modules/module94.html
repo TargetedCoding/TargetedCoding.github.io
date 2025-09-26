@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 94: DataFrames with `Polars` II - The Rust Adventure</title>
+    <link rel="stylesheet" href="../style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <img src="https://www.rust-lang.org/static/images/rust-logo-blk.svg" alt="Rust Logo" class="logo">
+            <h1>Module 94: DataFrames with `Polars` II</h1>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <article class="module-content">
+                <h2>Objective: To use the advanced features of the `Polars` lazy API to perform complex data manipulations, including grouping, aggregations, and joining multiple DataFrames.</h2>
+                <p>You've learned how to load, select, and filter data. Now it's time to unlock the true power of DataFrames by answering more complex questions. How many members are on each team? What is the average tenure of a hero? To answer these, we need to perform <strong>grouping</strong> and <strong>aggregation</strong> operations. We'll also learn how to combine data from two different sources using a <strong>join</strong>.</p>
+                
+                <hr>
+
+                <h3>Step 1: GroupBy and Aggregations</h3>
+                <p>This is one of the most powerful patterns in data analysis. It's a three-step process (often called "split-apply-combine"):</p>
+                <ol>
+                    <li><strong>Split:</strong> The DataFrame is split into groups based on the unique values in one or more columns (e.g., all "Avengers" in one group, all "X-Men" in another).</li>
+                    <li><strong>Apply:</strong> An aggregation function (like `count`, `sum`, `mean`, `max`) is applied to each group independently.</li>
+                    <li><strong>Combine:</strong> The results from each group are combined into a new DataFrame.</li>
+                </ol>
+                <p>In Polars, this is done with the <code>.group_by()</code> and <code>.agg()</code> methods in the lazy API.</p>
+                
+                <h3>Step 2: Joins</h3>
+                <p>A join is an operation that combines rows from two different DataFrames based on a related column between them. This is the exact same concept as a `JOIN` in SQL.</p>
+                
+                <h3>Practical Application: Deeper Avengers Analysis</h3>
+                <p>Let's use our `avengers.csv` file and add a second CSV to perform more advanced analysis.</p>
+                
+                <h4>1. Create a Second CSV File: `real_names.csv`</h4>
+                <pre><code># In real_names.csv
+name,real_name
+"Iron Man","Tony Stark"
+"Captain America","Steve Rogers"
+"Black Widow","Natasha Romanoff"
+"Hulk","Bruce Banner"
+"Doctor Strange","Stephen Strange"
+"Spider-Man","Peter Parker"
+</code></pre>
+
+                <h4>2. Project Setup</h4>
+                <p>Continue in your `polars_intro` project from the previous module.</p>
+                
+                <h4>3. The Complete `src/main.rs`</h4>
+                <pre><code>use anyhow::Result;
+use polars::prelude::*;
+
+fn main() -> Result<()> {
+    let df_heroes = CsvReader::from_path("avengers.csv")?.finish()?;
+    let df_names = CsvReader::from_path("real_names.csv")?.finish()?;
+
+    println!("--- Heroes DataFrame ---");
+    println!("{}", df_heroes);
+    println!("\n--- Real Names DataFrame ---");
+    println!("{}", df_names);
+
+
+    // --- 1. GROUPBY and AGGREGATION ---
+    // Let's count the number of heroes per team and find the average years_active.
+    let df_agg = df_heroes.clone().lazy()
+        // Group by the "team" column.
+        .group_by(["team"])
+        .agg([
+            // Define the aggregations to perform on each group.
+            count().alias("member_count"),
+            col("years_active").mean().alias("avg_years_active"),
+            col("name").list().alias("members"),
+        ])
+        .collect()?;
+
+    println!("\n--- Aggregated by Team ---");
+    println!("{}", df_agg);
+    
+    
+    // --- 2. JOINING DataFrames ---
+    // Let's combine the two DataFrames to get the real names alongside the hero data.
+    let df_joined = df_heroes.clone().lazy()
+        .inner_join(
+            df_names.clone().lazy(), // The other DataFrame to join with
+            col("name"),             // The key column in the left DataFrame
+            col("name")              // The key column in the right DataFrame
+        )
+        .collect()?;
+
+    println!("\n--- Joined DataFrame (Heroes + Real Names) ---");
+    println!("{}", df_joined);
+    
+    
+    // --- 3. PUTTING IT ALL TOGETHER: A Complex Query ---
+    // Find the real name of the Avenger with the most years active.
+    let final_result = df_joined.clone().lazy()
+        .filter(col("team").eq(lit("Avengers")))
+        // Sort the DataFrame by 'years_active' in descending order.
+        .sort(
+            "years_active",
+            SortOptions { descending: true, ..Default::default() }
+        )
+        // Select only the 'real_name' and 'years_active' columns.
+        .select([col("real_name"), col("years_active")])
+        // Take just the top row.
+        .limit(1)
+        .collect()?;
+        
+    println!("\n--- Most Experienced Avenger ---");
+    println!("{}", final_result);
+    
+    Ok(())
+}
+</code></pre>
+
+                <h4>The Advanced API in Action:</h4>
+                <ul>
+                    <li><strong><code>.group_by(["team"])</code></strong>: This lazy operation splits the DataFrame into groups for each unique value in the `team` column (one group for "Avengers", one for "").</li>
+                    <li><strong><code>.agg([...])</code></strong>: This takes a list of aggregation expressions to apply to each group.
+                        <ul>
+                            <li><strong><code>count()</code></strong>: Counts the number of rows in each group.</li>
+                            <li><strong><code>col("years_active").mean()</code></strong>: Takes the `years_active` column for each group and calculates its mean (average).</li>
+                            <li><strong><code>col("name").list()</code></strong>: Gathers all names in the group into a list.</li>
+                            <li><strong><code>.alias("...")</code></strong>: Renames the output column to something more descriptive.</li>
+                        </ul>
+                    </li>
+                    <li><strong><code>.inner_join(...)</code></strong>: This performs a database-style inner join. It looks for rows where the value in the `name` column is the same in both DataFrames and combines them.</li>
+                    <li><strong><code>.sort(...)</code></strong>: Sorts the DataFrame based on a column's values. We use `SortOptions` to specify descending order.</li>
+                </ul>
+                <p>Run <strong><code>cargo run</code></strong>. The program will now perform much more sophisticated analysis. It will tell you the size and average tenure of each team, and it will combine the data from two separate files to find the real name of the most experienced Avenger. You have now learned the core patterns of data manipulation—grouping, aggregation, and joining—that are used every day by data scientists and analysts, all within the high-performance, type-safe environment of Rust.</p>
+
+                <a href="../index.html" class="back-link">&larr; Back to Curriculum Map</a>
+            </article>
+        </div>
+    </main>
+    
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 The Rust Adventure.</p>
+        </div>
+    </footer>
+
+</body>
+</html>

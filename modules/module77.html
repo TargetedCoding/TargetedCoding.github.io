@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 77: Building Optimized Rust Binaries - The Rust Adventure</title>
+    <link rel="stylesheet" href="../style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <img src="https://www.rust-lang.org/static/images/rust-logo-blk.svg" alt="Rust Logo" class="logo">
+            <h1>Module 77: Building Optimized Rust Binaries</h1>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <article class="module-content">
+                <h2>Objective: To understand and configure Cargo's release profiles to produce small, fast binaries that are optimized for production deployment.</h2>
+                <p>Welcome to Day 22! Before we can put our application in a container, we need to build it correctly. A "debug" build is fast to compile but slow to run and produces a large file. A "release" build is slow to compile but fast to run and produces a smaller file. We can tune this even further to create highly optimized binaries perfect for deployment.</p>
+                
+                <hr>
+
+                <h3>Step 1: Debug vs. Release Profiles</h3>
+                <p>Cargo has the concept of "profiles" to control compiler settings. The two main profiles are:</p>
+                <ul>
+                    <li><strong><code>dev</code> (debug):</strong> Used when you run <code>cargo build</code> or <code>cargo run</code>. It optimizes for fast compilation times, includes lots of debugging information, and turns off most code optimizations.</li>
+                    <li><strong><code>release</code> (release):</strong> Used when you run <code>cargo build --release</code>. It optimizes for fast runtime performance, which means compilation takes longer.</li>
+                </ul>
+                <p>For any production deployment, you should <strong>always</strong> use a release build.</p>
+
+                <h3>Step 2: Configuring the Release Profile</h3>
+                <p>We can override the default release settings in our <code>Cargo.toml</code> to squeeze out even more performance and reduce the binary size. This is done in a <code>[profile.release]</code> section.</p>
+                
+                <p><strong>Analogy: The Master Craftsman.</strong> A debug build is a quick prototype with notes and extra material still attached. A release build is the final product. The `[profile.release]` settings are the instructions for the master craftsman building the final product:</p>
+                <ul>
+                    <li><strong><code>opt-level = 3</code>:</strong> "Use the highest level of optimization."</li>
+                    <li><strong><code>lto = true</code>:</strong> "Perform Link-Time Optimization. Look at the entire project at once to find more optimization opportunities."</li>
+                    <li><strong><code>codegen-units = 1</code>:</strong> "Work on the whole project as a single unit. This is slower to compile but allows for the best cross-crate optimizations."</li>
+                    <li><strong><code>panic = 'abort'</code>:</strong> "If the program panics, just abort immediately. Don't include the complex machinery for unwinding the stack, which makes the binary larger."</li>
+                </ul>
+
+                <h3>Step 3: Stripping the Binary</h3>
+                <p>Even a release binary contains "debug symbols"—information that maps the compiled machine code back to your source code functions and variable names. This is useful for debugging a release build, but it's unnecessary for a final production binary. We can remove this information to make the file even smaller using the `strip` command.</p>
+
+                <h3>Practical Application: Optimizing our `todo_api`</h3>
+                <p>Let's take our `todo_api` project and see how small we can make the final binary.</p>
+
+                <h4>1. Get a Baseline Size</h4>
+                <p>In your `todo_api` project, run a standard release build:</p>
+                <pre><code>cargo build --release</code></pre>
+                <p>Now, check the size of the resulting binary. On Linux or macOS, you can use `ls -lh`.</p>
+                <pre><code># On Linux/macOS
+ls -lh target/release/todo_api
+
+# On Windows
+dir target\release\todo_api.exe
+</code></pre>
+                <p>On a typical system, this might be around <strong>8-10 MB</strong>.</p>
+                
+                <h4>2. Configure `Cargo.toml` for Optimization</h4>
+                <p>Open your `todo_api/Cargo.toml` file and add this section at the bottom:</p>
+                <pre><code># In Cargo.toml
+
+[profile.release]
+opt-level = 'z'     # Optimize for size. '3' is for speed.
+lto = true          # Enable Link-Time Optimization
+codegen-units = 1   # Reduce parallel code generation units
+panic = 'abort'     # Abort on panic
+strip = true        # Automatically strip symbols from the binary
+</code></pre>
+                <p>We're using `opt-level = 'z'` which specifically tells the compiler to optimize for the smallest possible binary size, which is great for containers.</p>
+
+                <h4>3. Build the Optimized Binary</h4>
+                <p>First, clean the old build artifacts, then build again:</p>
+                <pre><code>cargo clean
+cargo build --release
+</code></pre>
+                <p>Check the file size again. With these settings, the binary size should be dramatically smaller, perhaps around <strong>2-4 MB</strong>! The `strip = true` option in recent Rust versions handles the stripping step for us automatically.</p>
+                
+                <h4>4. (Optional) Manual Stripping</h4>
+                <p>If your Rust version is older or you want to see the effect, you can strip manually. After building, run the `strip` command (available on Linux/macOS):</p>
+                <pre><code>strip target/release/todo_api</code></pre>
+                <p>This will reduce the size even further if `strip = true` was not used.</p>
+
+                <h4>Summary of Results (Example)</h4>
+                <table>
+                  <thead><tr><th>Optimization Step</th><th>Example Size</th><th>Reduction</th></tr></thead>
+                  <tbody>
+                    <tr><td>Standard Release Build</td><td>9.5 MB</td><td>-</td></tr>
+                    <tr><td>Optimized `[profile.release]`</td><td>3.2 MB</td><td>~66%</td></tr>
+                  </tbody>
+                </table>
+                <p>As you can see, by providing a few simple configuration options to Cargo, we can reduce our final binary size by more than half. This is a critical step for creating small, efficient Docker images and for faster deployments.</p>
+
+                <a href="../index.html" class="back-link">&larr; Back to Curriculum Map</a>
+            </article>
+        </div>
+    </main>
+    
+    <footer>
+        <div class="container">
+            <p>&copy; 205 The Rust Adventure.</p>
+        </div>
+    </footer>
+
+</body>
+</html>

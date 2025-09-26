@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 57: Async Runtimes (`tokio`) - The Rust Adventure</title>
+    <link rel="stylesheet" href="../style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <img src="https://www.rust-lang.org/static/images/rust-logo-blk.svg" alt="Rust Logo" class="logo">
+            <h1>Module 57: Async Runtimes (`tokio`)</h1>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <article class="module-content">
+                <h2>Objective: To understand the role of an async runtime (the event loop, task scheduler, and I/O reactor) and to use the `tokio` crate to execute our futures.</h2>
+                <p>In the last module, we learned that a <code>Future</code> is a lazy, pollable state machine. It doesn't do anything on its own. To make it run, we need an "executor" that repeatedly calls <code>.poll()</code>. This executor is the core of an <strong>async runtime</strong>. The most popular and production-ready async runtime in the Rust ecosystem is <strong><code>tokio</code></strong>.</p>
+                
+                <hr>
+
+                <h3>Step 1: What is a Runtime?</h3>
+                <p>An async runtime is like a mini-operating system for your asynchronous tasks. It has several key components:</p>
+                <ul>
+                    <li><strong>The Executor/Scheduler:</strong> This is the heart of the runtime. It has a queue of tasks (futures) that are ready to be worked on. It picks a task, calls <code>.poll()</code> on it, and if the task returns <code>Poll::Pending</code>, it puts it aside and picks up the next ready task.</li>
+                    <li><strong>The Reactor:</strong> This is the part that interacts with the operating system's I/O APIs (like networking and timers). When a task is waiting for a network packet, the reactor registers that interest with the OS. The OS will notify the reactor when the packet arrives, and the reactor will then tell the executor to "wake up" the corresponding task and put it back in the ready queue.</li>
+                </ul>
+                <p><strong>Analogy: The Restaurant's Head Chef.</strong> The async runtime is the head chef and project manager of a large, busy kitchen. The individual chefs are the threads. The `Future`s are the recipes. The head chef (`Executor`) gives recipes to the chefs. When a recipe says "wait for soup to boil," the chef tells the head chef, who then tells a specialized kitchen assistant (`Reactor`) to watch the pot. The chef is now free to work on a different recipe. When the soup timer dings, the assistant informs the head chef, who then finds a free chef and tells them to continue with the soup recipe.</p>
+
+                <h3>Step 2: Using `tokio`</h3>
+                <p>`tokio` provides everything you need for production-grade async Rust: the runtime itself, asynchronous versions of timers, file I/O, networking, and synchronization tools like an async `Mutex`.</p>
+                <p>Getting started is incredibly easy thanks to the <code>#[tokio::main]</code> procedural macro. It transforms a `main` function into a synchronous entry point that sets up and starts the `tokio` runtime for you.</p>
+
+                <h3>Practical Application: Bringing Our Async Kitchen to Life</h3>
+                <p>Let's take the conceptual code from the last module and make it a real, working program using `tokio`.</p>
+
+                <h4>1. Create a New Project</h4>
+                <pre><code>cargo new async_kitchen
+cd async_kitchen
+</code></pre>
+                
+                <h4>2. Update `Cargo.toml`</h4>
+                <p>We need to add `tokio` with the "full" feature flag to get access to all its capabilities, including the `main` macro and time functions.</p>
+                <pre><code>[dependencies]
+tokio = { version = "1", features = ["full"] }
+</code></pre>
+                
+                <h4>3. The Complete, Runnable `src/main.rs`</h4>
+                <pre><code>use std::time::Duration;
+use tokio::time::sleep; // Import tokio's async sleep function.
+
+// An async function. It no longer blocks the thread.
+async fn get_soup_async() {
+    println!("Chef: Putting soup on to boil...");
+    // When we `.await` this, the task can be paused, and the thread
+    // is free to run other tasks.
+    sleep(Duration::from_secs(2)).await;
+    println!("Chef: Soup is ready!");
+}
+
+async fn chop_vegetables() {
+    println!("Chef: Chopping vegetables...");
+    sleep(Duration::from_secs(1)).await;
+    println!("Chef: Vegetables are chopped.");
+}
+
+// 1. Add the `#[tokio::main]` attribute.
+// This sets up the runtime and makes our `main` function an async entry point.
+#[tokio::main]
+async fn main() {
+    println!("--- Running the Async Kitchen ---\n");
+    let start_time = std::time::Instant::now();
+
+    // 2. Spawn async tasks using `tokio::spawn`.
+    // This is like `thread::spawn`, but for lightweight, non-blocking async tasks.
+    // The runtime can run thousands of these on a small number of OS threads.
+    let soup_handle = tokio::spawn(get_soup_async());
+    let veggies_handle = tokio::spawn(chop_vegetables());
+
+    // 3. Wait for both tasks to complete using `.await`.
+    // This is similar to `JoinHandle::join()` for threads.
+    let _ = soup_handle.await;
+    let _ = veggies_handle.await;
+    
+    // We could also run them concurrently and wait for both with `tokio::join!`
+    // tokio::join!(soup_handle, veggies_handle);
+
+    println!("\n--- Async kitchen is done! ---");
+    println!("Total time: {:?}", start_time.elapsed());
+}
+</code></pre>
+
+                <h4>The Asynchronous Execution Flow:</h4>
+                <p>Run <strong><code>cargo run</code></strong>. You will see an output like this:</p>
+                <pre><code>--- Running the Async Kitchen ---
+
+Chef: Putting soup on to boil...
+Chef: Chopping vegetables...
+Chef: Vegetables are chopped.
+Chef: Soup is ready!
+
+--- Async kitchen is done! ---
+Total time: 2.001234567s
+</code></pre>
+                <ul>
+                    <li><strong>Concurrent Execution:</strong> Notice that "Chopping vegetables..." prints *before* "Soup is ready!". This is because `tokio` started the `get_soup_async` task, which immediately hit `sleep(...).await` and yielded control. The executor then started the `chop_vegetables` task, which also yielded. The runtime waited, and because the vegetable task had a shorter sleep (1s), it became `Ready` first and finished.</li>
+                    <li><strong>Efficiency:</strong> The most important part is the total time! Even though the soup took 2 seconds and the vegetables took 1 second (3 seconds of total "work"), the entire program finished in just over 2 seconds. This is because the work was done concurrently, not sequentially. The chopping happened *while* the soup was boiling.</li>
+                </ul>
+                <p>You have now successfully used an async runtime to execute multiple tasks concurrently on a single thread. You've seen firsthand how `async`/`await` can lead to highly efficient I/O-bound programs. In the next module, we'll use this knowledge to build a real network server.</p>
+
+                <a href="../index.html" class="back-link">&larr; Back to Curriculum Map</a>
+            </article>
+        </div>
+    </main>
+    
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 The Rust Adventure.</p>
+        </div>
+    </footer>
+
+</body>
+</html>

@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 66: Compile-Time Checked Queries - The Rust Adventure</title>
+    <link rel="stylesheet" href="../style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <img src="https://www.rust-lang.org/static/images/rust-logo-blk.svg" alt="Rust Logo" class="logo">
+            <h1>Module 66: Compile-Time Checked Queries</h1>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <article class="module-content">
+                <h2>Objective: To use `sqlx`'s procedural macros to write raw SQL queries that are checked against the live database schema at compile time, catching errors before the program runs.</h2>
+                <p>This is where <code>sqlx</code> truly shines and feels like magic. A common bug in many applications is a typo in an SQL query or a mismatch between the query and the database schema. These errors usually only appear at runtime, often in production. `sqlx` solves this by connecting to your database *during compilation* to verify your queries.</p>
+                
+                <hr>
+
+                <h3>Step 1: The `sqlx::query!` Macros</h3>
+                <p>`sqlx` provides a family of procedural macros for writing SQL. The most common are:</p>
+                <ul>
+                    <li><strong><code>sqlx::query!("...")</code></strong>: For queries where you don't need to return data (like `INSERT`, `UPDATE`, `DELETE`).</li>
+                    <li><strong><code>sqlx::query_as!("...", MyStruct)</code></strong>: For `SELECT` queries where you want to map the results directly into a struct.</li>
+                    <li><strong><code>sqlx::query_scalar!("...")</code></strong>: For `SELECT` queries that return a single value (like `SELECT count(*)`).</li>
+                </ul>
+                <p>When you run <code>cargo check</code> or <code>cargo build</code>, `sqlx-cli` (running in the background) will connect to the database specified in your <code>DATABASE_URL</code> and validate every query written inside these macros.</p>
+                
+                <h4>What does it check?</h4>
+                <ul>
+                    <li>That your SQL syntax is valid.</li>
+                    <li>That the tables and columns you reference actually exist.</li>
+                    <li>That the types of your query parameters (`?` placeholders) match the types of the database columns.</li>
+                    <li>That the columns you are selecting can be mapped correctly to the fields of your target struct in `query_as!`.</li>
+                </ul>
+                <p><strong>This is a revolutionary safety feature!</strong></p>
+                
+                <h3>Step 2: Preparing for Offline Compilation</h3>
+                <p>Connecting to a live database during every build isn't always practical (e.g., in a CI/CD pipeline). `sqlx-cli` has a solution:</p>
+                <pre><code># This command connects to the DB and saves the schema info to a .sqlx file.
+sqlx prepare
+</code></pre>
+                <p>Once this file exists, `cargo build` will use the saved information instead of connecting to the live database. You should run `sqlx prepare` again whenever you run a migration.</p>
+
+                <h3>Practical Application: Implementing the API Handlers</h3>
+                <p>Let's implement the database logic for our `create_task` and `list_tasks` handlers using `sqlx`'s compile-time checked macros.</p>
+
+                <h4>1. Run `sqlx prepare`</h4>
+                <p>Make sure your database is up-to-date by running `sqlx migrate run` and then run `sqlx prepare` in your terminal.</p>
+                
+                <h4>2. Update `src/main.rs` Handlers</h4>
+                <p>We'll now replace the placeholder logic in our handlers with real database queries.</p>
+                <pre><code>// In src/main.rs
+
+// ... (use statements, structs, and main function are the same as Module 65) ...
+
+// --- IMPLEMENTED HANDLER FUNCTIONS ---
+
+async fn create_task(
+    State(state): State<AppState>,
+    Json(payload): Json<CreateTask>,
+) -> Result<Json<Task>, axum::http::StatusCode> {
+    // The `query!` macro is checked at compile time.
+    // The `?` placeholders are for binding parameters safely.
+    let result = sqlx::query!(
+        "INSERT INTO tasks (description, completed) VALUES (?, ?)",
+        payload.description,
+        false
+    )
+    .execute(&state.db_pool)
+    .await;
+    
+    match result {
+        Ok(query_result) => {
+            let new_id = query_result.last_insert_rowid();
+            let new_task = Task {
+                id: new_id,
+                description: payload.description,
+                completed: false,
+            };
+            Ok(Json(new_task))
+        },
+        Err(_) => Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR),
+    }
+}
+
+async fn list_tasks(
+    State(state): State<AppState>,
+) -> Result<Json<Vec<Task>>, axum::http::StatusCode> {
+    // The `query_as!` macro maps the result rows directly to our `Task` struct.
+    // `sqlx` will check that the columns `id`, `description`, and `completed`
+    // exist and that their types are compatible with the `Task` struct's fields.
+    let tasks = sqlx::query_as!(Task, "SELECT id, description, completed FROM tasks")
+        .fetch_all(&state.db_pool)
+        .await;
+
+    match tasks {
+        Ok(tasks) => Ok(Json(tasks)),
+        Err(_) => Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR),
+    }
+}
+
+async fn get_task(
+    State(state): State<AppState>,
+    Path(id): Path<i64>, // Match the DB type
+) -> Result<Json<Task>, axum::http::StatusCode> {
+    let task = sqlx::query_as!(
+        Task,
+        "SELECT id, description, completed FROM tasks WHERE id = ?",
+        id
+    )
+    .fetch_optional(&state.db_pool) // `fetch_optional` returns an Option<Task>
+    .await;
+
+    match task {
+        Ok(Some(task)) => Ok(Json(task)),
+        Ok(None) => Err(axum::http::StatusCode::NOT_FOUND),
+        Err(_) => Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR),
+    }
+}
+</code></pre>
+
+                <h4>The Compile-Time Safety Net:</h4>
+                <ul>
+                    <li><strong><code>sqlx::query_as!(Task, "...")</code></strong>: This is the magic. Try changing `SELECT id, description` to `SELECT ident, desc`. Your code will no longer compile! `sqlx` will give you a detailed error message saying that the column `ident` doesn't exist in the `tasks` table and that the `desc` column doesn't match the `description` field on your `Task` struct.</li>
+                    <li><strong>Parameter Binding (`?`)</strong>: The `?` placeholders are used to safely bind variables to the query. This prevents SQL injection attacks. `sqlx` also checks the types. If you tried to pass a `String` to the `id` field in the `WHERE` clause, the compiler would stop you.</li>
+                    <li><strong><code>.fetch_all()</code> vs <code>.fetch_optional()</code></strong>: `sqlx` provides different "fetch" methods depending on what you expect. `fetch_all` is for getting multiple rows (a `Vec`), `fetch_one` is for when you expect exactly one row (an error if zero or more than one), and `fetch_optional` is for when you expect zero or one rows (an `Option`).</li>
+                </ul>
+                
+                <h3>Step 3: Test Your Persistent API!</h3>
+                <p>Run your server with <code>cargo run</code>. Now, use `curl` to interact with your API, which is now backed by a real database.</p>
+                <pre><code># 1. Create a task.
+curl -X POST -H "Content-Type: application/json" -d '{"description": "Test the database"}' http://127.0.0.1:3000/tasks
+
+# 2. List the tasks. You will see the task you just created!
+curl http://127.0.0.1:3000/tasks
+
+# 3. Get the task by its ID.
+curl http://127.0.0.1:3000/tasks/1
+</code></pre>
+                <p>Stop your server and restart it. Run the `list` command again. The data is still there! You have successfully built a persistent API with a level of compile-time safety that is almost unheard of in other web development ecosystems.</p>
+
+                <a href="../index.html" class="back-link">&larr; Back to Curriculum Map</a>
+            </article>
+        </div>
+    </main>
+    
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 The Rust Adventure.</p>
+        </div>
+    </footer>
+
+</body>
+</html>

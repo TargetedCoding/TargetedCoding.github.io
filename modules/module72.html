@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 72: Interacting with JavaScript (`wasm-bindgen`) - The Rust Adventure</title>
+    <link rel="stylesheet" href="../style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <img src="https://www.rust-lang.org/static/images/rust-logo-blk.svg" alt="Rust Logo" class="logo">
+            <h1>Module 72: Interacting with JavaScript (`wasm-bindgen`)</h1>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <article class="module-content">
+                <h2>Objective: To use the `wasm-bindgen` attribute to create a high-level, ergonomic bridge that allows Rust and JavaScript to call each other with rich data types like strings.</h2>
+                <p>WebAssembly on its own can only understand simple number types. This is a problem if we want to pass a string from JavaScript to a Rust function, or get a struct back. The <strong><code>wasm-bindgen</code></strong> project is the solution. It's a tool and a macro that generates all the necessary "glue" code to make communication between Rust and JavaScript seamless.</p>
+                
+                <hr>
+
+                <h3>Step 1: The `#[wasm_bindgen]` Macro</h3>
+                <p>The <code>#[wasm_bindgen]</code> attribute is a procedural macro that you can attach to Rust functions, structs, and enums. When `wasm-pack` runs, it uses this macro to generate the JavaScript shims and TypeScript type definitions that allow you to interact with your Rust code as if it were a native JavaScript module.</p>
+                
+                <p><strong>Analogy: The Diplomatic Translator.</strong> If WebAssembly is a low-level language, `wasm-bindgen` is a highly skilled diplomatic translator. It doesn't just translate words (numbers); it understands cultural context and complex ideas (like `String`s, `struct`s, and `Vec`s). It creates a formal protocol so that Rust and JavaScript can have a productive conversation, each speaking their own language, without any misunderstandings.</p>
+
+                <h3>Step 2: Exporting a Rust Function to JavaScript</h3>
+                <p>To make a Rust function callable from JavaScript, you simply add <code>#[wasm_bindgen]</code> above it. `wasm-bindgen` will automatically handle the conversion for many common types, like `String`.</p>
+                
+                <h3>Step 3: Importing a JavaScript Function into Rust</h3>
+                <p>You can also call JavaScript functions from Rust! You do this by declaring the function signature in an <code>extern "C" { ... }</code> block and annotating that block with `#[wasm_bindgen]`. For example, you can import the browser's `alert()` function.</p>
+
+                <h3>Practical Application: Building and Running a Wasm Library</h3>
+                <p>Let's build on our `wasm-hello` project from the last module to create a real, interactive web page that calls our Rust code.</p>
+
+                <h4>1. Update `src/lib.rs`</h4>
+                <p>Replace the contents of your `wasm-hello/src/lib.rs` file with this new code. We're getting rid of the old `extern "C"` function and using the `wasm-bindgen` macro instead.</p>
+                <pre><code>use wasm_bindgen::prelude::*;
+
+// This block allows us to import JavaScript functions into Rust.
+#[wasm_bindgen]
+extern "C" {
+    // We're importing the browser's `alert` function.
+    fn alert(s: &str);
+}
+
+// This attribute exports our Rust function to be used in JavaScript.
+#[wasm_bindgen]
+pub fn greet(name: &str) {
+    // This is a Rust `format!` macro, but it's calling a JavaScript function!
+    alert(&format!("Hello, {}! Welcome to the world of Rust and Wasm.", name));
+}
+</code></pre>
+
+                <h4>2. Build with `wasm-pack`</h4>
+                <p>Run the build command again from your project's root directory.</p>
+                <pre><code>wasm-pack build --target web</code></pre>
+                <p>`wasm-pack` will see the new attributes and generate much more sophisticated JavaScript glue code in the `pkg/` directory.</p>
+
+                <h4>3. Create an `index.html` File</h4>
+                <p>Now we need a web page to run our code. Create a new file named <code>index.html</code> in the root of your `wasm-hello` project (next to `Cargo.toml`).</p>
+                <pre><code>&lt;!DOCTYPE html&gt;
+&lt;html&gt;
+  &lt;head&gt;
+    &lt;meta charset="utf-8" /&gt;
+    &lt;title&gt;Rust Wasm Adventure&lt;/title&gt;
+  &lt;/head&gt;
+  &lt;body&gt;
+    &lt;h1&gt;Rust and WebAssembly Integration&lt;/h1&gt;
+    &lt;script type="module"&gt;
+      // 1. Import the default export and the named function from the JS glue file.
+      import init, { greet } from "./pkg/wasm_hello.js";
+
+      // 2. The `.wasm` file must be loaded asynchronously.
+      init().then(() => {
+        // 3. Once the Wasm module is loaded and ready, we can call our Rust function!
+        console.log("Wasm module initialized. Calling Rust function...");
+        greet("Adventurer");
+      });
+    &lt;/script&gt;
+  &lt;/body&gt;
+&lt;/html&gt;
+</code></pre>
+
+                <h4>4. Serve the Page</h4>
+                <p>You can't just open `index.html` from your file system, as browsers have security restrictions. You need a simple web server. If you have Python installed, this is a very easy way to do it:</p>
+                <pre><code># Make sure you are in the `wasm-hello` directory
+python3 -m http.server
+# Or if you have Python 2:
+# python -m SimpleHTTPServer
+</code></pre>
+                <p>This will start a web server, usually on port 8000.</p>
+                
+                <h4>5. See it in Action!</h4>
+                <p>Open your web browser and navigate to <a href="http://localhost:8000" target="_blank">http://localhost:8000</a>. When the page loads, you should see a browser alert box pop up with the message: "Hello, Adventurer! Welcome to the world of Rust and Wasm."</p>
+
+                <h4>The Interop in Action:</h4>
+                <ul>
+                    <li><strong>JavaScript to Rust:</strong> In our `index.html`, the JavaScript code calls <code>greet("Adventurer")</code>. The `wasm-bindgen` glue code takes the JavaScript string "Adventurer", converts it into a Rust `&str`, and passes it to our compiled Rust `greet` function inside the Wasm module.</li>
+                    <li><strong>Rust to JavaScript:</strong> Inside our Rust `greet` function, we call `alert(...)`. The `wasm-bindgen` glue code intercepts this call, converts the Rust `&str` into a JavaScript string, and then calls the actual browser `alert` function.</li>
+                </ul>
+                <p>You have successfully created a two-way communication channel between Rust and JavaScript. This powerful capability allows you to write performance-critical logic in Rust and seamlessly integrate it into any modern web application.</p>
+
+                <a href="../index.html" class="back-link">&larr; Back to Curriculum Map</a>
+            </article>
+        </div>
+    </main>
+    
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 The Rust Adventure.</p>
+        </div>
+    </footer>
+
+</body>
+</html>

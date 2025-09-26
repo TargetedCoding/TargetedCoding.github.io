@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 6: Graceful Error Handling - The Rust Adventure</title>
+    <link rel="stylesheet" href="../style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <img src="https://www.rust-lang.org/static/images/rust-logo-blk.svg" alt="Rust Logo" class="logo">
+            <h1>Module 6: Graceful Error Handling</h1>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <article class="module-content">
+                <h2>Objective: To learn how to handle potential failures without crashing the program.</h2>
+                <p>In the real world, things can go wrong. A file might not exist, a network connection might drop, or user input might be invalid. A robust program doesn't crash when this happens; it handles the error gracefully. Rust's primary tool for this is the <code>Result</code> enum.</p>
+                
+                <hr>
+
+                <h3>Step 1: The Possibility of Failure (<code>Result</code>)</h3>
+                <p>The <strong><code>Result&lt;T, E&gt;</code></strong> enum is designed for operations that can either succeed or fail. It has two variants:</p>
+                <ul>
+                    <li><code>Ok(T)</code>: Represents success and contains a value of type <code>T</code>.</li>
+                    <li><code>Err(E)</code>: Represents failure and contains an error value of type <code>E</code>.</li>
+                </ul>
+                <p><strong>Analogy: The Mystery Box.</strong> Imagine you ask a friend to fetch something for you. They return with a mystery box. The box might contain the <code>Ok</code> present you wanted, or an <code>Err</code> note explaining what went wrong (e.g., "the shop was closed"). Rust's <code>Result</code> type forces you to open the box and check what's inside before you can use the present. This prevents you from assuming everything went fine when it might not have.</p>
+
+                <h3>Step 2: Unpacking the Box (<code>match</code>)</h3>
+                <p>The safest and most thorough way to handle a <code>Result</code> is with a <code>match</code> statement. A <code>match</code> forces you to handle every possible variant, so you can't forget to handle the error case.</p>
+                <pre><code>// A function that might fail
+fn might_fail(success: bool) -> Result<String, String> {
+    if success {
+        Ok(String::from("Everything went perfectly!"))
+    } else {
+        Err(String::from("Something went wrong!"))
+    }
+}
+
+// Using `match` to handle the result
+let result = might_fail(true);
+match result {
+    Ok(message) => println!("Success: {}", message),
+    Err(error) => println!("Error: {}", error),
+}</code></pre>
+
+                <h3>Let's Build Our Todo App (Part 6)</h3>
+                <p>Let's add a crucial feature to our app: saving the task list to a file. This is a perfect example of an operation that can fail (e.g., we don't have permission to write the file). We'll use <code>Result</code> and <code>match</code> to handle it properly.</p>
+                <p>Replace the code in your <code>src/main.rs</code> file with this:</p>
+                <pre><code>// We need to bring the `fs` (file system) module into scope.
+use std::fs;
+
+struct Task {
+    description: String,
+    completed: bool,
+}
+
+fn main() {
+    let mut tasks = Vec::new();
+    tasks.push(Task {
+        description: "Master error handling".to_string(),
+        completed: false,
+    });
+    tasks.push(Task {
+        description: "Save tasks to a file".to_string(),
+        completed: false,
+    });
+    
+    // --- NEW: SAVE LOGIC ---
+
+    let mut file_contents = String::new();
+    for task in &tasks {
+        let status = if task.completed { "x" } else { " " };
+        let line = format!("[{}] {}\n", status, task.description);
+        file_contents.push_str(&line);
+    }
+    
+    // `fs::write` attempts to write to a file. It returns a Result!
+    let save_result = fs::write("tasks.txt", file_contents);
+
+    println!("Attempting to save file...");
+    match save_result {
+        Ok(()) => {
+            println!("Success! Tasks were saved to tasks.txt.");
+        }
+        Err(e) => {
+            println!("Error: Could not save tasks to file. Reason: {}", e);
+        }
+    }
+}</code></pre>
+
+                <h4>New Concepts in Our App:</h4>
+                <ul>
+                    <li><strong><code>use std::fs;</code></strong>: This line imports Rust's standard library module for interacting with the file system.</li>
+                    <li><strong><code>format!</code> macro</strong>: Similar to <code>println!</code>, but instead of printing to the console, it returns a formatted <code>String</code>.</li>
+                    <li><strong><code>fs::write("tasks.txt", ...)</code></strong>: This function attempts to write our string to a file named `tasks.txt`. It's the part that can fail.</li>
+                    <li><strong><code>let save_result = ...</code></strong>: The return value of `fs::write` is a `Result`. If it succeeds, it's <code>Ok(())</code>. The `()` is a special "unit type" in Rust that means "nothing to see here, it just worked." If it fails, it's <code>Err(e)</code>, where `e` is an `io::Error` struct containing information about the failure.</li>
+                    <li><strong><code>match save_result { ... }</code></strong>: This is our safety net. We explicitly handle the `Ok` case (printing a success message) and the `Err` case (printing a helpful error message).</li>
+                </ul>
+                <p>Run <code>cargo run</code>. You should see the success message, and a new file named `tasks.txt` will appear in your project's root directory! Now, try to make it fail: make the `tasks.txt` file read-only and run the program again. You'll see your error message print instead of the program crashing.</p>
+
+                <a href="../index.html" class="back-link">&larr; Back to Curriculum Map</a>
+            </article>
+        </div>
+    </main>
+    
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 The Rust Adventure.</p>
+        </div>
+    </footer>
+
+</body>
+</html>

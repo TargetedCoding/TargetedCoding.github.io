@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 11: The Power of Traits - The Rust Adventure</title>
+    <link rel="stylesheet" href="../style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <img src="https://www.rust-lang.org/static/images/rust-logo-blk.svg" alt="Rust Logo" class="logo">
+            <h1>Module 11: The Power of Traits</h1>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <article class="module-content">
+                <h2>Objective: To introduce abstract behavior and Rust's approach to polymorphism using traits.</h2>
+                <p>Our application works, but look at the giant <code>match</code> statement in our main loop. Every time we want to add a new command, we have to make that block bigger and bigger. This is not scalable. We need a way to separate the logic for each command. The solution is Rust's feature for defining shared behavior: <strong>traits</strong>.</p>
+                
+                <hr>
+
+                <h3>Step 1: Defining Shared Behavior with Traits</h3>
+                <p>A <strong>trait</strong> defines a collection of methods that a type must implement. It's a contract that guarantees certain behavior, without caring about the specific data inside the type.</p>
+                <p><strong>Analogy: A "Licensed Driver" Certification.</strong> Imagine a "Licensed Driver" trait. This trait guarantees that any type implementing it has a <code>drive()</code> method. A <code>Human</code> struct and a <code>SelfDrivingCar</code> struct could both implement this trait. You don't care *how* they drive, just that you can call the <code>.drive()</code> method on them.</p>
+
+                <h3>Step 2: Trait Objects for Flexibility</h3>
+                <p>The real magic happens when we want to handle different types that all share the same trait. We can use a <strong>trait object</strong>, like <code>Box&lt;dyn LicensedDriver&gt;</code>. This is a "smart pointer" that can hold *any* struct (<code>Human</code>, <code>SelfDrivingCar</code>, etc.) as long as it implements the `LicensedDriver` trait. This is how Rust achieves polymorphism, a concept known as "dynamic dispatch."</p>
+
+                <h3>Let's Build Our Todo App (Part 10)</h3>
+                <p>We will now refactor our app to use a <code>Command</code> trait. The main loop will no longer have a giant `match` statement. Instead, it will parse the input, create the correct "command object," and then just call a single <code>execute()</code> method on it. This is a massive architectural improvement.</p>
+                <p>Replace all the code in <code>src/main.rs</code> with this new, professionally structured version.</p>
+                <pre><code>use std::collections::HashMap;
+use std::io;
+
+// --- Data Structures (unchanged) ---
+struct Task {
+    description: String,
+    completed: bool,
+}
+
+#[derive(Debug)]
+enum AppError {
+    IoError(io::Error),
+    ParseError(String),
+    NotFound(String),
+}
+
+impl From<io::Error> for AppError {
+    fn from(error: io::Error) -> Self { AppError::IoError(error) }
+}
+
+// --- NEW: The Command Trait ---
+// This defines the shared behavior for all of our commands.
+trait Command {
+    fn execute(&self, tasks: &mut HashMap<u32, Task>, next_id: &mut u32) -> Result<(), AppError>;
+}
+
+// --- NEW: Structs for each Command ---
+struct AddCommand { description: String }
+struct CompleteCommand { id: u32 }
+struct ListCommand; // No data needed for this one
+
+// --- NEW: Implement the Trait for Each Command Struct ---
+impl Command for AddCommand {
+    fn execute(&self, tasks: &mut HashMap<u32, Task>, next_id: &mut u32) -> Result<(), AppError> {
+        let new_task = Task { description: self.description.clone(), completed: false };
+        tasks.insert(*next_id, new_task);
+        println!("Added task {}: '{}'", next_id, self.description);
+        *next_id += 1;
+        Ok(())
+    }
+}
+
+impl Command for CompleteCommand {
+    fn execute(&self, tasks: &mut HashMap<u32, Task>, _next_id: &mut u32) -> Result<(), AppError> {
+        let task = tasks.get_mut(&self.id)
+            .ok_or_else(|| AppError::NotFound(format!("Task with ID {} not found.", self.id)))?;
+        task.completed = true;
+        println!("Completed task {}: '{}'", self.id, task.description);
+        Ok(())
+    }
+}
+
+impl Command for ListCommand {
+    fn execute(&self, tasks: &mut HashMap<u32, Task>, _next_id: &mut u32) -> Result<(), AppError> {
+        println!("\n--- TODO LIST ---");
+        for (id, task) in tasks {
+            let status = if task.completed { "[x]" } else { "[ ]" };
+            println!("{}: {} {}", id, status, task.description);
+        }
+        println!("-----------------");
+        Ok(())
+    }
+}
+
+// --- REFACTORED: The Run Loop ---
+fn run() -> Result<(), AppError> {
+    let mut tasks = HashMap::new();
+    let mut next_id: u32 = 1;
+
+    loop {
+        println!("\n> Enter a command: add [desc], complete [id], list, or quit");
+        let mut input = String::new();
+        io::stdin().read_line(&mut input)?;
+        
+        let mut parts = input.trim().split_whitespace();
+        let command_name = parts.next().unwrap_or("");
+
+        // The logic for parsing now creates a command object.
+        let command: Option<Box<dyn Command>> = match command_name {
+            "add" => {
+                let description = parts.collect::<Vec<&str>>().join(" ");
+                if description.is_empty() {
+                    eprintln!("Error: 'add' command requires a description.");
+                    continue;
+                }
+                Some(Box::new(AddCommand { description }))
+            },
+            "complete" => {
+                let id_str = match parts.next() {
+                    Some(s) => s,
+                    None => { eprintln!("Error: 'complete' requires an ID."); continue; }
+                };
+                let id: u32 = match id_str.parse() {
+                    Ok(num) => num,
+                    Err(_) => { eprintln!("Error: '{}' is not a valid ID.", id_str); continue; }
+                };
+                Some(Box::new(CompleteCommand { id }))
+            },
+            "list" => Some(Box::new(ListCommand)),
+            "quit" => break,
+            "" => continue,
+            _ => { eprintln!("Error: Unknown command '{}'", command_name); continue; }
+        };
+
+        // If a command was successfully parsed, execute it.
+        if let Some(cmd) = command {
+            if let Err(e) = cmd.execute(&mut tasks, &mut next_id) {
+                eprintln!("Command execution error: {:?}", e);
+            }
+        }
+    }
+    Ok(())
+}
+
+fn main() {
+    if let Err(e) = run() {
+        eprintln!("Application error: {:?}", e);
+    }
+}
+</code></pre>
+
+                <h4>The New Scalable Architecture:</h4>
+                <ul>
+                    <li><strong><code>trait Command</code></strong>: The contract that unifies all our actions.</li>
+                    <li><strong><code>AddCommand</code>, etc.</strong>: Each command is now its own self-contained unit with its own data. The logic for adding a task is now entirely inside the <code>execute</code> method for <code>AddCommand</code>.</li>
+                    <li><strong><code>Box&lt;dyn Command&gt;</code></strong>: This is our flexible command holder. Our `command` variable can hold a `Box` containing an `AddCommand`, a `CompleteCommand`, or any other command we create in the future.</li>
+                    <li><strong>The Run Loop</strong>: The loop's only jobs are to parse input into the correct command object and then call <code>.execute()</code>. It no longer knows or cares about the specific logic of *how* to add or complete a task. To add a new "delete" command, you would simply create a `DeleteCommand` struct, implement the trait, and add one more arm to the parsing logic. The core loop doesn't change!</li>
+                </ul>
+                <p>This pattern is incredibly powerful and is used extensively in real-world Rust applications. You have just leveled up your skills from a programmer to a software architect!</p>
+
+                <a href="../index.html" class="back-link">&larr; Back to Curriculum Map</a>
+            </article>
+        </div>
+    </main>
+    
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 The Rust Adventure.</p>
+        </div>
+    </footer>
+
+</body>
+</html>
