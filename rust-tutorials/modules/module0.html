@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 0: Gearing Up - The Rust Adventure</title>
+    <link rel="stylesheet" href="../style.css"> <!-- Note the ../ to go up one directory -->
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <img src="https://www.rust-lang.org/static/images/rust-logo-blk.svg" alt="Rust Logo" class="logo">
+            <h1>Module 0: Gearing Up for the Adventure</h1>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <article class="module-content">
+                <h2>Objective: Set up your programming environment and run your first Rust program.</h2>
+                <p>Welcome to your first step! In this module, we'll get all the tools you need and make the computer say "Hello" in Rust.</p>
+                
+                <hr>
+
+                <h3>Step 1: The Grand Welcome</h3>
+                <p><strong>What is Rust?</strong> Imagine you're building with super-powered LEGOs. Rust is like a wise and friendly instructor who checks every piece you add, making sure your creation won't fall apart. It helps you build things that are both incredibly fast and super safe.</p>
+
+                <h3>Step 2: Setting Up Your Workshop</h3>
+                <p>We need to install the Rust toolchain. The best way is to use a tool called <code>rustup</code>. Visit the official Rust website at <a href="https://www.rust-lang.org/tools/install" target="_blank">rust-lang.org</a> and follow the instructions for your operating system (Windows, macOS, or Linux). This will install everything you need, including:</p>
+                <ul>
+                    <li><code>rustc</code>: The Rust compiler that turns your code into an executable program.</li>
+                    <li><code>cargo</code>: Rust's amazing project manager and build tool. Your new best friend!</li>
+                    <li><code>rustfmt</code>: A tool to automatically format your code to keep it neat.</li>
+                </ul>
+
+                <h3>Step 3: Our First Command: <code>cargo new</code></h3>
+                <p><code>cargo</code> is like a magical toolbox that creates projects for you. Let's make one!</p>
+                <p>Open your terminal or command prompt and run this command:</p>
+                <pre><code>cargo new todo_list</code></pre>
+                <p>This creates a new folder called <code>todo_list</code>. Inside, you'll find two important things:</p>
+                <ul>
+                    <li><code>Cargo.toml</code>: The project configuration file.</li>
+                    <li><code>src/main.rs</code>: The file where we'll write our Rust code.</li>
+                </ul>
+                
+                <h3>Step 4: "Hello, Adventurer!" - Your First Program</h3>
+                <p>Open the <code>src/main.rs</code> file in a text editor. It already has some code!</p>
+                <pre><code>fn main() {
+    println!("Hello, world!");
+}</code></pre>
+                <p>Let's break it down:</p>
+                <ul>
+                    <li><code>fn main() { ... }</code>: This defines the <strong>main function</strong>. Every adventure needs a starting point, and this is it for every Rust program.</li>
+                    <li><code>println!("Hello, world!")</code>: This is a <strong>macro</strong> that prints text to the screen. We know it's a macro because of the exclamation mark <code>!</code>.</li>
+                    <li><code>;</code>: The semicolon marks the end of the statement.</li>
+                </ul>
+                <p>Now, let's run it. Navigate into your new project directory in your terminal and run:</p>
+                <pre><code>cd todo_list
+cargo run</code></pre>
+                <p>You should see <code>Hello, world!</code> printed on your screen. Congratulations, you are officially a Rust programmer!</p>
+
+                <a href="../index.html" class="back-link">&larr; Back to Curriculum Map</a>
+            </article>
+        </div>
+    </main>
+    
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 The Rust Adventure.</p>
+        </div>
+    </footer>
+
+</body>
+</html>
