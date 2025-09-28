@@ -1,0 +1,1940 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Rust Adventure: A Curriculum for Fearless Coders</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;600;700&family=Roboto:wght@300;400;500;700&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+    <meta name="theme-color" content="#0f0f23">
+    <meta name="description" content="A futuristic journey to master Rust programming - from zero to fearless coder.">
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <div class="header-content">
+                <img src="https://www.rust-lang.org/static/images/rust-logo-blk.svg" alt="Rust Logo" class="logo">
+                <h1>The Rust Adventure</h1>
+                <p class="subtitle">A Curriculum for Fearless Coders</p>
+                <div class="tech-lines">
+                    <div class="tech-line"></div>
+                    <div class="tech-line"></div>
+                    <div class="tech-line"></div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <section id="introduction">
+                <h2>Welcome, Adventurer!</h2>
+                <div class="intro-content">
+                    <p>This curriculum is a multi-day journey to master Rust. Each day focuses on a core theme, building on the last. We will learn by building a real "Todo List" application from the ground up, one step at a time.</p>
+                    <p class="call-to-action">Select a day below to begin your quest.</p>
+                </div>
+                <div class="circuit-pattern">
+                    <div class="circuit-node"></div>
+                    <div class="circuit-node"></div>
+                    <div class="circuit-node"></div>
+                </div>
+            </section>
+
+            <nav id="curriculum-map">
+                <h2>Course Outline</h2>
+
+                <!-- DAY 1 SECTION -->
+                <div class="day-section">
+                    <details> <!-- The 'open' attribute makes it expanded by default -->
+                        <summary>
+                            <div class="day-info">
+                                <h3>Day 1: Rust Fundamentals</h3>
+                                <p>From zero to a complete command-line application.</p>
+                            </div>
+                        </summary>
+                        
+                        <!-- All of our existing modules now live inside here -->
+                        <ul class="module-list">
+                            <li class="module-item complete">
+                                <a href="modules/module0.html">
+                                    <div class="module-number">0</div>
+                                    <div class="module-info">
+                                        <h3>Gearing Up for the Adventure</h3>
+                                        <p>Set up your workshop and run your very first Rust program.</p>
+                                    </div>
+                                </a>
+                            </li>
+                             <li class="module-item complete">
+                                <a href="modules/module1.html">
+                                    <div class="module-number">1</div>
+                                    <div class="module-info">
+                                        <h3>The Basic Building Blocks</h3>
+                                        <p>Learn about variables, data types, and Rust's safety-first approach.</p>
+                                    </div>
+                                </a>
+                            </li>
+                            <li class="module-item complete">
+                                <a href="modules/module2.html">
+                                    <div class="module-number">2</div>
+                                    <div class="module-info">
+                                        <h3>Making Choices & Repeating Actions</h3>
+                                        <p>Control the flow of your program with loops and conditions.</p>
+                                    </div>
+                                </a>
+                            </li>
+                            <li class="module-item complete">
+                                <a href="modules/module3.html">
+                                    <div class="module-number">3</div>
+                                    <div class="module-info">
+                                        <h3>Rust's First Superpower: Ownership</h3>
+                                        <p>Understand Rust's core memory management feature that guarantees safety.</p>
+                                    </div>
+                                </a>
+                            </li>
+                            <li class="module-item complete">
+                                <a href="modules/module4.html">
+                                    <div class="module-number">4</div>
+                                    <div class="module-info">
+                                        <h3>Rust's Second Superpower: Borrowing</h3>
+                                        <p>Learn how to access data without taking ownership using references.</p>
+                                    </div>
+                                </a>
+                            </li>
+                            <li class="module-item complete">
+                                <a href="modules/module5.html">
+                                    <div class="module-number">5</div>
+                                    <div class="module-info">
+                                        <h3>Custom Blueprints (Structs & Enums)</h3>
+                                        <p>Learn how to create your own custom data types.</p>
+                                    </div>
+                                </a>
+                            </li>
+                            <li class="module-item complete">
+                                <a href="modules/module6.html">
+                                    <div class="module-number">6</div>
+                                    <div class="module-info">
+                                        <h3>Graceful Error Handling</h3>
+                                        <p>Handle potential failures without crashing your program using `Result`.</p>
+                                    </div>
+                                </a>
+                            </li>
+                            <li class="module-item complete">
+                                <a href="modules/module7.html">
+                                    <div class="module-number">7</div>
+                                    <div class="module-info">
+                                        <h3>The Wider World (Crates & Modules)</h3>
+                                        <p>Use code from the Rust community and organize your project.</p>
+                                    </div>
+                                </a>
+                            </li>
+                            <li class="module-item complete">
+                                <a href="modules/module8.html">
+                                    <div class="module-number">8</div>
+                                    <div class="module-info">
+                                        <h3>The Adventure Continues!</h3>
+                                        <p>You're a Rustacean! Here's where to go next on your journey.</p>
+                                    </div>
+                                </a>
+                            </li>
+                        </ul>
+                    </details>
+                </div>
+
+                <!-- DAY 2 PLACEHOLDER -->
+                <!-- DAY 2 SECTION -->
+<div class="day-section">
+    <details> <!-- Remove 'open' if you want it collapsed by default -->
+        <summary>
+            <div class="day-info">
+                <h3>Day 2: Diving Deeper into Rust</h3>
+                <p>Exploring traits, lifetimes, collections, and more advanced concepts.</p>
+            </div>
+        </summary>
+        
+        <ul class="module-list">
+            <!-- Update for Module 9 -->
+            <li class="module-item complete">
+                <a href="modules/module9.html">
+                    <div class="module-number">9</div>
+                    <div class="module-info">
+                        <h3>The Interactive App & Advanced Collections</h3>
+                        <p>Accept user commands and upgrade our data storage with HashMap.</p>
+                    </div>
+                </a>
+            </li>
+            <!-- Update for Module 10 -->
+<li class="module-item complete">
+    <a href="modules/module10.html">
+        <div class="module-number">10</div>
+        <div class="module-info">
+            <h3>Cleaner Error Handling & Custom Errors</h3>
+            <p>Move beyond `panic!` to professional error handling with `Result` and `?`.</p>
+        </div>
+    </a>
+</li>
+<!-- Inside the Day 2 <ul class="module-list"> -->
+
+<!-- Update for Module 11 -->
+<li class="module-item complete">
+    <a href="modules/module11.html">
+        <div class="module-number">11</div>
+        <div class="module-info">
+            <h3>The Power of Traits</h3>
+            <p>Define abstract behavior and create a scalable application architecture.</p>
+        </div>
+    </a>
+</li>
+
+<!-- Update for Module 12 -->
+<li class="module-item complete">
+    <a href="modules/module12.html">
+        <div class="module-number">12</div>
+        <div class="module-info">
+            <h3>Advanced Iterators & Closures</h3>
+            <p>Unlock the expressive, functional side of Rust.</p>
+        </div>
+    </a>
+</li>
+
+<!-- Update for Module 13 -->
+<li class="module-item complete">
+    <a href="modules/module13.html">
+        <div class="module-number">13</div>
+        <div class="module-info">
+            <h3>Demystifying Lifetimes</h3>
+            <p>Understand the "why" and "how" of Rust's most famous feature.</p>
+        </div>
+    </a>
+</li>
+
+<!-- Day 2 is now complete! We can add a placeholder for a future Day 3 -->
+<li class="module-item locked">
+    <a>
+        <div class="module-number">★</div>
+        <div class="module-info">
+            <h3>Day 2 Finale</h3>
+            <p>Congratulations on completing the advanced curriculum!</p>
+        </div>
+    </a>
+</li>
+        </ul>
+    </details>
+</div>
+
+<!-- DAY 3 SECTION - The Start of the Programming Bootcamp -->
+<div class="day-section">
+    <details> <!-- 'open' makes it expanded by default -->
+        <summary>
+            <div class="day-info">
+                <h3>Day 3: Mastering Core Data Structures</h3>
+                <p>A deep dive into strings, lists, key-value pairs, and multi-dimensional data.</p>
+            </div>
+        </summary>
+        
+        <ul class="module-list">
+            <!-- Update for Module 14 -->
+            <li class="module-item complete">
+                <a href="modules/module14.html">
+                    <div class="module-number">14</div>
+                    <div class="module-info">
+                        <h3>The Full Story of Rust Strings</h3>
+                        <p>Master the critical `String` vs. `&str` distinction and common manipulations.</p>
+                    </div>
+                </a>
+            </li>
+            
+            <!-- Update for Module 15 -->
+<li class="module-item complete">
+    <a href="modules/module15.html">
+        <div class="module-number">15</div>
+        <div class="module-info">
+            <h3>The Mighty Vec and Slices</h3>
+            <p>Go beyond the basics with capacity, slices, and advanced methods.</p>
+        </div>
+    </a>
+</li>
+
+<!-- Update for Module 16 -->
+<li class="module-item complete">
+    <a href="modules/module16.html">
+        <div class="module-number">16</div>
+        <div class="module-info">
+            <h3>Key-Value Magic: HashMap Deep Dive</h3>
+            <p>Master the powerful and idiomatic `Entry` API for complex updates.</p>
+        </div>
+    </a>
+</li>
+
+<!-- Update for Module 17 -->
+<li class="module-item complete">
+    <a href="modules/module17.html">
+        <div class="module-number">17</div>
+        <div class="module-info">
+            <h3>Multi-Dimensional Data & Pattern Printing</h3>
+            <p>Represent 2D grids for classic programming exercises.</p>
+        </div>
+    </a>
+</li>
+
+<!-- Day 3 is now complete! -->
+<li class="module-item locked">
+    <a>
+        <div class="module-number">★</div>
+        <div class="module-info">
+            <h3>Day 3 Finale</h3>
+            <p>Congratulations on mastering Rust's core data structures!</p>
+        </div>
+    </a>
+</li>
+        </ul>
+    </details>
+</div>
+
+<!-- DAY 4 SECTION - Expressive Control Flow -->
+<div class="day-section">
+    <details>
+        <summary>
+            <div class="day-info">
+                <h3>Day 4: Expressive Control Flow & Pattern Matching</h3>
+                <p>Mastering Rust's most powerful feature for controlling logic.</p>
+            </div>
+        </summary>
+        
+        <ul class="module-list">
+            <!-- Update for Module 18 -->
+            <li class="module-item complete">
+                <a href="modules/module18.html">
+                    <div class="module-number">18</div>
+                    <div class="module-info">
+                        <h3>The Power of `match`</h3>
+                        <p>Learn the rich variety of patterns for exhaustive, bug-free logic.</p>
+                    </div>
+                </a>
+            </li>
+            <!-- Update for Module 19 -->
+<li class="module-item complete">
+    <a href="modules/module19.html">
+        <div class="module-number">19</div>
+        <div class="module-info">
+            <h3>Ergonomics with `if let` and `while let`</h3>
+            <p>Write cleaner code when you only care about matching one pattern.</p>
+        </div>
+    </a>
+</li>
+            
+            <!-- Update for Module 20 -->
+<li class="module-item complete">
+    <a href="modules/module20.html">
+        <div class="module-number">20</div>
+        <div class="module-info">
+            <h3>Advanced Loop Control with Labels</h3>
+            <p>Break or continue outer loops from within an inner loop.</p>
+        </div>
+    </a>
+</li>
+
+<!-- Update for Module 21 -->
+<li class="module-item complete">
+    <a href="modules/module21.html">
+        <div class="module-number">21</div>
+        <div class="module-info">
+            <h3>Practical Application: Building a State Machine</h3>
+            <p>Tie all of Day 4's concepts together in a powerful pattern.</p>
+        </div>
+    </a>
+</li>
+
+<!-- Day 4 is now complete! -->
+<li class="module-item locked">
+    <a>
+        <div class="module-number">★</div>
+        <div class="module-info">
+            <h3>Day 4 Finale</h3>
+            <p>Congratulations on mastering expressive control flow!</p>
+        </div>
+    </a>
+</li>
+        </ul>
+    </details>
+</div>
+
+<!-- DAY 5 SECTION - Defining Behavior -->
+<div class="day-section">
+    <details>
+        <summary>
+            <div class="day-info">
+                <h3>Day 5: Defining Behavior with Enums, Structs, and Traits</h3>
+                <p>Structuring data and behavior together in a clean, reusable way.</p>
+            </div>
+        </summary>
+        
+        <ul class="module-list">
+            <!-- Update for Module 22 -->
+            <li class="module-item complete">
+                <a href="modules/module22.html">
+                    <div class="module-number">22</div>
+                    <div class="module-info">
+                        <h3>Methods and Associated Functions (`impl`)</h3>
+                        <p>Learn to attach functions directly to your custom data types.</p>
+                    </div>
+                </a>
+            </li>
+            
+            <!-- Update for Module 23 -->
+<li class="module-item complete">
+    <a href="modules/module23.html">
+        <div class="module-number">23</div>
+        <div class="module-info">
+            <h3>Enums with Data and Behavior</h3>
+            <p>Unlock the full power of enums by giving them methods.</p>
+        </div>
+    </a>
+</li>
+
+<!-- Update for Module 24 -->
+<li class="module-item complete">
+    <a href="modules/module24.html">
+        <div class="module-number">24</div>
+        <div class="module-info">
+            <h3>Deriving and Implementing Standard Traits</h3>
+            <p>Give your types superpowers with `#[derive]` and standard traits.</p>
+        </div>
+    </a>
+</li>
+
+<!-- Update for Module 25 -->
+<li class="module-item complete">
+    <a href="modules/module25.html">
+        <div class="module-number">25</div>
+        <div class="module-info">
+            <h3>Tying it all Together: A Major Refactor</h3>
+            <p>Consolidate all of Day 5's learning into a cleaner, idiomatic codebase.</p>
+        </div>
+    </a>
+</li>
+
+<!-- Day 5 is now complete! -->
+<li class="module-item locked">
+    <a>
+        <div class="module-number">★</div>
+        <div class="module-info">
+            <h3>Day 5 Finale</h3>
+            <p>Congratulations on mastering Rust's type and trait system!</p>
+        </div>
+    </a>
+</li>
+        </ul>
+    </details>
+</div>
+
+<!-- DAY 6 SECTION - Ownership in Action: Smart Pointers -->
+<div class="day-section">
+    <details>
+        <summary>
+            <div class="day-info">
+                <h3>Day 6: Ownership in Action: Smart Pointers</h3>
+                <p>Managing memory on the heap in more complex scenarios.</p>
+            </div>
+        </summary>
+        
+        <ul class="module-list">
+            <!-- Update for Module 26 -->
+            <li class="module-item complete">
+                <a href="modules/module26.html">
+                    <div class="module-number">26</div>
+                    <div class="module-info">
+                        <h3>The Simplest Smart Pointer: `Box<T>`</h3>
+                        <p>Learn the primary tool for allocating data on the heap.</p>
+                    </div>
+                </a>
+            </li>
+            
+            <!-- Update for Module 27 -->
+<li class="module-item complete">
+    <a href="modules/module27.html">
+        <div class="module-number">27</div>
+        <div class="module-info">
+            <h3>Shared Ownership with `Rc<T>`</h3>
+            <p>Allow a single piece of data to have multiple owners.</p>
+        </div>
+    </a>
+</li>
+
+<!-- Update for Module 28 -->
+<li class="module-item complete">
+    <a href="modules/module28.html">
+        <div class="module-number">28</div>
+        <div class="module-info">
+            <h3>Interior Mutability with `RefCell<T>`</h3>
+            <p>Mutate data that is behind a shared, immutable reference.</p>
+        </div>
+    </a>
+</li>
+
+<!-- Update for Module 29 -->
+<li class="module-item complete">
+    <a href="modules/module29.html">
+        <div class="module-number">29</div>
+        <div class="module-info">
+            <h3>Thread-Safe Shared Ownership with `Arc<T>` and `Mutex<T>`</h3>
+            <p>Prepare for concurrent programming with thread-safe smart pointers.</p>
+        </div>
+    </a>
+</li>
+
+<!-- Day 6 is now complete! -->
+<li class="module-item locked">
+    <a>
+        <div class="module-number">★</div>
+        <div class="module-info">
+            <h3>Day 6 Finale</h3>
+            <p>Congratulations on mastering Rust's smart pointers!</p>
+        </div>
+    </a>
+</li>
+        </ul>
+    </details>
+</div>
+<!-- DAY 7 SECTION - Robust Interactions: I/O and Serialization -->
+<div class="day-section">
+    <details>
+        <summary>
+            <div class="day-info">
+                <h3>Day 7: Robust Interactions: I/O and Serialization</h3>
+                <p>Building powerful command-line tools that talk to the world.</p>
+            </div>
+        </summary>
+        
+        <ul class="module-list">
+            <!-- Update for Module 30 -->
+            <li class="module-item complete">
+                <a href="modules/module30.html">
+                    <div class="module-number">30</div>
+                    <div class="module-info">
+                        <h3>Professional Argument Parsing with `clap`</h3>
+                        <p>Replace manual parsing with a powerful, industry-standard CLI builder.</p>
+                    </div>
+                </a>
+            </li>
+            
+            <!-- Update for Module 31 -->
+<li class="module-item complete">
+    <a href="modules/module31.html">
+        <div class="module-number">31</div>
+        <div class="module-info">
+            <h3>Generic I/O with `Read` and `Write` Traits</h3>
+            <p>Learn to use Rust's core I/O traits for flexible, testable code.</p>
+        </div>
+    </a>
+</li>
+
+<!-- Update for Module 32 -->
+<li class="module-item complete">
+    <a href="modules/module32.html">
+        <div class="module-number">32</div>
+        <div class="module-info">
+            <h3>Serialization and Deserialization with `serde`</h3>
+            <p>Replace our custom text format with the robust JSON standard.</p>
+        </div>
+    </a>
+</li>
+<!-- Update for Module 33 -->
+<li class="module-item complete">
+    <a href="modules/module33.html">
+        <div class="module-number">33</div>
+        <div class="module-info">
+            <h3>Tying it all Together: The Professional CLI Tool</h3>
+            <p>Integrate all of Day 7's concepts into a final, robust application.</p>
+        </div>
+    </a>
+</li>
+
+<!-- Day 7 is now complete! -->
+<li class="module-item locked">
+    <a>
+        <div class="module-number">★</div>
+        <div class="module-info">
+            <h3>Day 7 Finale</h3>
+            <p>Congratulations on building a professional command-line tool!</p>
+        </div>
+    </a>
+</li>
+        </ul>
+    </details>
+</div>
+
+<!-- DAY 8 SECTION - The Professional's Toolkit -->
+<div class="day-section">
+    <details>
+        <summary>
+            <div class="day-info">
+                <h3>Day 8: The Professional's Toolkit: Testing, Docs, and Modules</h3>
+                <p>Writing reliable, maintainable, and collaborative code.</p>
+            </div>
+        </summary>
+        
+        <ul class="module-list">
+            <!-- Update for Module 34 -->
+            <li class="module-item complete">
+                <a href="modules/module34.html">
+                    <div class="module-number">34</div>
+                    <div class="module-info">
+                        <h3>Writing and Running Tests</h3>
+                        <p>Use Rust's built-in framework for unit and integration testing.</p>
+                    </div>
+                </a>
+            </li>
+            
+            <!-- Update for Module 35 -->
+<li class="module-item complete">
+    <a href="modules/module35.html">
+        <div class="module-number">35</div>
+        <div class="module-info">
+            <h3>Generating and Writing Documentation</h3>
+            <p>Create a professional documentation site with `cargo doc`.</p>
+        </div>
+    </a>
+</li>
+
+<!-- Update for Module 36 -->
+<li class="module-item complete">
+    <a href="modules/module36.html">
+        <div class="module-number">36</div>
+        <div class="module-info">
+            <h3>Advanced Module Organization</h3>
+            <p>Structure a large Rust project with a hierarchical module system.</p>
+        </div>
+    </a>
+</li>
+
+<!-- Day 8 is now complete! -->
+<li class="module-item locked">
+    <a>
+        <div class="module-number">★</div>
+        <div class="module-info">
+            <h3>Day 8 Finale</h3>
+            <p>Congratulations on building a professional, well-tested project!</p>
+        </div>
+    </a>
+</li>
+        </ul>
+    </details>
+</div>
+<!-- DAY 9 SECTION - Fearless Concurrency -->
+<div class="day-section">
+    <details>
+        <summary>
+            <div class="day-info">
+                <h3>Day 9: Fearless Concurrency</h3>
+                <p>Unlocking the performance of modern CPUs with Rust's safety guarantees.</p>
+            </div>
+        </summary>
+        
+        <ul class="module-list">
+            <!-- Update for Module 37 -->
+            <li class="module-item complete">
+                <a href="modules/module37.html">
+                    <div class="module-number">37</div>
+                    <div class="module-info">
+                        <h3>Spawning Threads for Parallel Execution</h3>
+                        <p>Learn the basics of creating and managing threads with `std::thread`.</p>
+                    </div>
+                </a>
+            </li>
+            
+            <!-- Update for Module 38 -->
+<li class="module-item complete">
+    <a href="modules/module38.html">
+        <div class="module-number">38</div>
+        <div class="module-info">
+            <h3>Communication via Message Passing with Channels</h3>
+            <p>Use channels for safe, chat-like communication between threads.</p>
+        </div>
+    </a>
+</li>
+
+<!-- Update for Module 39 -->
+<li class="module-item complete">
+    <a href="modules/module39.html">
+        <div class="module-number">39</div>
+        <div class="module-info">
+            <h3>Shared-State Concurrency with `Arc` and `Mutex`</h3>
+            <p>Safely share and mutate data between multiple threads.</p>
+        </div>
+    </a>
+</li>
+
+<!-- Update for Module 40 -->
+<li class="module-item complete">
+    <a href="modules/module40.html">
+        <div class="module-number">40</div>
+        <div class="module-info">
+            <h3>Tying it all Together: A Parallel File Processor</h3>
+            <p>Build a final, concurrent application from scratch.</p>
+        </div>
+    </a>
+</li>
+
+<!-- Day 9 is now complete! -->
+<li class="module-item locked">
+    <a>
+        <div class="module-number">✔</div>
+        <div class="module-info">
+            <h3>Adventure Complete!</h3>
+            <p>Congratulations on finishing the entire Rust Adventure!</p>
+        </div>
+    </a>
+</li>
+        </ul>
+    </details>
+</div>
+
+<!-- DAY 10 SECTION - Advanced Error Handling & Parsing -->
+<div class="day-section">
+    <details>
+        <summary>
+            <div class="day-info">
+                <h3>Day 10: Advanced Error Handling & Parsing</h3>
+                <p>Using professional error libraries and building a parser with `nom`.</p>
+            </div>
+        </summary>
+        
+        <ul class="module-list">
+            <!-- Update for Module 41 -->
+            <li class="module-item complete">
+                <a href="modules/module41.html">
+                    <div class="module-number">41</div>
+                    <div class="module-info">
+                        <h3>Library vs. Application Errors (`thiserror` & `anyhow`)</h3>
+                        <p>Learn the two main philosophies of professional error handling.</p>
+                    </div>
+                </a>
+            </li>
+            
+            <!-- Update for Module 42 -->
+<li class="module-item complete">
+    <a href="modules/module42.html">
+        <div class="module-number">42</div>
+        <div class="module-info">
+            <h3>Parsing with Combinators (`nom`) I</h3>
+            <p>Introduction to parser combinators for simple, fixed-format strings.</p>
+        </div>
+    </a>
+</li>
+            
+            <!-- Update for Module 43 -->
+<li class="module-item complete">
+    <a href="modules/module43.html">
+        <div class="module-number">43</div>
+        <div class="module-info">
+            <h3>Parsing with Combinators (`nom`) II</h3>
+            <p>Build a full log file parser by combining simple parsers.</p>
+        </div>
+    </a>
+</li>
+
+<!-- Day 10 is now complete! -->
+<li class="module-item locked">
+    <a>
+        <div class="module-number">★</div>
+        <div class="module-info">
+            <h3>Day 10 Finale</h3>
+            <p>Congratulations on mastering advanced error handling and parsing!</p>
+        </div>
+    </a>
+</li>
+        </ul>
+    </details>
+</div>
+
+<!-- DAY 11 SECTION - Data Structures & Algorithms I (Linear) -->
+<div class="day-section">
+    <details>
+        <summary>
+            <div class="day-info">
+                <h3>Day 11: Data Structures & Algorithms I (Linear)</h3>
+                <p>A deep, practical understanding of ownership, `Box`, and the heap.</p>
+            </div>
+        </summary>
+        
+        <ul class="module-list">
+            <!-- Update for Module 44 -->
+            <li class="module-item complete">
+                <a href="modules/module44.html">
+                    <div class="module-number">44</div>
+                    <div class="module-info">
+                        <h3>`Vec` vs. `VecDeque`</h3>
+                        <p>A performance-focused comparison of Rust's sequence types.</p>
+                    </div>
+                </a>
+            </li>
+            
+            <!-- Update for Module 45 -->
+<li class="module-item complete">
+    <a href="modules/module45.html">
+        <div class="module-number">45</div>
+        <div class="module-info">
+            <h3>Implementing a Singly Linked List</h3>
+            <p>The classic Rust challenge for mastering `Box` and `Option`.</p>
+        </div>
+    </a>
+</li>
+
+            <!-- Update for Module 46 -->
+<li class="module-item complete">
+    <a href="modules/module46.html">
+        <div class="module-number">46</div>
+        <div class="module-info">
+            <h3>Implementing a Stack and Queue</h3>
+            <p>Build classic LIFO and FIFO data structures from your linked list.</p>
+        </div>
+    </a>
+</li>
+
+<!-- Day 11 is now complete! -->
+<li class="module-item locked">
+    <a>
+        <div class="module-number">★</div>
+        <div class="module-info">
+            <h3>Day 11 Finale</h3>
+            <p>Congratulations on building your own data structures!</p>
+        </div>
+    </a>
+</li>
+        </ul>
+    </details>
+</div>
+<!-- DAY 12 SECTION - Data Structures & Algorithms II (Non-Linear) -->
+<div class="day-section">
+    <details>
+        <summary>
+            <div class="day-info">
+                <h3>Day 12: Data Structures & Algorithms II (Non-Linear)</h3>
+                <p>Mastering HashMaps and building graph-like data structures.</p>
+            </div>
+        </summary>
+        
+        <ul class="module-list">
+            <!-- Update for Module 47 -->
+            <li class="module-item complete">
+                <a href="modules/module47.html">
+                    <div class="module-number">47</div>
+                    <div class="module-info">
+                        <h3>Hashing and `HashMap` Internals</h3>
+                        <p>A deeper look at the `Hash`, `Eq`, and `Borrow` traits.</p>
+                    </div>
+                </a>
+            </li>
+            
+            <!-- Update for Module 48 -->
+<li class="module-item complete">
+    <a href="modules/module48.html">
+        <div class="module-number">48</div>
+        <div class="module-info">
+            <h3>Implementing a Binary Search Tree</h3>
+            <p>Using `Rc<RefCell<T>>` to build a shared, mutable graph.</p>
+        </div>
+    </a>
+</li>
+
+            <!-- Update for Module 49 -->
+<li class="module-item complete">
+    <a href="modules/module49.html">
+        <div class="module-number">49</div>
+        <div class="module-info">
+            <h3>Introduction to Graph Traversal</h3>
+            <p>Implementing Breadth-First Search (BFS) and Depth-First Search (DFS).</p>
+        </div>
+    </a>
+</li>
+<!-- Day 12 is now complete! -->
+<li class="module-item locked">
+    <a>
+        <div class="module-number">★</div>
+        <div class="module-info">
+            <h3>Day 12 Finale</h3>
+            <p>Congratulations on mastering non-linear data structures!</p>
+        </div>
+    </a>
+</li>
+        </ul>
+    </details>
+</div>
+
+<!-- DAY 13 SECTION - Interfacing with the System -->
+<div class="day-section">
+    <details>
+        <summary>
+            <div class="day-info">
+                <h3>Day 13: Interfacing with the System</h3>
+                <p>Understanding `unsafe`, memory layout, and the Foreign Function Interface.</p>
+            </div>
+        </summary>
+        
+        <ul class="module-list">
+            <!-- Update for Module 50 -->
+            <li class="module-item complete">
+                <a href="modules/module50.html">
+                    <div class="module-number">50</div>
+                    <div class="module-info">
+                        <h3>The `unsafe` Keyword and Raw Pointers</h3>
+                        <p>A safe, structured introduction to Rust's low-level superpowers.</p>
+                    </div>
+                </a>
+            </li>
+            
+            <!-- Update for Module 51 -->
+<li class="module-item complete">
+    <a href="modules/module51.html">
+        <div class="module-number">51</div>
+        <div class="module-info">
+            <h3>The Foreign Function Interface (FFI)</h3>
+            <p>Calling C functions from Rust for maximum interoperability.</p>
+        </div>
+    </a>
+</li>
+
+            <!-- Update for Module 52 -->
+<li class="module-item complete">
+    <a href="modules/module52.html">
+        <div class="module-number">52</div>
+        <div class="module-info">
+            <h3>Memory Layout and Management</h3>
+            <p>Understanding `repr(C)`, alignment, and the global allocator.</p>
+        </div>
+    </a>
+</li>
+
+<!-- Day 13 is now complete! -->
+<li class="module-item locked">
+    <a>
+        <div class="module-number">★</div>
+        <div class="module-info">
+            <h3>Day 13 Finale</h3>
+            <p>Congratulations on mastering system-level interoperability!</p>
+        </div>
+    </a>
+</li>
+        </ul>
+    </details>
+</div>
+<!-- DAY 14 SECTION - Advanced Traits and Generics -->
+<div class="day-section">
+    <details>
+        <summary>
+            <div class="day-info">
+                <h3>Day 14: Advanced Traits and Generics</h3>
+                <p>Mastering the trait system for elegant and flexible API design.</p>
+            </div>
+        </summary>
+        
+        <ul class="module-list">
+            <!-- Update for Module 53 -->
+            <li class="module-item complete">
+                <a href="modules/module53.html">
+                    <div class="module-number">53</div>
+                    <div class="module-info">
+                        <h3>Associated Types vs. Generics</h3>
+                        <p>Understanding the difference and when to use each pattern.</p>
+                    </div>
+                </a>
+            </li>
+            
+            <!-- Update for Module 54 -->
+<li class="module-item complete">
+    <a href="modules/module54.html">
+        <div class="module-number">54</div>
+        <div class="module-info">
+            <h3>`dyn Trait` vs. `impl Trait`</h3>
+            <p>A deep dive into dynamic vs. static dispatch and their trade-offs.</p>
+        </div>
+    </a>
+</li>
+
+            <!-- Update for Module 55 -->
+<li class="module-item complete">
+    <a href="modules/module55.html">
+        <div class="module-number">55</div>
+        <div class="module-info">
+            <h3>The Newtype and Deref Patterns</h3>
+            <p>Learn to wrap external types and create ergonomic smart pointers.</p>
+        </div>
+    </a>
+</li>
+
+<!-- Day 14 is now complete! -->
+<li class="module-item locked">
+    <a>
+        <div class="module-number">★</div>
+        <div class="module-info">
+            <h3>Day 14 Finale</h3>
+            <p>Congratulations on mastering advanced traits and API design!</p>
+        </div>
+    </a>
+</li>
+        </ul>
+    </details>
+</div>
+<!-- DAY 15 SECTION - Asynchronous Rust -->
+<div class="day-section">
+    <details>
+        <summary>
+            <div class="day-info">
+                <h3>Day 15: Asynchronous Rust</h3>
+                <p>Writing highly concurrent, non-blocking code for network services.</p>
+            </div>
+        </summary>
+        
+        <ul class="module-list">
+            <!-- Update for Module 56 -->
+            <li class="module-item complete">
+                <a href="modules/module56.html">
+                    <div class="module-number">56</div>
+                    <div class="module-info">
+                        <h3>The `Future` Trait and `async/await`</h3>
+                        <p>Understand the core of async Rust and its state machine transformation.</p>
+                    </div>
+                </a>
+            </li>
+            
+            <!-- Update for Module 57 -->
+<li class="module-item complete">
+    <a href="modules/module57.html">
+        <div class="module-number">57</div>
+        <div class="module-info">
+            <h3>Async Runtimes (`tokio`)</h3>
+            <p>Learn what an async runtime is and how to use `tokio` to run futures.</p>
+        </div>
+    </a>
+</li>
+
+            <!-- Update for Module 58 -->
+<li class="module-item complete">
+    <a href="modules/module58.html">
+        <div class="module-number">58</div>
+        <div class="module-info">
+            <h3>Building an Async TCP Echo Server</h3>
+            <p>A hands-on project to build a server that handles many connections.</p>
+        </div>
+    </a>
+</li>
+
+<!-- Day 15 is now complete! -->
+<li class="module-item locked">
+    <a>
+        <div class="module-number">★</div>
+        <div class="module-info">
+            <h3>Day 15 Finale</h3>
+            <p>Congratulations on mastering the fundamentals of async Rust!</p>
+        </div>
+    </a>
+</li>
+        </ul>
+    </details>
+</div>
+
+<!-- DAY 16 SECTION - Metaprogramming with Macros -->
+<div class="day-section">
+    <details>
+        <summary>
+            <div class="day-info">
+                <h3>Day 16: Metaprogramming with Macros</h3>
+                <p>Learning to extend the Rust language's syntax with code that writes code.</p>
+            </div>
+        </summary>
+        
+        <ul class="module-list">
+            <!-- Update for Module 59 -->
+            <li class="module-item complete">
+                <a href="modules/module59.html">
+                    <div class="module-number">59</div>
+                    <div class="module-info">
+                        <h3>Declarative Macros with `macro_rules!`</h3>
+                        <p>Learn the syntax and patterns for writing your own simple, reusable macros.</p>
+                    </div>
+                </a>
+            </li>
+            
+            <!-- Update for Module 60 -->
+<li class="module-item complete">
+    <a href="modules/module60.html">
+        <div class="module-number">60</div>
+        <div class="module-info">
+            <h3>Introduction to Procedural Macros</h3>
+            <p>Understand the power behind `#[derive]` and other advanced macros.</p>
+        </div>
+    </a>
+</li>
+
+            <!-- Update for Module 61 -->
+<li class="module-item complete">
+    <a href="modules/module61.html">
+        <div class="module-number">61</div>
+        <div class="module-info">
+            <h3>Writing a Custom `#[derive]` Macro</h3>
+            <p>A challenging capstone project to write a simple custom derive macro.</p>
+        </div>
+    </a>
+</li>
+<!-- Day 16 is now complete! -->
+<li class="module-item locked">
+    <a>
+        <div class="module-number">★</div>
+        <div class="module-info">
+            <h3>Day 16 Finale</h3>
+            <p>Congratulations on mastering metaprogramming with macros!</p>
+        </div>
+    </a>
+</li>
+        </ul>
+    </details>
+</div>
+
+<!-- === WEEK 3 (Day 17-23): Building for the Web === -->
+
+<!-- DAY 17 SECTION - Backend Foundations (Axum) -->
+<div class="day-section">
+    <details>
+        <summary>
+            <div class="day-info">
+                <h3>Day 17: Backend Foundations (Axum)</h3>
+                <p>Building a high-performance, asynchronous REST API from scratch.</p>
+            </div>
+        </summary>
+        
+        <ul class="module-list">
+            <!-- Update for Module 62 -->
+            <li class="module-item complete">
+                <a href="modules/module62.html">
+                    <div class="module-number">62</div>
+                    <div class="module-info">
+                        <h3>Your First Web Server</h3>
+                        <p>Setting up Axum, creating routes, and writing simple handlers.</p>
+                    </div>
+                </a>
+            </li>
+            
+            <!-- Update for Module 63 -->
+<li class="module-item complete">
+    <a href="modules/module63.html">
+        <div class="module-number">63</div>
+        <div class="module-info">
+            <h3>Extractors and JSON APIs</h3>
+            <p>Parsing request bodies and path parameters to return JSON data.</p>
+        </div>
+    </a>
+</li>
+
+            <!-- Update for Module 64 -->
+<li class="module-item complete">
+    <a href="modules/module64.html">
+        <div class="module-number">64</div>
+        <div class="module-info">
+            <h3>API State Management</h3>
+            <p>Sharing state, like a database connection pool, safely between handlers.</p>
+        </div>
+    </a>
+</li>
+<!-- Day 17 is now complete! -->
+<li class="module-item locked">
+    <a>
+        <div class="module-number">★</div>
+        <div class="module-info">
+            <h3>Day 17 Finale</h3>
+            <p>Congratulations on building a stateful backend foundation!</p>
+        </div>
+    </a>
+</li>
+        </ul>
+    </details>
+</div>
+
+<!-- DAY 18 SECTION - Database Integration (sqlx) -->
+<div class="day-section">
+    <details>
+        <summary>
+            <div class="day-info">
+                <h3>Day 18: Database Integration (`sqlx`)</h3>
+                <p>Connecting our API to a real database with compile-time query checking.</p>
+            </div>
+        </summary>
+        
+        <ul class="module-list">
+            <!-- Update for Module 65 -->
+            <li class="module-item complete">
+                <a href="modules/module65.html">
+                    <div class="module-number">65</div>
+                    <div class="module-info">
+                        <h3>Setting up `sqlx` and Writing Migrations</h3>
+                        <p>Connect to a database and manage schema changes with `sqlx-cli`.</p>
+                    </div>
+                </a>
+            </li>
+            
+            <!-- Update for Module 66 -->
+<li class="module-item complete">
+    <a href="modules/module66.html">
+        <div class="module-number">66</div>
+        <div class="module-info">
+            <h3>Compile-Time Checked Queries</h3>
+            <p>Write raw SQL queries that are validated by the Rust compiler.</p>
+        </div>
+    </a>
+</li>
+
+            <!-- Update for Module 67 -->
+<li class="module-item complete">
+    <a href="modules/module67.html">
+        <div class="module-number">67</div>
+        <div class="module-info">
+            <h3>The Query Builder Pattern</h3>
+            <p>Use `sqlx`'s query builder for creating dynamic queries safely.</p>
+        </div>
+    </a>
+</li>
+<!-- Day 18 is now complete! -->
+<li class="module-item locked">
+    <a>
+        <div class="module-number">★</div>
+        <div class="module-info">
+            <h3>Day 18 Finale</h3>
+            <p>Congratulations on mastering database integration with `sqlx`!</p>
+        </div>
+    </a>
+</li>
+        </ul>
+    </details>
+</div>
+
+<!-- DAY 19 SECTION - Advanced Backend Topics -->
+<div class="day-section">
+    <details>
+        <summary>
+            <div class="day-info">
+                <h3>Day 19: Advanced Backend Topics</h3>
+                <p>Securing your API, handling errors gracefully, and managing cross-cutting concerns.</p>
+            </div>
+        </summary>
+        
+        <ul class="module-list">
+            <!-- Update for Module 68 -->
+            <li class="module-item complete">
+                <a href="modules/module68.html">
+                    <div class="module-number">68</div>
+                    <div class="module-info">
+                        <h3>Middleware for Logging and CORS</h3>
+                        <p>Write custom middleware to handle logging and Cross-Origin Resource Sharing.</p>
+                    </div>
+                </a>
+            </li>
+            
+            <!-- Update for Module 69 -->
+<li class="module-item complete">
+    <a href="modules/module69.html">
+        <div class="module-number">69</div>
+        <div class="module-info">
+            <h3>API Authentication</h3>
+            <p>Implement simple JWT (JSON Web Token) based authentication.</p>
+        </div>
+    </a>
+</li>
+            <!-- Update for Module 70 -->
+<li class="module-item complete">
+    <a href="modules/module70.html">
+        <div class="module-number">70</div>
+        <div class="module-info">
+            <h3>API Error Handling</h3>
+            <p>Design a robust error strategy for clean HTTP error responses.</p>
+        </div>
+    </a>
+</li>
+
+<!-- Day 19 is now complete! -->
+<li class="module-item locked">
+    <a>
+        <div class="module-number">★</div>
+        <div class="module-info">
+            <h3>Day 19 Finale</h3>
+            <p>Congratulations on building a secure and robust API backend!</p>
+        </div>
+    </a>
+</li>
+        </ul>
+    </details>
+</div>
+<!-- DAY 20 SECTION - Introduction to WebAssembly (Wasm) -->
+<div class="day-section">
+    <details>
+        <summary>
+            <div class="day-info">
+                <h3>Day 20: Introduction to WebAssembly (Wasm)</h3>
+                <p>Running Rust in the browser for near-native performance on the web.</p>
+            </div>
+        </summary>
+        
+        <ul class="module-list">
+            <!-- Update for Module 71 -->
+            <li class="module-item complete">
+                <a href="modules/module71.html">
+                    <div class="module-number">71</div>
+                    <div class="module-info">
+                        <h3>What is WebAssembly?</h3>
+                        <p>Understand the Wasm binary format and the Rust toolchain.</p>
+                    </div>
+                </a>
+            </li>
+            
+            <!-- Update for Module 72 -->
+<li class="module-item complete">
+    <a href="modules/module72.html">
+        <div class="module-number">72</div>
+        <div class="module-info">
+            <h3>Interacting with JavaScript (`wasm-bindgen`)</h3>
+            <p>Create a bridge to call Rust from JS and JS from Rust.</p>
+        </div>
+    </a>
+</li>
+
+            <!-- Update for Module 73 -->
+<li class="module-item complete">
+    <a href="modules/module73.html">
+        <div class="module-number">73</div>
+        <div class="module-info">
+            <h3>Manipulating the DOM</h3>
+            <p>Use the `web-sys` crate to directly interact with HTML from Rust.</p>
+        </div>
+    </a>
+</li>
+
+<!-- Day 20 is now complete! -->
+<li class="module-item locked">
+    <a>
+        <div class="module-number">★</div>
+        <div class="module-info">
+            <h3>Day 20 Finale</h3>
+            <p>Congratulations on running Rust natively in the browser!</p>
+        </div>
+    </a>
+</li>
+        </ul>
+    </details>
+</div>
+<!-- DAY 21 SECTION - Frontend in Rust (Yew/Leptos) -->
+<div class="day-section">
+    <details>
+        <summary>
+            <div class="day-info">
+                <h3>Day 21: Frontend in Rust (Yew)</h3>
+                <p>Building a complete single-page application (SPA) in pure Rust.</p>
+            </div>
+        </summary>
+        
+        <ul class="module-list">
+            <!-- Update for Module 74 -->
+            <li class="module-item complete">
+                <a href="modules/module74.html">
+                    <div class="module-number">74</div>
+                    <div class="module-info">
+                        <h3>The Component Model</h3>
+                        <p>Introduction to Yew, building simple, reusable UI components.</p>
+                    </div>
+                </a>
+            </li>
+            
+            <!-- Update for Module 75 -->
+<li class="module-item complete">
+    <a href="modules/module75.html">
+        <div class="module-number">75</div>
+        <div class="module-info">
+            <h3>State Management and Callbacks</h3>
+            <p>Managing component state and handling user events like button clicks.</p>
+        </div>
+    </a>
+</li>
+
+            <!-- Update for Module 76 -->
+<li class="module-item complete">
+    <a href="modules/module76.html">
+        <div class="module-number">76</div>
+        <div class="module-info">
+            <h3>Making API Calls</h3>
+            <p>Fetching data from our Rust backend to dynamically render a list.</p>
+        </div>
+    </a>
+</li>
+
+<!-- Day 21 is now complete! -->
+<li class="module-item locked">
+    <a>
+        <div class="module-number">★</div>
+        <div class="module-info">
+            <h3>Day 21 Finale</h3>
+            <p>Congratulations on building a full-stack app in pure Rust!</p>
+        </div>
+    </a>
+</li>
+        </ul>
+    </details>
+</div>
+
+<!-- === WEEK 3 CONTINUED (Day 22-23) & WEEK 4 (Day 24+) === -->
+
+<!-- DAY 22 SECTION - Deployment and Containers -->
+<div class="day-section">
+    <details>
+        <summary>
+            <div class="day-info">
+                <h3>Day 22: Deployment and Containers</h3>
+                <p>Packaging your Rust application for professional, reproducible deployment.</p>
+            </div>
+        </summary>
+        
+        <ul class="module-list">
+            <!-- Update for Module 77 -->
+            <li class="module-item complete">
+                <a href="modules/module77.html">
+                    <div class="module-number">77</div>
+                    <div class="module-info">
+                        <h3>Building Optimized Rust Binaries</h3>
+                        <p>Understanding release profiles, LTO, and stripping for size.</p>
+                    </div>
+                </a>
+            </li>
+            
+            <!-- Update for Module 78 -->
+<li class="module-item complete">
+    <a href="modules/module78.html">
+        <div class="module-number">78</div>
+        <div class="module-info">
+            <h3>Writing a `Dockerfile`</h3>
+            <p>Containerizing our Rust backend using multi-stage builds.</p>
+        </div>
+    </a>
+</li>
+
+            <!-- Update for Module 79 -->
+<li class="module-item complete">
+    <a href="modules/module79.html">
+        <div class="module-number">79</div>
+        <div class="module-info">
+            <h3>Orchestration with `docker-compose`</h3>
+            <p>Running our API and database together with a single command.</p>
+        </div>
+    </a>
+</li>
+
+<!-- Day 22 is now complete! -->
+<li class="module-item locked">
+    <a>
+        <div class="module-number">★</div>
+        <div class="module-info">
+            <h3>Day 22 Finale</h3>
+            <p>Congratulations on mastering professional deployment workflows!</p>
+        </div>
+    </a>
+</li>
+        </ul>
+    </details>
+</div>
+<!-- DAY 23 SECTION - Review and Full-Stack Integration -->
+<div class="day-section">
+    <details>
+        <summary>
+            <div class="day-info">
+                <h3>Day 23: Review and Full-Stack Integration</h3>
+                <p>Combining the frontend and backend into a single, deployable application.</p>
+            </div>
+        </summary>
+        
+        <ul class="module-list">
+            <!-- Update for Module 80 -->
+            <li class="module-item complete">
+                <a href="modules/module80.html">
+                    <div class="module-number">80</div>
+                    <div class="module-info">
+                        <h3>Serving the Frontend from the Backend</h3>
+                        <p>Modify Axum to serve the compiled Wasm/JS/HTML assets.</p>
+                    </div>
+                </a>
+            </li>
+            
+            <!-- Update for Module 81 -->
+<li class="module-item complete">
+    <a href="modules/module81.html">
+        <div class="module-number">81</div>
+        <div class="module-info">
+            <h3>Project Review</h3>
+            <p>A complete walkthrough of the entire full-stack application.</p>
+        </div>
+    </a>
+</li>
+
+            <!-- Update for Module 82 -->
+<li class="module-item complete">
+    <a href="modules/module82.html">
+        <div class="module-number">82</div>
+        <div class="module-info">
+            <h3>The Path Forward</h3>
+            <p>Discussing deployment options and next steps for the project.</p>
+        </div>
+    </a>
+</li>
+
+<!-- Day 23 is now complete! -->
+<li class="module-item locked">
+    <a>
+        <div class="module-number">★</div>
+        <div class="module-info">
+            <h3>Week 3 Finale</h3>
+            <p>Congratulations on building a complete full-stack web application!</p>
+        </div>
+    </a>
+</li>
+        </ul>
+    </details>
+</div>
+<!-- === WEEK 4 (Days 24-30): Specialized and Modern Domains === -->
+
+<!-- DAY 24 SECTION - 2D Graphics & Game Dev (Bevy) -->
+<div class="day-section">
+    <details>
+        <summary>
+            <div class="day-info">
+                <h3>Day 24: 2D Graphics & Game Dev (Bevy)</h3>
+                <p>Learning the basics of game development with a modern, data-driven engine.</p>
+            </div>
+        </summary>
+        
+        <ul class="module-list">
+            <!-- Update for Module 83 -->
+            <li class="module-item complete">
+                <a href="modules/module83.html">
+                    <div class="module-number">83</div>
+                    <div class="module-info">
+                        <h3>The Entity-Component-System (ECS) Pattern</h3>
+                        <p>A deep dive into the data-driven architecture of modern game engines.</p>
+                    </div>
+                </a>
+            </li>
+            
+            <!-- Update for Module 84 -->
+<li class="module-item complete">
+    <a href="modules/module84.html">
+        <div class="module-number">84</div>
+        <div class="module-info">
+            <h3>Spawning Sprites and Handling Assets</h3>
+            <p>Loading images and displaying them on screen with Bevy.</p>
+        </div>
+    </a>
+</li>
+
+            <!-- Update for Module 85 -->
+<li class="module-item complete">
+    <a href="modules/module85.html">
+        <div class="module-number">85</div>
+        <div class="module-info">
+            <h3>User Input and Simple Game Logic</h3>
+            <p>Making a sprite move in response to keyboard input.</p>
+        </div>
+    </a>
+</li>
+
+<!-- Day 24 is now complete! -->
+<li class="module-item locked">
+    <a>
+        <div class="module-number">★</div>
+        <div class="module-info">
+            <h3>Day 24 Finale</h3>
+            <p>Congratulations on building your first interactive game!</p>
+        </div>
+    </a>
+</li>
+        </ul>
+    </details>
+</div>
+<!-- DAY 25 SECTION - Cross-Platform GUI (Tauri) -->
+<div class="day-section">
+    <details>
+        <summary>
+            <div class="day-info">
+                <h3>Day 25: Cross-Platform GUI (Tauri)</h3>
+                <p>Building modern, cross-platform desktop applications with a Rust core.</p>
+            </div>
+        </summary>
+        
+        <ul class="module-list">
+            <!-- Update for Module 86 -->
+            <li class="module-item complete">
+                <a href="modules/module86.html">
+                    <div class="module-number">86</div>
+                    <div class="module-info">
+                        <h3>The Tauri Architecture</h3>
+                        <p>Understanding the Rust core / web-view frontend model.</p>
+                    </div>
+                </a>
+            </li>
+            
+            <!-- Update for Module 87 -->
+<li class="module-item complete">
+    <a href="modules/module87.html">
+        <div class="module-number">87</div>
+        <div class="module-info">
+            <h3>Frontend-Backend Communication</h3>
+            <p>Invoking Rust commands from JS and emitting events to the frontend.</p>
+        </div>
+    </a>
+</li>
+
+            <!-- Update for Module 88 -->
+<li class="module-item complete">
+    <a href="modules/module88.html">
+        <div class="module-number">88</div>
+        <div class="module-info">
+            <h3>Building and Packaging a Desktop App</h3>
+            <p>Using `cargo tauri build` to create a native installer for your application.</p>
+        </div>
+    </a>
+</li>
+
+<!-- Day 25 is now complete! -->
+<li class="module-item locked">
+    <a>
+        <div class="module-number">★</div>
+        <div class="module-info">
+            <h3>Day 25 Finale</h3>
+            <p>Congratulations on building a cross-platform desktop application!</p>
+        </div>
+    </a>
+</li>
+        </ul>
+    </details>
+</div>
+
+<!-- DAY 26 SECTION - AI & Machine Learning -->
+<div class="day-section">
+    <details>
+        <summary>
+            <div class="day-info">
+                <h3>Day 26: AI & Machine Learning</h3>
+                <p>Exploring Rust's potential in the AI/ML space with the Candle framework.</p>
+            </div>
+        </summary>
+        
+        <ul class="module-list">
+            <!-- Update for Module 89 -->
+            <li class="module-item complete">
+                <a href="modules/module89.html">
+                    <div class="module-number">89</div>
+                    <div class="module-info">
+                        <h3>Tensors and `Candle`</h3>
+                        <p>Introduction to the core data structure of ML and the Candle framework.</p>
+                    </div>
+                </a>
+            </li>
+            
+            <!-- Update for Module 90 -->
+<li class="module-item complete">
+    <a href="modules/module90.html">
+        <div class="module-number">90</div>
+        <div class="module-info">
+            <h3>Building a Simple Neural Network</h3>
+            <p>Defining the layers of a basic Multi-Layer Perceptron (MLP).</p>
+        </div>
+    </a>
+</li>
+
+            <!-- Update for Module 91 -->
+<li class="module-item complete">
+    <a href="modules/module91.html">
+        <div class="module-number">91</div>
+        <div class="module-info">
+            <h3>The Training Loop</h3>
+            <p>Writing a loop to train the model on a dataset like MNIST.</p>
+        </div>
+    </a>
+</li>
+
+<!-- Day 26 is now complete! -->
+<li class="module-item locked">
+    <a>
+        <div class="module-number">★</div>
+        <div class="module-info">
+            <h3>Day 26 Finale</h3>
+            <p>Congratulations on training your first neural network in Rust!</p>
+        </div>
+    </a>
+</li>
+        </ul>
+    </details>
+</div>
+<!-- DAY 27 SECTION - High-Performance Data Analysis -->
+<div class="day-section">
+    <details>
+        <summary>
+            <div class="day-info">
+                <h3>Day 27: High-Performance Data Analysis</h3>
+                <p>Using Rust for scientific computing with `ndarray` and `Polars`.</p>
+            </div>
+        </summary>
+        
+        <ul class="module-list">
+            <!-- Update for Module 92 -->
+            <li class="module-item complete">
+                <a href="modules/module92.html">
+                    <div class="module-number">92</div>
+                    <div class="module-info">
+                        <h3>N-Dimensional Arrays with `ndarray`</h3>
+                        <p>The "NumPy" of Rust. Performing matrix and vector operations.</p>
+                    </div>
+                </a>
+            </li>
+            
+            <!-- Update for Module 93 -->
+<li class="module-item complete">
+    <a href="modules/module93.html">
+        <div class="module-number">93</div>
+        <div class="module-info">
+            <h3>DataFrames with `Polars` I</h3>
+            <p>Reading CSVs and performing basic filtering and selection.</p>
+        </div>
+    </a>
+</li>
+
+            <!-- Update for Module 94 -->
+<li class="module-item complete">
+    <a href="modules/module94.html">
+        <div class="module-number">94</div>
+        <div class="module-info">
+            <h3>DataFrames with `Polars` II</h3>
+            <p>Advanced data manipulation: `group_by`, aggregations, and joins.</p>
+        </div>
+    </a>
+</li>
+
+<!-- Day 27 is now complete! -->
+<li class="module-item locked">
+    <a>
+        <div class="module-number">★</div>
+        <div class="module-info">
+            <h3>Day 27 Finale</h3>
+            <p>Congratulations on mastering high-performance data analysis!</p>
+        </div>
+    </a>
+</li>
+        </ul>
+    </details>
+</div>
+
+<!-- DAY 28 SECTION - Embedded Systems -->
+<div class="day-section">
+    <details>
+        <summary>
+            <div class="day-info">
+                <h3>Day 28: Embedded Systems</h3>
+                <p>Programming microcontrollers and resource-constrained devices with Rust.</p>
+            </div>
+        </summary>
+        
+        <ul class="module-list">
+            <!-- Update for Module 95 -->
+            <li class="module-item complete">
+                <a href="modules/module95.html">
+                    <div class="module-number">95</div>
+                    <div class="module-info">
+                        <h3>`no_std` and the Embedded Toolchain</h3>
+                        <p>Setting up the environment for programming microcontrollers.</p>
+                    </div>
+                </a>
+            </li>
+            
+            <!-- Update for Module 96 -->
+<li class="module-item complete">
+    <a href="modules/module96.html">
+        <div class="module-number">96</div>
+        <div class="module-info">
+            <h3>Hardware Abstraction Layers (HALs)</h3>
+            <p>Understanding the role of HAL crates for writing portable embedded code.</p>
+        </div>
+    </a>
+</li>
+
+            <!-- Update for Module 97 -->
+<li class="module-item complete">
+    <a href="modules/module97.html">
+        <div class="module-number">97</div>
+        <div class="module-info">
+            <h3>Blinky in an Emulator</h3>
+            <p>Cross-compiling and running the "Hello, World!" of embedded systems.</p>
+        </div>
+    </a>
+</li>
+
+<!-- Day 28 is now complete! -->
+<li class="module-item locked">
+    <a>
+        <div class="module-number">★</div>
+        <div class="module-info">
+            <h3>Day 28 Finale</h3>
+            <p>Congratulations on programming your first microcontroller!</p>
+        </div>
+    </a>
+</li>
+        </ul>
+    </details>
+</div>
+<!-- DAY 29 SECTION - Performance and Optimization -->
+<div class="day-section">
+    <details>
+        <summary>
+            <div class="day-info">
+                <h3>Day 29: Performance and Optimization</h3>
+                <p>Scientifically measuring and improving the speed of your Rust code.</p>
+            </div>
+        </summary>
+        
+        <ul class="module-list">
+            <!-- Update for Module 98 -->
+            <li class="module-item complete">
+                <a href="modules/module98.html">
+                    <div class="module-number">98</div>
+                    <div class="module-info">
+                        <h3>Writing Benchmarks with `cargo bench`</h3>
+                        <p>Scientifically measuring the speed of your code.</p>
+                    </div>
+                </a>
+            </li>
+            
+            <!-- Update for Module 99 -->
+<li class="module-item complete">
+    <a href="modules/module99.html">
+        <div class="module-number">99</div>
+        <div class="module-info">
+            <h3>Profiling with `perf` and `flamegraph`</h3>
+            <p>Finding the performance "hot spots" in your application.</p>
+        </div>
+    </a>
+</li>
+
+            <!-- Update for Module 100 -->
+<li class="module-item complete">
+    <a href="modules/module100.html">
+        <div class="module-number">100</div>
+        <div class="module-info">
+            <h3>Common Optimization Patterns</h3>
+            <p>Exploring idiomatic Rust optimization techniques.</p>
+        </div>
+    </a>
+</li>
+
+<!-- Day 29 is now complete! -->
+<li class="module-item locked">
+    <a>
+        <div class="module-number">★</div>
+        <div class="module-info">
+            <h3>Day 29 Finale</h3>
+            <p>Congratulations on mastering performance and optimization!</p>
+        </div>
+    </a>
+</li>
+        </ul>
+    </details>
+</div>
+
+<!-- DAY 30 SECTION - The Rust Ecosystem -->
+<div class="day-section">
+    <details>
+        <summary>
+            <div class="day-info">
+                <h3>Day 30: The Rust Ecosystem</h3>
+                <p>Becoming a contributor and publishing your own crates.</p>
+            </div>
+        </summary>
+        
+        <ul class="module-list">
+            <!-- Update for Module 101 -->
+            <li class="module-item complete">
+                <a href="modules/module101.html">
+                    <div class="module-number">101</div>
+                    <div class="module-info">
+                        <h3>Designing a Library API</h3>
+                        <p>Best practices for creating an ergonomic, user-friendly public API.</p>
+                    </div>
+                </a>
+            </li>
+            
+            <!-- Update for Module 102 -->
+<li class="module-item complete">
+    <a href="modules/module102.html">
+        <div class="module-number">102</div>
+        <div class="module-info">
+            <h3>Publishing to `crates.io`</h3>
+            <p>The process of documenting, versioning, and publishing your own crate.</p>
+        </div>
+    </a>
+</li>
+
+            <!-- Update for Module 103 -->
+<li class="module-item complete">
+    <a href="modules/module103.html">
+        <div class="module-number">103</div>
+        <div class="module-info">
+            <h3>Contributing to Open Source</h3>
+            <p>How to find projects and submit your first Pull Request.</p>
+        </div>
+    </a>
+</li>
+
+<!-- Day 30 is now complete! -->
+<li class="module-item locked">
+    <a>
+        <div class="module-number">★</div>
+        <div class="module-info">
+            <h3>Day 30 Finale</h3>
+            <p>Congratulations on becoming a Rust ecosystem contributor!</p>
+        </div>
+    </a>
+</li>
+        </ul>
+    </details>
+</div>
+
+<!-- DAY 31 SECTION - The Capstone -->
+<div class="day-section">
+    <details>
+        <summary>
+            <div class="day-info">
+                <h3>Day 31: The Capstone</h3>
+                <p>A final review and a launchpad for your future as a Rustacean.</p>
+            </div>
+        </summary>
+        
+        <ul class="module-list">
+            <!-- Update for Module 104 -->
+            <li class="module-item complete">
+                <a href="modules/module104.html">
+                    <div class="module-number">✔</div>
+                    <div class="module-info">
+                        <h3>Chart Your Own Adventure</h3>
+                        <p>Your journey is complete. Your adventure begins now.</p>
+                    </div>
+                </a>
+            </li>
+        </ul>
+    </details>
+</div>
+
+
+
+            </nav>
+        </div>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 The Rust Adventure. Created by your Expert Technology Teacher.</p>
+        </div>
+    </footer>
+
+</body>
+</html>
