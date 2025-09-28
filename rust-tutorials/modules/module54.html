@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 54: `dyn Trait` vs. `impl Trait` - The Rust Adventure</title>
+    <link rel="stylesheet" href="../style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <img src="https://www.rust-lang.org/static/images/rust-logo-blk.svg" alt="Rust Logo" class="logo">
+            <h1>Module 54: `dyn Trait` vs. `impl Trait`</h1>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <article class="module-content">
+                <h2>Objective: To understand the difference between dynamic dispatch (`dyn Trait`) and static dispatch (`impl Trait`), their performance trade-offs, and when to use each.</h2>
+                <p>When you use traits as function arguments or return types, you're using one of Rust's most powerful abstraction features. But behind the scenes, the compiler can satisfy that abstraction in two very different ways. Choosing the right one has significant implications for the performance and flexibility of your code.</p>
+                
+                <hr>
+
+                <h3>Step 1: Static Dispatch with `impl Trait`</h3>
+                <p><strong>Static dispatch</strong> (also called "monomorphization") happens at compile time. When you write a function that takes <code>fn do_something(item: impl MyTrait)</code>, you are telling the compiler: "This function accepts any single, concrete type that implements `MyTrait`."</p>
+                <p>The compiler will then create a separate, specialized version of that function for every concrete type you call it with. If you call it with a `String` and a `&str`, the compiler will generate two versions of the function in the final binary, one optimized for `String` and one for `&str`.</p>
+                <ul>
+                    <li><strong>Pros:</strong> Extremely fast. The compiler knows the exact type at compile time, so it can perform inlining and other optimizations. The function call is a direct, static jump to the right code.</li>
+                    <li><strong>Cons:</strong> Can lead to larger binary sizes, as code is duplicated for each concrete type.</li>
+                </ul>
+                <p><strong>Analogy: The Specialized Tools.</strong> Static dispatch is like having a toolbox with a specialized wrench for every single bolt size (a 10mm wrench, a 12mm wrench, etc.). When you need to turn a 10mm bolt, you grab the 10mm wrench. It's a perfect fit and extremely fast to use, but you need to carry around a lot of wrenches.</p>
+
+                <h3>Step 2: Dynamic Dispatch with `dyn Trait`</h3>
+                <p><strong>Dynamic dispatch</strong> happens at run time. You use this when you need to handle a collection of *different* concrete types that all implement the same trait. The `dyn` keyword creates a "trait object." A trait object (like <code>&dyn MyTrait</code> or <code>Box&lt;dyn MyTrait&gt;</code>) is a "fat pointer" that contains two things: a pointer to the actual data, and a pointer to a "vtable" (virtual method table).</p>
+                <p>The vtable is a list of function pointers for that type's implementation of the trait. When you call a method on a trait object, the program has to look up the correct function pointer in the vtable at run time and then call it.</p>
+                <ul>
+                    <li><strong>Pros:</strong> Very flexible. Allows you to have a `Vec<Box<dyn MyTrait>>` containing a mix of different structs. Results in smaller binary sizes as the function code is not duplicated.</li>
+                    <li><strong>Cons:</strong> Slower. Each method call involves an extra pointer lookup, which can prevent some compiler optimizations like inlining.</li>
+                </ul>
+                <p><strong>Analogy: The Adjustable Wrench.</strong> Dynamic dispatch is like having a single adjustable wrench. It can handle any bolt size within its range. This is very flexible and means you only need to carry one tool. However, for every bolt, you have to spend a moment adjusting the wrench to the right size before you can turn it. This makes it slightly slower than using a specialized tool.</p>
+                
+                <h3>Practical Application: A Drawing Program</h3>
+                <p>Let's illustrate the difference with a standalone example that simulates drawing shapes on a screen.</p>
+
+                <h4>1. Create a New Project</h4>
+                <pre><code>cargo new dispatch_demo
+cd dispatch_demo
+</code></pre>
+                
+                <h4>2. The Complete `src/main.rs`</h4>
+                <pre><code>// The core trait.
+trait Drawable {
+    fn draw(&self);
+}
+
+// Two different concrete types that implement the trait.
+struct Button { label: String }
+impl Drawable for Button {
+    fn draw(&self) { println!("Drawing a button with label '{}'", self.label); }
+}
+
+struct Circle { radius: u32 }
+impl Drawable for Circle {
+    fn draw(&self) { println!("Drawing a circle with radius {}", self.radius); }
+}
+
+// --- STATIC DISPATCH using `impl Trait` ---
+// The compiler will create two versions of this function:
+// `draw_static_for_button` and `draw_static_for_circle`.
+fn draw_static(item: impl Drawable) {
+    println!("--- Static Dispatch ---");
+    item.draw();
+}
+
+// --- DYNAMIC DISPATCH using `dyn Trait` ---
+// The compiler creates only one version of this function.
+// It works with any type that implements Drawable.
+fn draw_dynamic(item: &dyn Drawable) {
+    println!("--- Dynamic Dispatch ---");
+    item.draw();
+}
+
+
+fn main() {
+    let button = Button { label: "Click Me".to_string() };
+    let circle = Circle { radius: 42 };
+
+    // --- Static dispatch in action ---
+    // At compile time, Rust knows `button` is a `Button` and calls the specialized function.
+    draw_static(button); 
+    // At compile time, Rust knows `circle` is a `Circle` and calls the specialized function.
+    draw_static(circle);
+
+    // --- Dynamic dispatch in action ---
+    let button2 = Button { label: "Don't Click".to_string() };
+    let circle2 = Circle { radius: 100 };
+    
+    // We can call `draw_dynamic` with references to our objects.
+    draw_dynamic(&button2);
+    draw_dynamic(&circle2);
+
+    // --- The key use case for dynamic dispatch: HETEROGENEOUS COLLECTIONS ---
+    // You CANNOT do this with `impl Trait`.
+    // We can store different types that implement the same trait in one collection.
+    let drawables: Vec<Box<dyn Drawable>> = vec![
+        Box::new(Button { label: "OK".to_string() }),
+        Box::new(Circle { radius: 25 }),
+        Box::new(Button { label: "Cancel".to_string() }),
+    ];
+
+    println!("\n--- Drawing from a heterogeneous vector ---");
+    for item in &drawables {
+        // The program checks the vtable for each item at runtime to find the correct `draw` method.
+        item.draw();
+    }
+}
+</code></pre>
+                
+                <h4>Choosing the Right Tool:</h4>
+                <ul>
+                    <li>Use <strong><code>impl Trait</code> (static dispatch)</strong> by default. It's faster and is the most common choice for generic function arguments. Use it when you need to operate on some type that implements a trait, but you don't need to mix and match different types. Our `todo-app`'s `Command` trait could have used this if we didn't need the `Box`.</li>
+                    <li>Use <strong><code>dyn Trait</code> (dynamic dispatch)</strong> when you specifically need to handle a collection of different types that all share the same trait. The classic example is a GUI where a `Vec` needs to hold a `Button`, a `CheckBox`, a `Slider`, etc. Our `todo-app`'s `Box<dyn Command>` is a perfect example of this, allowing us to choose which `Command` struct to create at runtime.</li>
+                </ul>
+                <p>You now understand one of the most important performance and design considerations in Rust. Knowing the difference between static and dynamic dispatch allows you to write code that is not only correct and abstract but also highly performant.</p>
+
+                <a href="../index.html" class="back-link">&larr; Back to Curriculum Map</a>
+            </article>
+        </div>
+    </main>
+    
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 The Rust Adventure.</p>
+        </div>
+    </footer>
+
+</body>
+</html>

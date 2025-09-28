@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 67: The Query Builder Pattern - The Rust Adventure</title>
+    <link rel="stylesheet" href="../style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <img src="https://www.rust-lang.org/static/images/rust-logo-blk.svg" alt="Rust Logo" class="logo">
+            <h1>Module 67: The Query Builder Pattern</h1>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <article class="module-content">
+                <h2>Objective: To use `sqlx`'s `QueryBuilder` to safely and programmatically construct SQL queries at runtime, enabling features like optional filtering.</h2>
+                <p>The compile-time checked macros are fantastic for static queries, but what happens when your query needs to change based on user input? For example, what if you want to add an optional `WHERE` clause for filtering? Manually concatenating strings is a recipe for SQL injection vulnerabilities. The safe, idiomatic solution is to use a <strong>query builder</strong>.</p>
+                
+                <hr>
+
+                <h3>Step 1: The Limitation of Static Queries</h3>
+                <p>The <code>sqlx::query!</code> macros require the entire SQL string to be known at compile time. You can't do this:</p>
+                <pre><code>let mut sql = "SELECT * FROM tasks".to_string();
+if let Some(filter) = user_filter {
+    sql.push_str(" WHERE completed = ?");
+}
+// THIS DOES NOT WORK! The macro needs a string literal.
+// sqlx::query!(&sql, filter).fetch_all(...);
+</code></pre>
+                <p>This is where `sqlx`'s `QueryBuilder` comes in.</p>
+
+                <h3>Step 2: The `QueryBuilder`</h3>
+                <p>The <code>QueryBuilder</code> allows you to build up a query piece by piece in a safe way. It keeps the SQL fragments separate from the values you want to bind, preventing injection attacks.</p>
+                <ul>
+                    <li><strong><code>QueryBuilder::new("...")</code></strong>: Starts a new query builder with an initial SQL fragment.</li>
+                    <li><strong><code>.push("...")</code></strong>: Appends another raw SQL fragment.</li>
+                    <li><strong><code>.push_bind(value)</code></strong>: Pushes a value to the list of bound parameters and adds the appropriate placeholder (`?` or `$1`, etc.) to the SQL string for you.</li>
+                    <li><strong><code>.build_query_as::<MyStruct>()</code></strong>: Consumes the builder and produces a final, executable query that can be mapped to a struct.</li>
+                </ul>
+                <p><strong>Analogy: Building a Sentence.</strong> The `query!` macro is like a pre-written, unchangeable sentence. The `QueryBuilder` is like having a set of words and grammar rules. You can `push` word fragments ("SELECT * FROM tasks") and then safely `push_bind` placeholders (the nouns and verbs) to construct a grammatically correct and meaningful sentence on the fly.</p>
+
+                <h3>Practical Application: Filtering the Task List</h3>
+                <p>Let's enhance our `list_tasks` handler. We will allow the user to provide an optional query parameter, like <code>/tasks?completed=true</code>, to filter the list. This requires building our `SELECT` query dynamically.</p>
+
+                <h4>1. Add a Struct for Query Parameters</h4>
+                <p>First, we need a struct to hold our optional query parameters. `serde` and Axum's `Query` extractor will handle the parsing for us.</p>
+                <pre><code>// In src/main.rs
+use axum::extract::Query;
+
+// ...
+
+#[derive(Debug, Deserialize)]
+pub struct ListTasksQuery {
+    completed: Option<bool>,
+}
+</code></pre>
+                
+                <h4>2. Update the `list_tasks` Handler</h4>
+                <p>Now, we'll modify the handler to use `QueryBuilder`.</p>
+                <pre><code>// In src/main.rs
+use sqlx::QueryBuilder;
+
+// ...
+
+async fn list_tasks(
+    State(state): State<AppState>,
+    // Use the Query extractor. If no query params are provided,
+    // `params.completed` will be `None`.
+    Query(params): Query<ListTasksQuery>,
+) -> Result<Json<Vec<Task>>, axum::http::StatusCode> {
+    
+    // 1. Start building the query.
+    let mut query_builder: QueryBuilder<sqlx::Sqlite> = 
+        QueryBuilder::new("SELECT id, description, completed FROM tasks");
+
+    // 2. If a filter was provided, dynamically add a WHERE clause.
+    if let Some(completed) = params.completed {
+        query_builder.push(" WHERE completed = ");
+        query_builder.push_bind(completed);
+    }
+
+    // 3. Build the final query and execute it.
+    let query = query_builder.build_query_as();
+    
+    let tasks = query.fetch_all(&state.db_pool).await;
+
+    match tasks {
+        Ok(tasks) => Ok(Json(tasks)),
+        Err(e) => {
+            eprintln!("Failed to list tasks: {}", e);
+            Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+</code></pre>
+
+                <h4>The Dynamic and Safe Architecture:</h4>
+                <ul>
+                    <li><strong><code>Query<ListTasksQuery></code></strong>: Axum's extractor parses the URL's query string (<code>?completed=true</code>) into our `ListTasksQuery` struct. If the parameter is missing, `completed` will be `None`.</li>
+                    <li><strong><code>QueryBuilder::new(...)</code></strong>: We start with the base SQL that is always present. We explicitly tell the builder we're targeting `sqlx::Sqlite`.</li>
+                    <li><strong>Conditional Logic</strong>: The `if let Some(...)` block is the core of the dynamic part. Only if the user provides the filter do we append the `WHERE` clause and bind the value.</li>
+                    <li><strong><code>.push_bind(completed)</code></strong>: This is the safe part. We are not formatting the `true` or `false` value into the string ourselves. We are handing the value over to `sqlx`, which will use a prepared statement to bind it safely, preventing any chance of SQL injection.</li>
+                    <li><strong>NOTE:</strong> Unlike `query!`, the query builder's queries are *not* checked at compile time, because their final form isn't known until runtime. This is the trade-off you make for dynamic capability.</li>
+                </ul>
+
+                <h3>Step 3: Test Your Filterable API!</h3>
+                <p>Run your server with <code>cargo run</code>. Add a few tasks, and mark at least one as complete. Then, use `curl` to test the new filtering.</p>
+                <pre><code># 1. Add a couple of tasks
+curl -X POST -H "Content-Type: application/json" -d '{"description": "Learn QueryBuilder"}' http://127.0.0.1:3000/tasks
+curl -X POST -H "Content-Type: application/json" -d '{"description": "Finish Day 18"}' http://127.0.0.1:3000/tasks
+
+# 2. Mark task 1 as complete (you'll need a `complete` handler for this)
+# Assuming you have a PUT /tasks/:id/complete endpoint...
+
+# 3. List all tasks (no filter)
+curl "http://127.0.0.1:3000/tasks"
+
+# 4. List only the incomplete tasks
+curl "http://127.0.0.1:3000/tasks?completed=false"
+
+# 5. List only the completed tasks
+curl "http://127.0.0.1:3000/tasks?completed=true"
+</code></pre>
+                <p>You have now mastered the two primary ways of querying a database with `sqlx`. You can write ultra-safe, compile-time checked static queries with the `query!` macros, and you can build powerful, safe, dynamic queries with the `QueryBuilder`.</p>
+
+                <a href="../index.html" class="back-link">&larr; Back to Curriculum Map</a>
+            </article>
+        </div>
+    </main>
+    
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 The Rust Adventure.</p>
+        </div>
+    </footer>
+
+</body>
+</html>

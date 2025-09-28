@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 40: Tying it all Together: A Parallel File Processor - The Rust Adventure</title>
+    <link rel="stylesheet" href="../style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <img src="https://www.rust-lang.org/static/images/rust-logo-blk.svg" alt="Rust Logo" class="logo">
+            <h1>Module 40: Tying it all Together: A Parallel File Processor</h1>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <article class="module-content">
+                <h2>Objective: To combine the concepts of the entire course into a final, impressive command-line tool that uses concurrency for a real performance benefit.</h2>
+                <p>This is it—your final project! We are going to build a brand-new application from scratch that showcases skills from the entire 9-day curriculum. We will build a command-line tool that analyzes log files in parallel, demonstrating a real-world use case where concurrency provides a significant speed advantage.</p>
+                
+                <hr>
+
+                <h3>The Project: Parallel Log Analyzer</h3>
+                <p>The application will:</p>
+                <ol>
+                    <li>Accept a directory path from the command line (<strong><code>clap</code></strong> - Day 7).</li>
+                    <li>Recursively find all files in that directory ending with <code>.log</code>.</li>
+                    <li>Create a thread-safe work queue containing the paths of all log files found (<strong><code>Arc&lt;Mutex&lt;...&gt;&gt;</code></strong> - Day 6 & 9).</li>
+                    <li>Spawn a pool of worker threads to process the files in parallel (<strong><code>std::thread</code></strong> - Day 9).</li>
+                    <li>Each worker will take a file from the queue, read its contents (<strong>I/O Traits</strong> - Day 7), and count the number of lines containing the word "ERROR".</li>
+                    <li>The results will be stored in a shared, thread-safe `HashMap` (<strong><code>Arc&lt;Mutex&lt;...&gt;&gt;</code></strong>).</li>
+                    <li>Once all work is done, the main thread will print the final results as a JSON object (<strong><code>serde_json</code></strong> - Day 7).</li>
+                </ol>
+                <p>This is a challenging but incredibly rewarding project. Create a new project with <code>cargo new log_analyzer</code>.</p>
+
+                <h4>1. Update `Cargo.toml`</h4>
+                <pre><code>[dependencies]
+clap = { version = "4.0", features = ["derive"] }
+serde_json = "1.0"
+walkdir = "2" # A great crate for recursively walking directories
+</code></pre>
+
+                <h4>2. The Complete `src/main.rs`</h4>
+                <p>This is the culmination of your learning. Read the comments to see how concepts from different days come together.</p>
+                <pre><code>use clap::Parser;
+use std::collections::HashMap;
+use std::fs::File;
+use std::io::{BufRead, BufReader};
+use std::path::{Path, PathBuf};
+use std::sync::{Arc, Mutex};
+use std::thread;
+use walkdir::WalkDir;
+
+// --- Day 7: CLI Definition with `clap` ---
+#[derive(Parser, Debug)]
+#[command(author, version, about)]
+struct Cli {
+    /// The path to the directory to analyze
+    #[arg(required = true)]
+    path: PathBuf,
+
+    /// The number of worker threads to use
+    #[arg(short, long, default_value_t = 4)]
+    threads: usize,
+}
+
+fn main() {
+    let cli = Cli::parse();
+
+    // --- Day 6 & 9: Create thread-safe, shared data structures ---
+    let work_queue = Arc::new(Mutex::new(Vec::new()));
+    let results = Arc::new(Mutex::new(HashMap::new()));
+
+    // --- Main Thread: Discover Files (Producer) ---
+    println!("Finding .log files in '{}'...", cli.path.display());
+    for entry in WalkDir::new(&cli.path).into_iter().filter_map(|e| e.ok()) {
+        if entry.path().extension().map_or(false, |ext| ext == "log") {
+            // Lock the queue, push a file path, and the lock is released.
+            work_queue.lock().unwrap().push(entry.path().to_path_buf());
+        }
+    }
+    
+    let total_files = work_queue.lock().unwrap().len();
+    println!("Found {} files to process.", total_files);
+
+    // --- Day 9: Spawn Worker Threads (Consumers) ---
+    let mut handles = vec![];
+    for i in 0..cli.threads {
+        let queue_clone = Arc::clone(&work_queue);
+        let results_clone = Arc::clone(&results);
+
+        let handle = thread::spawn(move || {
+            // This loop is the worker's life.
+            loop {
+                // Take a file path from the queue.
+                let mut queue_guard = queue_clone.lock().unwrap();
+                let maybe_file = queue_guard.pop();
+                // Release the lock immediately so other threads can work.
+                drop(queue_guard);
+
+                if let Some(file_path) = maybe_file {
+                    let error_count = process_file(&file_path);
+                    
+                    // Lock the results and insert our findings.
+                    let mut results_guard = results_clone.lock().unwrap();
+                    let file_name = file_path.file_name().unwrap().to_str().unwrap().to_string();
+                    results_guard.insert(file_name, error_count);
+                } else {
+                    // If the queue is empty, the thread's work is done.
+                    break;
+                }
+            }
+            println!("Worker thread {} finished.", i);
+        });
+        handles.push(handle);
+    }
+    
+    // Wait for all workers to finish.
+    for handle in handles {
+        handle.join().unwrap();
+    }
+    
+    // --- Day 7: Print final results as JSON ---
+    println!("\n--- Analysis Complete ---");
+    let final_results = results.lock().unwrap();
+    let json_output = serde_json::to_string_pretty(&*final_results).unwrap();
+    println!("{}", json_output);
+}
+
+/// --- Day 7 & 8: A testable, isolated function for I/O ---
+fn process_file(path: &Path) -> usize {
+    let file = match File::open(path) {
+        Ok(f) => f,
+        Err(_) => return 0,
+    };
+    let reader = BufReader::new(file);
+    
+    reader
+        .lines()
+        .filter_map(|line| line.ok())
+        .filter(|line| line.contains("ERROR"))
+        .count()
+}
+</code></pre>
+                
+                <h3>Final Step: See Your Creation in Action!</h3>
+                <ol>
+                    <li>Create a temporary directory, e.g., `test_logs`.</li>
+                    <li>Inside it, create a few files: `app1.log`, `app2.log`, `data.txt`.</li>
+                    <li>Add some lines to the log files. Make sure some lines contain the word `ERROR`.</li>
+                    <li>Run your program: <strong><code>cargo run -- test_logs</code></strong></li>
+                    <li>Try it with more threads: <strong><code>cargo run -- test_logs -t 8</code></strong></li>
+                </ol>
+                <p>You will see the worker threads start up, process the files in parallel, and finally, the main thread will print a clean JSON report of the error counts. You have successfully built a real, concurrent utility that combines the best parts of the entire Rust Adventure curriculum.</p>
+                <p><strong>Congratulations! Your adventure is complete. You now have the knowledge and hands-on experience to tackle a wide range of problems with one of the most powerful and rewarding programming languages available today.</strong></p>
+
+                <a href="../index.html" class="back-link">&larr; Back to Curriculum Map</a>
+            </article>
+        </div>
+    </main>
+    
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 The Rust Adventure.</p>
+        </div>
+    </footer>
+
+</body>
+</html>

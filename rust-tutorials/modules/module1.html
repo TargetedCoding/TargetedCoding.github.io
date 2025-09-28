@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 1: The Basic Building Blocks - The Rust Adventure</title>
+    <link rel="stylesheet" href="../style.css"> <!-- Links to the main stylesheet -->
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <img src="https://www.rust-lang.org/static/images/rust-logo-blk.svg" alt="Rust Logo" class="logo">
+            <h1>Module 1: The Basic Building Blocks</h1>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <article class="module-content">
+                <h2>Objective: To understand how to store and use data, and the core concept of immutability.</h2>
+                <p>Now that your workshop is set up, it's time to learn how to handle the materials. In this module, we'll learn how to store information in labeled boxes called variables.</p>
+                
+                <hr>
+
+                <h3>Step 1: Labeled Boxes (Variables)</h3>
+                <p>In programming, we store data in <strong>variables</strong>. A key feature of Rust is that variables are <strong>immutable</strong> by default. This is a safety feature!</p>
+                <p><strong>Analogy:</strong> Think of a variable as a labeled box. When you write <code>let tasks_total = 5;</code>, you are putting the number 5 into a box labeled 'tasks_total'. By default, Rust seals this box shut. You can look inside, but you can't change what's in it.</p>
+                <pre><code>// This is an immutable variable.
+let tasks_total = 5;</code></pre>
+
+                <h4>The <code>mut</code> Keyword</h4>
+                <p>What if you need a box you can change? You must explicitly tell Rust by using the <code>mut</code> keyword (short for mutable). This is like putting a special "changeable" sticker on the box.</p>
+                <pre><code>// This is a mutable variable.
+let mut tasks_completed = 0;
+println!("Tasks completed: {}", tasks_completed);
+
+// We can change it because it's marked as `mut`.
+tasks_completed = tasks_completed + 1;
+println!("Tasks completed: {}", tasks_completed);</code></pre>
+                <p>This "immutable by default" rule helps prevent a whole class of bugs where data gets changed unexpectedly.</p>
+
+                <h3>Step 2: Different Kinds of Treasure (Scalar Types)</h3>
+                <p>Variables can hold different kinds of data. Rust needs to know the type of data so it knows how to work with it. These basic types are called scalar types.</p>
+                <ul>
+                    <li><strong>Integers:</strong> Whole numbers. Types include <code>i32</code> (a 32-bit signed integer, meaning it can be negative) and <code>u32</code> (a 32-bit unsigned integer, only positive). The number tells you the size. For now, <code>i32</code> is a great default.</li>
+                    <li><strong>Floating-Point Numbers:</strong> Numbers with a decimal point, like <code>f64</code>.</li>
+                    <li><strong>Booleans:</strong> Can only be <code>true</code> or <code>false</code>. Used for making decisions.</li>
+                    <li><strong>Characters:</strong> A single character, like <code>'a'</code> or <code>'🦀'</code>. Note the single quotes!</li>
+                </ul>
+                
+                <h3>Let's Build Our Todo App (Part 1)</h3>
+                <p>It's time to apply what we've learned to our project. Let's start building our actual todo list. For now, we will just store a single task as text.</p>
+                <p>Open your <code>src/main.rs</code> file from Module 0 and replace the code with this:</p>
+                <pre><code>fn main() {
+    let mut todo_list = String::from("1. Learn Rust");
+    println!("My tasks:\n{}", todo_list);
+
+    // Let's add another task!
+    todo_list.push_str("\n2. Understand variables");
+    
+    println!("\nMy tasks are now:\n{}", todo_list);
+}</code></pre>
+                <h4>New Concepts Introduced:</h4>
+                <ul>
+                    <li><code>String::from("...")</code>: We introduce a new type, the <code>String</code>. While characters in single quotes are simple, text that can grow and change needs this more powerful type. <code>String::from()</code> creates a new, flexible string.</li>
+                    <li><code>.push_str()</code>: This is a "method" that belongs to the <code>String</code> type. It allows us to append more text to the end of our string.</li>
+                </ul>
+                <p>Run your program again with <code>cargo run</code>. You'll see your updated task list! You have successfully used a mutable variable to modify data.</p>
+
+
+                <a href="../index.html" class="back-link">&larr; Back to Curriculum Map</a>
+            </article>
+        </div>
+    </main>
+    
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 The Rust Adventure.</p>
+        </div>
+    </footer>
+
+</body>
+</html>

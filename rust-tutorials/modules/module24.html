@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 24: Deriving and Implementing Standard Traits - The Rust Adventure</title>
+    <link rel="stylesheet" href="../style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <img src="https://www.rust-lang.org/static/images/rust-logo-blk.svg" alt="Rust Logo" class="logo">
+            <h1>Module 24: Deriving and Implementing Standard Traits</h1>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <article class="module-content">
+                <h2>Objective: To introduce the standard library's most important traits and show how the `#[derive]` attribute can automatically implement them, giving our custom types new "superpowers."</h2>
+                <p>You've learned that traits define shared behavior. The Rust standard library is full of incredibly useful traits that, once implemented for your type, unlock new functionality. Often, the logic for implementing these traits is straightforward, so Rust provides a powerful macro, <code>#[derive]</code>, to do the work for you.</p>
+                
+                <hr>
+
+                <h3>Step 1: The Magic of `#[derive]`</h3>
+                <p>The <code>#[derive(...)]</code> attribute is placed above a struct or enum definition. You give it a list of traits, and the compiler will automatically write the necessary `impl` blocks for you at compile time. This saves a huge amount of boilerplate code.</p>
+                <p>Some of the most common "derivable" traits are:</p>
+                <ul>
+                    <li><strong><code>Debug</code></strong>: Allows the type to be printed with the <code>{:?}</code> format specifier. Essential for debugging.</li>
+                    <li><strong><code>Clone</code></strong>: Gives the type a <code>.clone()</code> method for explicit, deep duplication of its data.</li>
+                    <li><strong><code>PartialEq</code>, <code>Eq</code></strong>: Implements the equality operators (<code>==</code> and <code>!=</code>).</li>
+                    <li><strong><code>PartialOrd</code>, <code>Ord</code></strong>: Implements the comparison operators (<code><</code>, <code>></code>, etc.) and enables sorting.</li>
+                    <li><strong><code>Copy</code></strong>: A special "marker" trait for types that can be copied by just copying their bits (like `i32` or simple enums). A `Copy` type is implicitly copied on assignment, rather than moved.</li>
+                </ul>
+
+                <h3>Step 2: Manual Implementation for Custom Logic</h3>
+                <p>Sometimes, the default derived implementation isn't what you want. For example, how should two `Task` structs be compared? By ID? By description? By priority? The derived `Ord` trait can't guess your intention. In these cases, you must implement the trait manually to define the specific logic you need.</p>
+
+                <h3>Let's Build Our Todo App (Part 21)</h3>
+                <p>Let's supercharge our <code>Priority</code> and <code>Task</code> types. We'll derive what we can, and manually implement what we must. The result will be a huge simplification of our <code>SortCommand</code>.</p>
+                <p>This is a big step! We will be modifying both of our custom types and the `SortCommand`.</p>
+                <pre><code>// In src/main.rs
+
+// --- MODIFIED: The Priority Enum with derived traits ---
+// We can derive all of these because the enum itself doesn't contain complex data.
+// We can now compare priorities directly (e.g., Priority::High > Priority::Low).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+enum Priority {
+    Low,
+    Medium,
+    High,
+}
+
+// ... (impl Priority with as_char() is the same) ...
+
+// --- MODIFIED: The Task struct with derived and manual traits ---
+#[derive(Debug, Clone)] // We can derive Debug and Clone
+struct Task {
+    // ... (fields are the same) ...
+}
+
+// We need to implement the comparison traits manually to define our custom sorting logic.
+// This tells Rust that two Tasks are equal if their descriptions are equal.
+impl PartialEq for Task {
+    fn eq(&self, other: &Self) -> bool {
+        self.description == other.description
+    }
+}
+impl Eq for Task {} // Eq is a marker trait that builds on PartialEq.
+
+// This is the most important part: defining the TOTAL order of Tasks.
+impl Ord for Task {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        // Compare by priority first. Since High > Low, but we want High to appear
+        // first in a sorted list, we reverse the comparison.
+        self.priority.cmp(&other.priority).reverse()
+            // If priorities are equal, then compare by description alphabetically.
+            .then_with(|| self.description.cmp(&other.description))
+    }
+}
+
+// We must also implement PartialOrd. A simple implementation just calls `cmp`.
+impl PartialOrd for Task {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+
+// --- THE "AHA!" MOMENT: The SortCommand is now incredibly simple! ---
+impl Command for SortCommand {
+    fn execute(&self, tasks: &mut HashMap<u32, Task>, _next_id: &mut u32) -> Result<(), AppError> {
+        // Collect into a Vec just like before.
+        let mut sorted_tasks: Vec<_> = tasks.values().cloned().collect();
+
+        // THE MAGIC: Because `Task` now implements `Ord`, we can just call `.sort()`!
+        // No more complex closure!
+        sorted_tasks.sort();
+        
+        println!("\n--- SORTED TODO LIST ---");
+        for task in sorted_tasks {
+            let status = if task.completed { "[x]" } else { "[ ]" };
+            let priority_char = task.priority.as_char();
+            println!("[{}] {} (edits: {})", priority_char, task.description, task.edit_count);
+        }
+        println!("------------------------");
+        Ok(())
+    }
+}
+// ... (The rest of the file is largely unchanged) ...
+</code></pre>
+
+                <h4>The Design Improvement:</h4>
+                <ul>
+                    <li><strong>Supercharged Enums</strong>: Our <code>Priority</code> enum is now <code>Copy</code>, meaning it's cheap to pass around, and <code>Ord</code>, meaning we can directly compare variants (e.g., <code>if my_priority > Priority::Medium</code>).</li>
+                    <li><strong>Custom Sorting Logic</strong>: By implementing <code>Ord</code> for <code>Task</code>, we have defined, in one single place, the canonical way that tasks should be sorted: high-priority tasks come first, and tasks with the same priority are sorted alphabetically.</li>
+                    <li><strong>Simplified Commands</strong>: The <code>SortCommand</code> is now beautifully simple. It doesn't need to know the *rules* for sorting; it just tells the `Vec` to sort itself. The `Vec` then uses the <code>Ord</code> implementation we provided on `Task`. This is a perfect example of how traits allow for powerful, generic programming.</li>
+                    <li><strong>Cloning Data</strong>: Note the change in `SortCommand` to <code>tasks.values().cloned().collect()</code>. Since we are creating a new `Vec` to sort, we need to `clone` the tasks out of the `HashMap` so our new `Vec` can own them. This is possible because we derived `Clone` on `Task`.</li>
+                </ul>
+                <p>This is a major step in writing idiomatic Rust. By leveraging the standard library's traits, you make your own types more powerful and your application logic simpler and more declarative.</p>
+
+                <a href="../index.html" class="back-link">&larr; Back to Curriculum Map</a>
+            </article>
+        </div>
+    </main>
+    
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 The Rust Adventure.</p>
+        </div>
+    </footer>
+
+</body>
+</html>

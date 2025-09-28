@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 44: `Vec` vs. `VecDeque` - The Rust Adventure</title>
+    <link rel="stylesheet" href="../style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <img src="https://www.rust-lang.org/static/images/rust-logo-blk.svg" alt="Rust Logo" class="logo">
+            <h1>Module 44: `Vec` vs. `VecDeque`</h1>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <article class="module-content">
+                <h2>Objective: To understand the internal structure and performance characteristics of Rust's two primary sequence types, `Vec` and `VecDeque`, to make informed decisions about which to use.</h2>
+                <p>Welcome to Day 11! We're now diving into the heart of computer science: data structures. You've used <code>Vec</code> extensively, but it's not always the best tool for the job. Rust's standard library provides another powerful sequence type, <strong><code>VecDeque</code></strong> (a "vector deque," pronounced "deck"), which is optimized for a different set of operations.</p>
+                
+                <hr>
+
+                <h3>Step 1: The `Vec<T>` - A Contiguous Array</h3>
+                <p>Let's revisit how a `Vec` works internally. A `Vec` guarantees that all of its elements are laid out next to each other in a single, contiguous block of memory.</p>
+                <ul>
+                    <li><strong>Pro:</strong> This is fantastic for CPU caches! Accessing any element by its index (<code>my_vec[i]</code>) is extremely fast, as the computer can calculate its exact memory address. Iterating over a `Vec` is also very fast.</li>
+                    <li><strong>Con:</strong> This is terrible for inserting or removing elements at the *beginning* or in the *middle*. If you remove the first element, all other elements must be shifted one by one to fill the empty space. This is an O(n) operation, meaning it gets linearly slower the bigger the vector is.</li>
+                </ul>
+                <p><strong>A `Vec` is optimized for:</strong> random access by index and adding/removing elements at the end (<code>push</code>/<code>pop</code>).</p>
+
+                <h3>Step 2: The `VecDeque<T>` - A Ring Buffer</h3>
+                <p>A <code>VecDeque</code>, or double-ended queue, is implemented internally as a "ring buffer." It's still a contiguous block of memory, but it cleverly wraps around, like the numbers on a clock face.</p>
+                <ul>
+                    <li><strong>Pro:</strong> This structure is optimized for adding and removing elements from both the front and the back. Operations like <code>push_front</code>, <code>pop_front</code>, <code>push_back</code>, and <code>pop_back</code> are all extremely fast (amortized O(1)).</li>
+                    <li><strong>Con:</strong> It doesn't guarantee that all its elements are in a single contiguous slice of memory (the "wrap around" point might be in the middle of the allocated block). This can make some complex slice operations or interactions with C libraries more difficult. Access by index is still fast, but might be slightly slower than a `Vec` due to the extra logic needed to handle the wrap-around.</li>
+                </ul>
+                <p><strong>A `VecDeque` is optimized for:</strong> use as a queue or a deque, where you are primarily adding/removing from the ends.</p>
+
+                <h3>Practical Application: A Performance Benchmark</h3>
+                <p>Talk is cheap. Let's write a program that proves the performance difference. We'll create a benchmark that repeatedly adds a large number of elements to the front of both a `Vec` and a `VecDeque` and time how long each takes.</p>
+
+                <h4>1. Create a New Project</h4>
+                <pre><code>cargo new vec_vs_deque
+cd vec_vs_deque
+</code></pre>
+
+                <h4>2. The Complete `src/main.rs`</h4>
+                <pre><code>use std::collections::{VecDeque};
+use std::time::Instant;
+
+fn main() {
+    let num_elements = 100_000;
+
+    // --- Benchmark Vec ---
+    println!("Benching Vec<i32>...");
+    let mut vec = Vec::new();
+    let start = Instant::now();
+    
+    for i in 0..num_elements {
+        // Inserting at the front of a Vec is very slow!
+        // It has to shift all other elements over.
+        vec.insert(0, i);
+    }
+
+    let duration = start.elapsed();
+    println!("  Time taken: {:?}", duration);
+    println!("  (Note: Your program will be very slow during this part.)");
+
+
+    // --- Benchmark VecDeque ---
+    println!("\nBenching VecDeque<i32>...");
+    let mut deque = VecDeque::new();
+    let start = Instant::now();
+
+    for i in 0..num_elements {
+        // Pushing to the front of a VecDeque is very fast!
+        deque.push_front(i);
+    }
+    
+    let duration = start.elapsed();
+    println!("  Time taken: {:?}", duration);
+
+    println!("\nConclusion: VecDeque is much faster for front-insertions!");
+}
+</code></pre>
+
+                <h4>The Performance Difference:</h4>
+                <p>When you run this code (<strong>be patient, the `Vec` part is intentionally very slow!</strong>), you will see a dramatic difference in the timings. On a typical machine, the `VecDeque` might take a few milliseconds, while the `Vec` could take multiple *seconds*—a difference of thousands of times faster!</p>
+                <p>The output will look something like this:</p>
+                <pre><code>Benching Vec<i32>...
+  Time taken: 1.523456789s  <-- VERY SLOW
+  (Note: Your program will be very slow during this part.)
+
+Benching VecDeque<i32>...
+  Time taken: 890.123µs     <-- EXTREMELY FAST (microseconds)
+
+Conclusion: VecDeque is much faster for front-insertions!
+</code></pre>
+
+                <h4>Choosing the Right Tool:</h4>
+                <ul>
+                    <li>Need a simple list where you mostly add to the end and access by index? Use <strong><code>Vec</code></strong>. This is the default and most common choice.</li>
+                    <li>Need to implement a queue (First-In, First-Out) where you `push_back` and `pop_front`? Use <strong><code>VecDeque</code></strong>.</li>
+                    <li>Need a double-ended queue where you frequently add or remove from both ends? Use <strong><code>VecDeque</code></strong>.</li>
+                </ul>
+                <p>Understanding the performance characteristics of the data structures you use is a hallmark of a great systems programmer. You now have the knowledge to make the right choice between Rust's two most important sequence types.</p>
+
+                <a href="../index.html" class="back-link">&larr; Back to Curriculum Map</a>
+            </article>
+        </div>
+    </main>
+    
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 The Rust Adventure.</p>
+        </div>
+    </footer>
+
+</body>
+</html>

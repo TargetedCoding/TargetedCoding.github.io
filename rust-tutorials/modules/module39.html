@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 39: Shared-State Concurrency with `Arc` and `Mutex` - The Rust Adventure</title>
+    <link rel="stylesheet" href="../style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <img src="https://www.rust-lang.org/static/images/rust-logo-blk.svg" alt="Rust Logo" class="logo">
+            <h1>Module 39: Shared-State Concurrency with `Arc` and `Mutex`</h1>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <article class="module-content">
+                <h2>Objective: To revisit the `Arc<Mutex<T>>` pattern from Day 6 and apply it to a real problem, solidifying the understanding of how to safely share and mutate data between threads.</h2>
+                <p>While message passing with channels is a fantastic way to handle many concurrency problems, sometimes you genuinely need to have a single piece of data that multiple threads can access and modify. This is called "shared-state concurrency." Rust's primary tools for this are the thread-safe smart pointers we previewed on Day 6: <strong><code>Arc</code></strong> and <strong><code>Mutex</code></strong>.</p>
+                
+                <hr>
+
+                <h3>Step 1: The `Arc<Mutex<T>>` Pattern Revisited</h3>
+                <p>Let's break down this crucial pattern:</p>
+                <ul>
+                    <li><strong><code>Arc&lt;T&gt;</code> (Atomic Reference Counter):</strong> This is the thread-safe version of `Rc<T>`. It allows multiple threads to have shared ownership of a pointer to some data on the heap.</li>
+                    <li><strong><code>Mutex&lt;T&gt;</code> (Mutual Exclusion):</strong> This acts as a "lock" around a piece of data. Before any thread can use the data, it must acquire the lock. The `Mutex` guarantees that only one thread can have the lock (and thus, access to the data) at any given time.</li>
+                </ul>
+                <p>By combining them into <strong><code>Arc&lt;Mutex&lt;T&gt;&gt;</code></strong>, we create a piece of data `T` that can be safely shared and mutated by any number of threads.</p>
+
+                <p><strong>Analogy: The Shared Whiteboard.</strong> Imagine a shared project whiteboard (the data `T`). The whiteboard itself is inside a special room that can be locked (the `Mutex`). To give everyone on the project team access to this room, you give them each a keycard (an `Arc`). When a team member wants to write on the board, they use their keycard to <code>.lock()</code> the door. While they are in the room, no one else can enter. When they are done, they leave, and the door automatically unlocks, allowing the next person in line to get the lock.</p>
+
+                <h3>Practical Application: The Word Counter, Reimagined</h3>
+                <p>Let's solve the exact same problem as the previous module—counting words in parallel—but this time, we will use the shared-state model instead of message passing. This will give you a clear comparison of the two approaches.</p>
+                <p>Create a new project or replace your <code>main.rs</code> temporarily to run this exercise.</p>
+                <pre><code>// In a new main.rs
+use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
+use std::thread;
+
+fn main() {
+    let text_chunks = vec![
+        "hello world rust world",
+        "hello adventure fearless concurrency",
+        "rust is safe and fast",
+    ];
+
+    // 1. Create the final HashMap, protected by a Mutex and an Arc.
+    let final_counts = Arc::new(Mutex::new(HashMap::new()));
+    
+    let mut handles = vec![];
+
+    // Process each chunk of text in a separate thread.
+    for (i, chunk) in text_chunks.into_iter().enumerate() {
+        // Clone the Arc for each thread. This is cheap.
+        let final_counts_clone = Arc::clone(&final_counts);
+        let chunk = chunk.to_string(); // Own the chunk data for the thread
+
+        let handle = thread::spawn(move || {
+            for word in chunk.split_whitespace() {
+                // 2. Acquire the lock on the Mutex.
+                // This will block if another thread currently holds the lock.
+                let mut counts_map = final_counts_clone.lock().unwrap();
+
+                // 3. Mutate the data inside the Mutex.
+                *counts_map.entry(word.to_string()).or_insert(0) += 1;
+                
+                // 4. The lock is automatically released when `counts_map` goes out of scope here!
+            }
+            println!("Thread {} finished processing.", i);
+        });
+        handles.push(handle);
+    }
+
+    // Wait for all threads to finish.
+    for handle in handles {
+        handle.join().unwrap();
+    }
+
+    println!("\n--- Final Word Counts ---");
+    // Get the lock one last time on the main thread to print the results.
+    println!("{:#?}", final_counts.lock().unwrap());
+}
+</code></pre>
+
+                <h4>The Shared-State Architecture:</h4>
+                <ul>
+                    <li><strong><code>Arc::new(Mutex::new(...))</code></strong>: We create our single, shared `HashMap` that all threads will contribute to.</li>
+                    <li><strong><code>Arc::clone(&final_counts)</code></strong>: Each thread gets its own `Arc` pointer, allowing it to have shared ownership of the `Mutex`.</li>
+                    <li><strong><code>.lock().unwrap()</code></strong>: This is the critical part. Inside the loop, for every single word, the thread must wait its turn to acquire the lock. This ensures that two threads can't try to update the `HashMap` at the exact same time, which would corrupt its data.</li>
+                    <li><strong>Lock Contention</strong>: Notice the difference from the channel approach. There, each thread worked in total isolation and only communicated once at the end. Here, all threads are constantly competing for the same lock. For this specific problem, this can be less performant because of how much time threads might spend waiting. However, for other problems where threads need to both read and write to a shared "live" state, this pattern is essential.</li>
+                </ul>
+                <p>You have now successfully implemented the two primary models of concurrency in Rust. Understanding when to use message passing (for independent tasks) and when to use shared-state (for a single, shared resource) is a key skill for any advanced Rust programmer.</p>
+
+                <a href="../index.html" class="back-link">&larr; Back to Curriculum Map</a>
+            </article>
+        </div>
+    </main>
+    
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 The Rust Adventure.</p>
+        </div>
+    </footer>
+
+</body>
+</html>

@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale-1.0">
+    <title>Module 5: Custom Blueprints (Structs & Enums) - The Rust Adventure</title>
+    <link rel="stylesheet" href="../style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <img src="https://www.rust-lang.org/static/images/rust-logo-blk.svg" alt="Rust Logo" class="logo">
+            <h1>Module 5: Custom Blueprints (Structs & Enums)</h1>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <article class="module-content">
+                <h2>Objective: To learn how to create your own custom data types.</h2>
+                <p>So far, we've used built-in types like <code>String</code>, <code>i32</code>, and <code>bool</code>. But to model the real world, we need to create our own types. Rust gives us two powerful tools for this: <code>structs</code> and <code>enums</code>.</p>
+                
+                <hr>
+
+                <h3>Step 1: Building Your Own Box (<code>struct</code>)</h3>
+                <p>A <strong>struct</strong> (short for structure) is a custom data type that lets you name and package together related values into a meaningful group.</p>
+                <p><strong>Analogy:</strong> A <code>struct</code> is like a blueprint for a custom container. If you were making a program to store user contacts, a `User` struct could have named compartments (called "fields") for a `username`, `email`, and `sign_in_count`.</p>
+                <p>For our todo app, we need more than just text. We need to know if a task is completed. A struct is perfect for this!</p>
+                <pre><code>// Define the blueprint for a Task.
+struct Task {
+    description: String,
+    completed: bool,
+}
+
+// Create an "instance" of the Task struct.
+let my_task = Task {
+    description: String::from("Learn Structs"),
+    completed: true,
+};
+
+// Access the fields using dot notation.
+println!("Task: {}", my_task.description);</code></pre>
+
+                <h3>Step 2: A Value from a Set of Choices (<code>enum</code>)</h3>
+                <p>An <strong>enum</strong> (short for enumeration) is a type that can have one of a few possible values, called "variants".</p>
+                <p><strong>Analogy:</strong> An <code>enum</code> is like a traffic light. A variable of type `TrafficLight` could only be `Red`, `Yellow`, or `Green`, but nothing else. This is very useful for representing state.</p>
+                <pre><code>enum TaskStatus {
+    Pending,
+    InProgress,
+    Completed,
+}
+
+let status = TaskStatus::InProgress;</code></pre>
+                <p>We won't use a custom enum in our app just yet, but understanding them is crucial. The most important enum in all of Rust is <code>Option</code>, which is how Rust handles the potential absence of a value (instead of `null`). We'll see it in future lessons!</p>
+
+                <h3>Let's Build Our Todo App (Part 5)</h3>
+                <p>Let's upgrade our app from a simple `Vec<String>` to a `Vec<Task>` using our new struct. This is a big improvement!</p>
+                <p>Replace the code in your <code>src/main.rs</code> file with this:</p>
+                <pre><code>// First, define our custom struct blueprint.
+struct Task {
+    description: String,
+    completed: bool,
+}
+
+fn main() {
+    // Now our vector holds instances of our `Task` struct.
+    let mut tasks = Vec::new();
+
+    tasks.push(Task {
+        description: "Master structs".to_string(),
+        completed: false,
+    });
+    tasks.push(Task {
+        description: "Create a great project".to_string(),
+        completed: true, // This one is already done!
+    });
+    
+    print_tasks(&tasks);
+}
+
+// The print_tasks function now needs to be updated to handle a list of `Task` structs.
+fn print_tasks(task_list: &Vec<Task>) {
+    println!("\n---- TODO LIST ----");
+    for (index, task) in task_list.iter().enumerate() {
+        // Here's our challenge! Let's show a checkbox.
+        let status = if task.completed { "[x]" } else { "[ ]" };
+        
+        // `index + 1` to show a 1-based list.
+        // `task.description` to access the field from the struct.
+        println!("{}. {} {}", index + 1, status, task.description);
+    }
+    println!("-------------------");
+}</code></pre>
+
+                <h4>New Concepts in Our App:</h4>
+                <ul>
+                    <li><strong><code>struct Task { ... }</code></strong>: We defined our own type!</li>
+                    <li><strong><code>Vec<Task></code></strong>: Our vector is now "typed" to only hold `Task` structs. The compiler will enforce this.</li>
+                    <li><strong><code>task_list.iter().enumerate()</code></strong>: This is a cool combination. <code>.iter()</code> gives us an "iterator" to loop over. <code>.enumerate()</code> wraps that and also gives us the index (0, 1, 2...) of each item as we loop. This is how we can print the task number.</li>
+                    <li><strong><code>task.description</code> & <code>task.completed</code></strong>: We use dot notation on our `task` variable to access the data inside its fields.</li>
+                    <li><strong><code>if task.completed { ... }</code></strong>: A simple `if` expression to change the `status` text based on the boolean `completed` field.</li>
+                </ul>
+                <p>Run <code>cargo run</code>. Your app is now much more sophisticated! It correctly displays the status of each task, all thanks to the power of structs.</p>
+
+                <a href="../index.html" class="back-link">&larr; Back to Curriculum Map</a>
+            </article>
+        </div>
+    </main>
+    
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 The Rust Adventure.</p>
+        </div>
+    </footer>
+
+</body>
+</html>

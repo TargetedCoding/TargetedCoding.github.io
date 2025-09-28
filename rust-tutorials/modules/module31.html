@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 31: Generic I/O with `Read` and `Write` Traits - The Rust Adventure</title>
+    <link rel="stylesheet" href="../style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <img src="https://www.rust-lang.org/static/images/rust-logo-blk.svg" alt="Rust Logo" class="logo">
+            <h1>Module 31: Generic I/O with `Read` and `Write` Traits</h1>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <article class="module-content">
+                <h2>Objective: To understand Rust's core I/O traits, `Read` and `Write`, and learn how to use buffered I/O for better performance.</h2>
+                <p>Interacting with files is a core part of many applications. While you can work with a `File` struct directly, idiomatic Rust prefers to use generic traits from the <code>std::io</code> module. This makes your code more flexible, reusable, and easier to test.</p>
+                
+                <hr>
+
+                <h3>Step 1: The Core I/O Traits</h3>
+                <p>The two most important traits are:</p>
+                <ul>
+                    <li><strong><code>std::io::Read</code></strong>: A trait for any source you can read bytes from. This could be a file, a network connection, standard input, or even an in-memory buffer.</li>
+                    <li><strong><code>std::io::Write</code></strong>: A trait for any destination you can write bytes to. This could be a file, a network connection, standard output, or an in-memory buffer.</li>
+                </ul>
+                <p><strong>Analogy: The Universal Hose Adapter.</strong> Writing a function that only accepts a <code>&File</code> is like having a hose that only connects to one specific brand of spigot. Writing a function that accepts any type that implements <code>Write</code> is like having a universal adapter. Your function can now "write" to any destination—a file, the console, anywhere!—as long as it supports the standard `Write` connection.</p>
+
+                <h3>Step 2: Buffered I/O for Performance</h3>
+                <p>Every time you write to a file, you are making a "system call," which is a relatively slow operation. If you write one byte at a time, you'll make thousands of slow calls. To solve this, Rust provides buffered wrappers:</p>
+                <ul>
+                    <li><code>BufReader<R: Read></code>: Reads large chunks from the source into an in-memory buffer, then serves smaller read requests from that fast buffer.</li>
+                    <li><code>BufWriter<W: Write></code>: Collects small writes in an in-memory buffer. It only performs the slow system call to write to the destination when the buffer is full (or when you explicitly <code>.flush()</code> it).</li>
+                </ul>
+                <p><strong>Rule of Thumb:</strong> Almost always wrap your file I/O in a <code>BufReader</code> or <code>BufWriter</code>.</p>
+                
+                <h3>Let's Build Our Todo App (Part 25)</h3>
+                <p>Let's create a dedicated module for handling our application's data persistence. We'll write generic `load_tasks` and `save_tasks` functions that work with any `Read` or `Write` source, and then use them in our `main` function to work with a real file.</p>
+
+                <h4>1. Create a new file: `src/storage.rs`</h4>
+                <p>This file will contain our generic I/O logic.</p>
+                <pre><code>// In src/storage.rs
+use std::io::{Read, Write};
+use std::collections::HashMap;
+// We'll bring our Task struct into scope here
+use crate::Task;
+
+// A generic function to save tasks. It can write to any `W` as long as it implements `Write`.
+pub fn save_tasks<W: Write>(mut writer: W, tasks: &HashMap<u32, Task>) -> std::io::Result<()> {
+    for (id, task) in tasks {
+        // For now, we'll use a simple text format: "id,description,completed\n"
+        let completed_str = if task.completed { "done" } else { "pending" };
+        writeln!(writer, "{},{},{}", id, task.description, completed_str)?;
+    }
+    Ok(())
+}
+
+// A placeholder for our load_tasks function. We'll implement this fully in the next module.
+pub fn load_tasks<R: Read>(_reader: R) -> std::io::Result<HashMap<u32, Task>> {
+    // For now, just return an empty HashMap.
+    Ok(HashMap::new())
+}
+</code></pre>
+
+                <h4>2. Update `src/main.rs` to use the new module</h4>
+                <p>We need to declare the new module and call our load/save functions.</p>
+                <pre><code>// In src/main.rs
+use std::fs::File;
+use std::io::{BufReader, BufWriter};
+use std::collections::HashMap;
+// ... (clap structs and other use statements) ...
+
+// --- DECLARE MODULES AND STRUCTS ---
+mod storage; // Make the `storage` module available
+
+// We need a simple Task struct here for now. We will improve this in the next module.
+#[derive(Clone)] // We need Clone to put tasks into the HashMap
+struct Task {
+    description: String,
+    completed: bool,
+}
+
+fn main() {
+    let cli = Cli::parse();
+    
+    // --- LOAD TASKS ---
+    let filename = "tasks.txt";
+    // Open the file, or create it if it doesn't exist.
+    let file = File::open(filename).unwrap_or_else(|_| File::create(filename).unwrap());
+    // Wrap the file in a BufReader for efficiency.
+    let reader = BufReader::new(file);
+    // Load the tasks using our generic function.
+    let mut tasks = storage::load_tasks(reader).expect("Could not load tasks");
+
+    // --- EXECUTE COMMAND ---
+    match cli.command {
+        Commands::Add { description, .. } => {
+            let next_id = tasks.keys().max().unwrap_or(&0) + 1;
+            let new_task = Task { description, completed: false };
+            tasks.insert(next_id, new_task);
+            println!("Added task {}", next_id);
+        },
+        // ... (other command arms) ...
+        _ => println!("Command not yet implemented."),
+    }
+
+    // --- SAVE TASKS ---
+    // Re-open the file for writing, truncating it first.
+    let file = File::create(filename).expect("Could not open file for writing");
+    // Wrap it in a BufWriter.
+    let writer = BufWriter::new(file);
+    // Save the tasks using our generic function.
+    storage::save_tasks(writer, &tasks).expect("Could not save tasks");
+
+    println!("...App finished.");
+}
+</code></pre>
+
+                <h4>The Flexible I/O Architecture:</h4>
+                <ul>
+                    <li><strong><code>mod storage;</code></strong>: We've organized our code by moving the I/O logic into its own dedicated module.</li>
+                    <li><strong><code>save_tasks<W: Write></code></strong>: This function is now incredibly flexible. The `W` is a generic type parameter. We are telling Rust, "We don't care what `W` is, as long as it guarantees it implements the `Write` trait."</li>
+                    <li><strong><code>BufReader</code>/<code>BufWriter</code></strong>: In `main`, we wrap our `File` handles with buffered wrappers. This is the correct and performant way to do file I/O.</li>
+                    <li><strong>Decoupling</strong>: Our `storage` module knows nothing about files! It only knows about the abstract concepts of `Read` and `Write`. This makes it easy to test (we could pass it an in-memory buffer instead of a file) and reusable in other contexts (like writing to a network).</li>
+                </ul>
+                <p>Right now, our app doesn't do much—it loads an empty list, maybe adds one task, and saves it. But the *structure* is now professional and robust. In the next module, we'll replace our simple text format with `serde` and JSON to make our persistence layer truly powerful.</p>
+
+                <a href="../index.html" class="back-link">&larr; Back to Curriculum Map</a>
+            </article>
+        </div>
+    </main>
+    
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 The Rust Adventure.</p>
+        </div>
+    </footer>
+
+</body>
+</html>

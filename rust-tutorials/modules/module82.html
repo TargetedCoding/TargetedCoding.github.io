@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 82: The Path Forward - The Rust Adventure</title>
+    <link rel="stylesheet" href="../style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <img src="https://www.rust-lang.org/static/images/rust-logo-blk.svg" alt="Rust Logo" class="logo">
+            <h1>Module 82: The Path Forward</h1>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <article class="module-content">
+                <h2>Objective: To discuss common production deployment strategies for a containerized Rust web application and outline potential next steps for improving the project.</h2>
+                <p>Congratulations on completing the full-stack web development week! You have a containerized, database-backed, full-stack application. But how do you take this and make it available to the world? This final module is about bridging the gap from local development to production deployment and thinking about what comes next.</p>
+                
+                <hr>
+
+                <h3>Step 1: Production Deployment Options</h3>
+                <p>Because we packaged our application and its database with Docker and Docker Compose, we have several excellent, industry-standard deployment options.</p>
+                
+                <h4>Option A: The Virtual Private Server (VPS)</h4>
+                <ul>
+                    <li><strong>What it is:</strong> Renting a virtual machine (a "server") from a cloud provider like DigitalOcean, Linode, or AWS EC2.</li>
+                    <li><strong>How it works:</strong> You get a clean Linux server with an IP address. You would install Docker and Docker Compose on it, copy your project files over, and run <code>docker-compose up -d</code> to start your application in the background. You would also need to set up a reverse proxy like Nginx or Caddy to handle HTTPS.</li>
+                    <li><strong>Pros:</strong> Full control, relatively low cost, conceptually simple.</li>
+                    <li><strong>Cons:</strong> You are responsible for all system administration, security updates, and maintenance.</li>
+                </ul>
+
+                <h4>Option B: Managed Container Platforms</h4>
+                <ul>
+                    <li><strong>What it is:</strong> Services specifically designed to run containers for you, like AWS App Runner, Google Cloud Run, or Railway.</li>
+                    <li><strong>How it works:</strong> These platforms connect directly to a "container registry" (like Docker Hub or GitHub Container Registry). You push your built Docker image to the registry. Then, you configure the platform to pull and run your image, and it handles networking, scaling, and HTTPS for you.</li>
+                    <li><strong>Pros:</strong> Highly scalable, less operational overhead, managed infrastructure.</li>
+                    <li><strong>Cons:</strong> Can be more expensive, less direct control over the underlying machine.</li>
+                </ul>
+                
+                <h4>Option C: Platform as a Service (PaaS)</h4>
+                <ul>
+                    <li><strong>What it is:</strong> Services like Heroku or Fly.io that are designed to run applications directly from source code.</li>
+                    <li><strong>How it works:</strong> You connect your Git repository to the service. When you `git push`, the platform detects that you have a Rust project (and often a `Dockerfile`), builds the container for you in the cloud, and deploys it.</li>
+                    <li><strong>Pros:</strong> Extremely easy to use, fastest path from code to deployment.</li>
+                    <li><strong>Cons:</strong> Can be the most expensive, often has the most restrictions on what you can do.</li>
+                </ul>
+                
+                <p><strong>For our project, a managed container platform like Google Cloud Run or a PaaS like Fly.io would be an excellent choice.</strong></p>
+
+                <h3>Step 2: Next Steps for the Todo App</h3>
+                <p>Our application is functional, but a real production app would have more features. Here are some great next steps you can take to build on what you've learned:</p>
+                
+                <h4>1. User Accounts and Multi-Tenancy</h4>
+                <ul>
+                    <li>Add a `users` table to the database.</li>
+                    <li>Create `POST /register` and `POST /login` endpoints that handle password hashing (using a crate like `bcrypt` or `argon2`).</li>
+                    <li>Modify the `tasks` table to include a `user_id` foreign key.</li>
+                    <li>Update all API handlers to only show/modify tasks that belong to the authenticated user (the `sub` claim from their JWT).</li>
+                </ul>
+
+                <h4>2. A More Interactive Frontend</h4>
+                <ul>
+                    <li>Add a form to the Yew frontend for creating new tasks. When submitted, it should make a `POST` request to `/api/tasks`.</li>
+                    <li>When a new task is successfully created, update the frontend's state to show the new task without needing a full page reload.</li>
+                    <li>Add buttons to each task to mark them as complete or delete them, and wire these up to the corresponding API endpoints.</li>
+                </ul>
+
+                <h4>3. A Robust CI/CD Pipeline</h4>
+                <ul>
+                    <li>Set up GitHub Actions.</li>
+                    <li>Create a workflow that automatically runs <code>cargo test</code> on every push.</li>
+                    <li>Create a second workflow that, on a push to the `main` branch, builds the Docker image, runs the integration tests against it, and pushes the image to a container registry like Docker Hub or GHCR.</li>
+                </ul>
+
+                <h3>Conclusion of the Web Development Week</h3>
+                <p>You have come an incredible distance. You started with a blank file and have now built a complete, database-backed, authenticated, and containerized full-stack web application in pure Rust. You have touched every layer of the stack, from raw SQL to the frontend component model. The patterns and tools you have learned this week—Axum, sqlx, serde, tokio, Yew, and Docker—are the real, production-grade tools used to build high-performance web services in the Rust ecosystem. You are now well-equipped to start your own ambitious web projects in Rust.</p>
+                
+                <a href="../index.html" class="back-link">&larr; Back to Curriculum Map</a>
+            </article>
+        </div>
+    </main>
+    
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 The Rust Adventure.</p>
+        </div>
+    </footer>
+
+</body>
+</html>

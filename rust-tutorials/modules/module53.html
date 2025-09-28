@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 53: Associated Types vs. Generics - The Rust Adventure</title>
+    <link rel="stylesheet" href="../style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <img src="https://www.rust-lang.org/static/images/rust-logo-blk.svg" alt="Rust Logo" class="logo">
+            <h1>Module 53: Associated Types vs. Generics</h1>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <article class="module-content">
+                <h2>Objective: To understand the difference between using generic type parameters on a trait and using associated types, and to know when each pattern is appropriate.</h2>
+                <p>Welcome to Day 14! We're now moving into the art of API design. A core part of designing traits is deciding how to handle other types that are related to your trait. Rust gives you two primary tools for this: <strong>generic type parameters</strong> and <strong>associated types</strong>. They look similar, but they have a crucial difference that impacts the flexibility and clarity of your code.</p>
+                
+                <hr>
+
+                <h3>Step 1: Traits with Generic Type Parameters</h3>
+                <p>You've seen generics on structs and functions, and you can use them on traits too. When you put a generic parameter on a trait, you are saying that a single type can implement that trait *multiple times* for different generic types.</p>
+                <p>A classic example is the `From<T>` trait in the standard library: <code>trait From&lt;T&gt; { ... }</code>. A `String` can be created from a `&str`, so it implements `From<&str>`. A `String` can also be created from a `Vec<u8>`, so it also implements `From<Vec<u8>>`.</p>
+                <p><strong>Use generics when:</strong> A type might reasonably implement the trait for many different other types.</p>
+                
+                <h3>Step 2: Traits with Associated Types</h3>
+                <p>An associated type is a placeholder type within a trait. When a type implements the trait, it must specify the concrete type for that placeholder. The key difference is that a type can only implement a trait with an associated type *once*. The associated type becomes a fixed part of that specific implementation.</p>
+                <p>The classic example is the `Iterator` trait:</p>
+                <pre><code>pub trait Iterator {
+    type Item; // `Item` is the associated type.
+    
+    fn next(&mut self) -> Option<Self::Item>;
+}</code></pre>
+                <p>When you implement `Iterator` for a type, you must decide what the `Item` type is. The iterator for a `Vec<i32>` will have `type Item = &i32;`. It cannot also have an `Item` of `&String`. There is only one `Item` type for that implementation.</p>
+                <p><strong>Use associated types when:</strong> A trait can only have one logical implementation for a given type, and there is one clear "output" or "related" type.</p>
+                
+                <p><strong>Analogy: The Chef's Specialty.</strong> A generic trait is like a chef who can cook many types of cuisine: <code>impl Cook<Italian></code>, <code>impl Cook<Mexican></code>. An associated type trait is like a specialty. A `SushiChef` trait has an associated type `FishType`. Any given sushi chef specializes in one `FishType` (e.g., `type FishType = Tuna;`). They can't be both a Tuna specialist and a Salmon specialist under the same `SushiChef` certification.</p>
+
+                <h3>Practical Application: A `Graph` Trait</h3>
+                <p>Let's design a simple `Graph` trait and see how the two approaches differ. We'll create a standalone example to make the distinction clear.</p>
+
+                <h4>1. Create a New Project</h4>
+                <pre><code>cargo new traits_demo
+cd traits_demo
+</code></pre>
+                
+                <h4>2. The Complete `src/main.rs`</h4>
+                <pre><code>// --- VERSION 1: With an Associated Type ---
+// This is generally the better design for a Graph.
+pub mod version_one {
+    pub trait Graph {
+        type Node; // Associated type for the node data
+        type Edge; // Associated type for the edge data
+
+        fn add_node(&mut self, node: Self::Node);
+        fn add_edge(&mut self, edge: Self::Edge);
+        fn nodes(&self) -> Vec<&Self::Node>;
+    }
+
+    pub struct MyGraph {
+        nodes: Vec<String>,
+        // Edges are pairs of node indices.
+        edges: Vec<(usize, usize)>,
+    }
+
+    // When we implement `Graph`, we must specify the concrete types.
+    impl Graph for MyGraph {
+        type Node = String;
+        type Edge = (usize, usize);
+
+        fn add_node(&mut self, node: Self::Node) { self.nodes.push(node); }
+        fn add_edge(&mut self, edge: Self::Edge) { self.edges.push(edge); }
+        fn nodes(&self) -> Vec<&Self::Node> { self.nodes.iter().collect() }
+    }
+}
+
+
+// --- VERSION 2: With Generic Parameters ---
+// This is more flexible, but often less clear.
+pub mod version_two {
+    pub trait GenericGraph<N, E> {
+        fn add_node(&mut self, node: N);
+        fn add_edge(&mut self, edge: E);
+        fn nodes(&self) -> Vec<&N>; // This can be tricky to implement
+    }
+
+    // Now the concrete types are part of the struct definition.
+    pub struct MyGenericGraph<N> {
+        nodes: Vec<N>,
+        edges: Vec<(usize, usize)>,
+    }
+
+    // The implementation is also generic.
+    impl<N> GenericGraph<N, (usize, usize)> for MyGenericGraph<N> {
+        fn add_node(&mut self, node: N) { self.nodes.push(node); }
+        fn add_edge(&mut self, edge: (usize, usize)) { self.edges.push(edge); }
+        fn nodes(&self) -> Vec<&N> { self.nodes.iter().collect() }
+    }
+}
+
+
+fn main() {
+    println!("--- Using the Associated Type version ---");
+    use version_one::{Graph, MyGraph};
+    let mut graph = MyGraph { nodes: vec![], edges: vec![] };
+    graph.add_node("A".to_string());
+    graph.add_node("B".to_string());
+    graph.add_edge((0, 1));
+    println!("Nodes: {:?}", graph.nodes());
+
+
+    println!("\n--- Using the Generic Parameter version ---");
+    use version_two::{GenericGraph, MyGenericGraph};
+    let mut generic_graph = MyGenericGraph::<&str> { nodes: vec![], edges: vec![] };
+    generic_graph.add_node("X");
+    generic_graph.add_node("Y");
+    generic_graph.add_edge((0, 1));
+    println!("Nodes: {:?}", generic_graph.nodes());
+}
+</code></pre>
+                
+                <h4>Why Associated Types are Better Here:</h4>
+                <ul>
+                    <li><strong>Clarity:</strong> The associated type version is much easier to read. When you see a function that takes <code>g: &impl Graph</code>, you know you can call <code>g.nodes()</code> and get a list of whatever that specific graph's `Node` type is. With the generic version, you'd have to write <code>g: &impl GenericGraph<N, E></code> everywhere, which is verbose.</li>
+                    <li><strong>Cohesion:</strong> For a given graph struct, there is only one logical type for its nodes and edges. `MyGraph` can't be a graph of `String` nodes *and* a graph of `i32` nodes at the same time. The associated type model enforces this one-to-one relationship, making the API less error-prone.</li>
+                    <li><strong>The `Iterator` Example</strong>: Think back to the `Iterator` trait. It wouldn't make sense for an iterator to yield `i32`s sometimes and `String`s other times. It has one specific `Item` type, which makes associated types the perfect fit.</li>
+                </ul>
+                <p>You have now learned a key distinction in Rust's trait system. Choosing correctly between generic parameters and associated types is a hallmark of a programmer who thinks carefully about API design, leading to code that is not only functional but also ergonomic and clear for others to use.</p>
+
+                <a href="../index.html" class="back-link">&larr; Back to Curriculum Map</a>
+            </article>
+        </div>
+    </main>
+    
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 The Rust Adventure.</p>
+        </div>
+    </footer>
+
+</body>
+</html>

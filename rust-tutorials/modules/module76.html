@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 76: Making API Calls - The Rust Adventure</title>
+    <link rel="stylesheet" href="../style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <img src="https://www.rust-lang.org/static/images/rust-logo-blk.svg" alt="Rust Logo" class="logo">
+            <h1>Module 76: Making API Calls</h1>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <article class="module-content">
+                <h2>Objective: To use the `gloo-net` crate to make HTTP requests from our Yew frontend to our Axum backend, fetching and displaying a live list of tasks.</h2>
+                <p>Our frontend is interactive, but its data is hardcoded. A real application needs to fetch its data from a server. In this module, we will finally connect the two major projects of this week: our Yew frontend and our Axum backend API. We will use the <strong><code>gloo-net</code></strong> crate, which provides a convenient, high-level wrapper around the browser's `fetch` API.</p>
+                
+                <hr>
+                
+                <h3>Step 1: The `use_effect` Hook</h3>
+                <p>How do we tell our component to fetch data when it first renders? For this, we use another powerful Yew hook: <strong><code>use_effect</code></strong>. This hook is for running "side effects," which are operations that interact with the outside world, like making an API call.</p>
+                <p><code>use_effect</code> runs its code block once when the component is first mounted. If you want it to run again when certain state changes, you can provide a list of dependencies.</p>
+                
+                <h3>Step 2: Making the Request with `gloo-net`</h3>
+                <p>The `gloo-net` crate makes fetching data simple. The core type is <code>Request</code>. The pattern is:</p>
+                <ol>
+                    <li>Create a request: <code>Request::new("/api/tasks")</code>.</li>
+                    <li>Chain methods to configure it: <code>.method(Method::GET)</code>.</li>
+                    <li>Send it: <code>.send().await</code>.</li>
+                    <li>Handle the response: <code>.json::<Vec<Task>>().await</code> to automatically deserialize the JSON response.</li>
+                </ol>
+                <p>Because making a request is an `async` operation, we will need to spawn a local future to handle it.</p>
+                
+                <h3>Practical Application: Fetching Live Todo Data</h3>
+                <p>Let's make our `todo-frontend` fetch its list of tasks directly from our `todo_api` backend.</p>
+
+                <h4>1. Start Your Backend API</h4>
+                <p>First, make sure the Axum `todo_api` server you built on Day 17-19 is running in a separate terminal. It should be listening on `http://localhost:3000`.</p>
+                
+                <h4>2. Update `todo-frontend/Cargo.toml`</h4>
+                <p>Add `gloo-net` and the `serde` features we'll need.</p>
+                <pre><code>[dependencies]
+yew = { version = "0.20" }
+gloo-net = "0.2"
+wasm-bindgen-futures = "0.4" # For spawning async tasks
+serde = { version = "1.0", features = ["derive"] }
+</code></pre>
+
+                <h4>3. Create `todo-frontend/src/main.rs`</h4>
+                <p>We'll refactor our `App` component to fetch data on load.</p>
+                <pre><code>use gloo_net::http::Request;
+use serde::Deserialize;
+use wasm_bindgen_futures::spawn_local;
+use yew::prelude::*;
+
+// --- The Task struct must now derive `Deserialize` ---
+// This must match the `Task` struct on our backend.
+#[derive(Clone, PartialEq, Deserialize, Debug)]
+struct Task {
+    id: i64,
+    description: String,
+    completed: bool,
+}
+
+#[function_component(App)]
+fn app() -> Html {
+    // We start with an empty vector of tasks.
+    let tasks = use_state(|| Vec::new());
+
+    // --- The `use_effect` Hook ---
+    // This runs once when the component is first rendered.
+    {
+        // We need a clone of the state handle to move into the async block.
+        let tasks = tasks.clone();
+        use_effect_with_deps(move |_| {
+            // Spawn a local future to handle the async API call.
+            spawn_local(async move {
+                // The URL of our backend API.
+                let request = Request::get("http://localhost:3000/tasks");
+                
+                // Send the request and await the response.
+                let fetched_tasks: Vec<Task> = request
+                    .send()
+                    .await
+                    .expect("Failed to send request")
+                    // Automatically deserialize the JSON response into our `Task` struct.
+                    .json()
+                    .await
+                    .expect("Failed to parse response");
+                
+                // Update our component's state with the fetched tasks.
+                tasks.set(fetched_tasks);
+            });
+            || ()
+        }, ());
+    }
+
+
+    html! {
+        <main>
+            <h1>{ "Live Todo List from API" }</h1>
+            if tasks.is_empty() {
+                <p>{ "Loading..." }</p>
+            } else {
+                <ul>
+                {
+                    tasks.iter().map(|task| {
+                        html! { <li class={if task.completed {"done"} else {""}}>
+                            { &task.description }
+                        </li> }
+                    }).collect::<Html>()
+                }
+                </ul>
+            }
+        </main>
+    }
+}
+
+fn main() {
+    yew::Renderer::<App>::new().render();
+}
+</code></pre>
+                
+                <h4>4. Configure the CORS Middleware on Your Backend</h4>
+                <p>Go back to your `todo_api` project from Day 19. The `CorsLayer` must be configured to allow requests from the domain your frontend is running on (likely `http://127.0.0.1:8080` for trunk).</p>
+                <pre><code>// In `todo_api/src/main.rs`
+let cors = CorsLayer::new()
+    .allow_methods([Method::GET, Method::POST])
+    .allow_origin("http://127.0.0.1:8080".parse::<HeaderValue>().unwrap()); // Be specific!
+</code></pre>
+                <p>Restart your backend server after making this change.</p>
+
+                <h4>5. Build and Serve the Frontend</h4>
+                <p>From the `todo-frontend` directory, run:</p>
+                <pre><code>trunk serve --open</code></pre>
+                
+                <p>When the page loads, you'll briefly see "Loading...", and then—magic!—the list of tasks from your backend API will appear on the page, rendered by your Yew application. If you use `curl` to add a new task to your backend and then refresh the webpage, the new task will appear.</p>
+
+                <h4>The Full-Stack Architecture:</h4>
+                <ul>
+                    <li><strong><code>use_effect_with_deps</code></strong>: We use this hook to trigger the data fetch once when the component mounts. The `()` as the second argument means it has no dependencies and will only run once.</li>
+                    <li><strong><code>spawn_local</code></strong>: Because API calls are `async`, we can't block the main browser thread. `spawn_local` from `wasm-bindgen-futures` is the standard way to run an `async` block in the browser.</li>
+                    <li><strong><code>Request::get(...).send().await.json().await</code></strong>: This is the fluent API of `gloo-net`. It beautifully chains together the creation, sending, and deserialization of the request.</li>
+                    <li><strong>Conditional Rendering</strong>: The `if tasks.is_empty()` check allows us to show a "Loading..." message to the user while the API request is in flight, providing a much better user experience.</li>
+                </ul>
+                <p>You have successfully built a full-stack application! Your pure Rust frontend is now communicating with your pure Rust backend, fetching live data and rendering it dynamically. This is the culmination of our entire web development week.</p>
+
+                <a href="../index.html" class="back-link">&larr; Back to Curriculum Map</a>
+            </article>
+        </div>
+    </main>
+    
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 The Rust Adventure.</p>
+        </div>
+    </footer>
+
+</body>
+</html>

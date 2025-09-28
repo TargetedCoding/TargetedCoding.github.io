@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 3: Rust's First Superpower: Ownership - The Rust Adventure</title>
+    <link rel="stylesheet" href="../style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <img src="https://www.rust-lang.org/static/images/rust-logo-blk.svg" alt="Rust Logo" class="logo">
+            <h1>Module 3: Rust's First Superpower: Ownership</h1>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <article class="module-content">
+                <h2>Objective: To understand Rust's most unique and fundamental concept: ownership.</h2>
+                <p>Welcome to the heart of Rust! Ownership is a set of rules the compiler checks at compile time. It allows Rust to be extremely fast and memory-safe without needing a "garbage collector" like other languages. It might feel different at first, but soon it will feel like a superpower.</p>
+                
+                <hr>
+
+                <h3>Step 1: The Rules of Ownership</h3>
+                <p>Ownership is governed by three simple rules:</p>
+                <ol>
+                    <li>Each value in Rust has a variable that’s called its <strong>owner</strong>.</li>
+                    <li>There can only be <strong>one owner at a time</strong>.</li>
+                    <li>When the owner goes out of scope, the value will be <strong>dropped</strong> (freed from memory).</li>
+                </ol>
+
+                <h4>The "One Owner" Rule in Action: The Move</h4>
+                <p><strong>Analogy: The Ownership Toy.</strong> Imagine a special toy (our data). Only one person can "own" it and play with it at a time. If you give the toy to a friend, you can no longer play with it. Your friend is the new owner. This is called a <strong>move</strong>.</p>
+                <p>Let's see this with a <code>String</code>. This code will <strong>not</strong> compile, and that's the lesson!</p>
+                <pre><code>let s1 = String::from("hello");
+let s2 = s1; // Ownership of the "hello" data is MOVED from s1 to s2.
+
+// Try to use s1 after the move.
+println!("This will fail: {}", s1);</code></pre>
+                <p>If you try to compile this, the Rust compiler will give you a very helpful error: <code>error[E0382]: borrow of moved value: `s1`</code>. It even tells you that the value was moved. This is Rust protecting you from using data that you've already given away!</p>
+
+                <h3>Step 2: The Stack and the Heap (A Simple View)</h3>
+                <p>Why does this "move" happen for <code>String</code> but not for a simple <code>i32</code>? It's because of where the data is stored.</p>
+                <ul>
+                    <li><strong>The Stack:</strong> Like a stack of plates. Super fast and organized. Simple types with a known, fixed size like <code>i32</code>, <code>bool</code>, and <code>char</code> live here. When you assign them, the data is just copied.</li>
+                    <li><strong>The Heap:</strong> Like a big open field where you can ask for a spot of any size. Data that can grow or change, like a <code>String</code>, lives here. The variable on the stack just holds a pointer to the data's location on the heap. Moving a <code>String</code> means copying the pointer, not the giant chunk of data on the heap. The ownership rules make sure only one variable is responsible for cleaning up that data.</li>
+                </ul>
+
+                <h3>Let's Build Our Todo App (Part 3)</h3>
+                <p>Let's see ownership in action in our app. We will create a function to add a new task. This will demonstrate how ownership is moved when we pass values to functions.</p>
+                <p>Replace the code in your <code>src/main.rs</code> file with this:</p>
+                <pre><code>fn main() {
+    let mut tasks = Vec::new(); // Our list of tasks
+    
+    // Create a new task
+    let new_task = "Learn Ownership".to_string();
+    
+    // Pass the task to our function
+    add_task(&mut tasks, new_task);
+    
+    // What happens if we try to use new_task again?
+    // The line below will cause a compile error! Try uncommenting it.
+    // println!("I still have the task: {}", new_task);
+
+    // Let's just print the list for now.
+    println!("My tasks are: {:?}", tasks);
+}
+
+// This function takes a mutable vector and a String.
+// It takes OWNERSHIP of the `task_description` String.
+fn add_task(task_list: &mut Vec<String>, task_description: String) {
+    task_list.push(task_description); 
+    // `task_description` is now owned by the vector. It's gone from here.
+}</code></pre>
+                <h4>The Learning Moment:</h4>
+                <p>When we call <code>add_task(..., new_task)</code>, the ownership of the string data is <strong>moved</strong> from the <code>new_task</code> variable in <code>main</code> to the <code>task_description</code> parameter in <code>add_task</code>. Then, inside that function, ownership is moved again when we <code>push</code> it into the vector.</p>
+                <p>This means the <code>main</code> function no longer owns that string and cannot use it. This is perfectly fine, but what if we just wanted a function to <em>look at</em> the data without taking it? How can a function use a value without taking ownership?</p>
+                <p>That is the question that leads us directly to Rust's second superpower: <strong>Borrowing</strong>.</p>
+                <p>For now, notice the new print format <code>{:?}</code>. This is a debug print, useful for printing a whole vector or other complex types.</p>
+
+
+                <a href="../index.html" class="back-link">&larr; Back to Curriculum Map</a>
+            </article>
+        </div>
+    </main>
+    
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 The Rust Adventure.</p>
+        </div>
+    </footer>
+
+</body>
+</html>

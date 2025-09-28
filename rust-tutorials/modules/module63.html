@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 63: Extractors and JSON APIs - The Rust Adventure</title>
+    <link rel="stylesheet" href="../style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <img src="https://www.rust-lang.org/static/images/rust-logo-blk.svg" alt="Rust Logo" class="logo">
+            <h1>Module 63: Extractors and JSON APIs</h1>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <article class="module-content">
+                <h2>Objective: To use Axum's "extractor" pattern to parse incoming request data (like path parameters and JSON bodies) and to use `serde` to return structured JSON responses.</h2>
+                <p>A web server that only returns static text isn't very useful. Real applications need to receive data from clients and respond with structured data. In this module, we'll transform our simple server into a real JSON API by leveraging two powerful features: Axum's <strong>extractor</strong> system and the <strong><code>serde</code></strong> crate.</p>
+                
+                <hr>
+
+                <h3>Step 1: The Extractor Pattern</h3>
+                <p>In Axum, an "extractor" is any type that implements the <code>FromRequestParts</code> or <code>FromRequest</code> trait. They are used as arguments in your handler functions. When a request comes in, Axum looks at the types of your handler's arguments and automatically "extracts" the required data from the request. If the extraction fails (e.g., the client sends malformed JSON), Axum automatically returns a `400 Bad Request` error for you.</p>
+                <p>Some of the most common extractors are:</p>
+                <ul>
+                    <li><strong><code>axum::extract::Path<T></code></strong>: Extracts parameters from the URL path.</li>
+                    <li><strong><code>axum::Json<T></code></strong>: Deserializes a JSON request body into a struct `T`.</li>
+                    <li><strong><code>axum::extract::Query<T></code></strong>: Deserializes query parameters (e.g., `?foo=bar`) into a struct `T`.</li>
+                </ul>
+
+                <h3>Step 2: Returning JSON with `serde`</h3>
+                <p>Just as `Json<T>` can be an extractor, it can also be a response! If you return a <code>Json<T></code> from your handler, Axum will automatically serialize your struct `T` into a JSON string and send it back to the client with the correct `Content-Type: application/json` header.</p>
+                <p>This all relies on the <code>Serialize</code> and <code>Deserialize</code> traits from `serde`, which we learned about on Day 7.</p>
+                
+                <h3>Practical Application: Building the Todo API Endpoints</h3>
+                <p>Let's start building the actual API for our Todo application. We'll create a `Task` struct and build the endpoints to create and list tasks.</p>
+
+                <h4>1. Update `Cargo.toml`</h4>
+                <p>We need to add `serde` to our dependencies.</p>
+                <pre><code>[dependencies]
+axum = { version = "0.6", features = ["json"] } # Enable the "json" feature for Axum
+tokio = { version = "1", features = ["full"] }
+serde = { version = "1.0", features = ["derive"] }
+</code></pre>
+                
+                <h4>2. The Complete `src/main.rs`</h4>
+                <p>This version introduces our `Task` struct and the core API routes.</p>
+                <pre><code>use axum::{
+    extract::Path,
+    routing::{get, post},
+    Json, Router,
+};
+use serde::{Deserialize, Serialize};
+use std::net::SocketAddr;
+
+#[tokio::main]
+async fn main() {
+    let app = Router::new()
+        // `POST /tasks` will call the `create_task` handler.
+        .route("/tasks", post(create_task))
+        // `GET /tasks` will call the `list_tasks` handler.
+        .route("/tasks", get(list_tasks))
+        // `GET /tasks/:id` will call the `get_task` handler.
+        .route("/tasks/:id", get(get_task));
+
+    let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
+    println!("Server listening on {}", addr);
+    axum::Server::bind(&addr)
+        .serve(app.into_make_service())
+        .await
+        .unwrap();
+}
+
+// --- DATA STRUCTURES ---
+// These structs will be used for both receiving and sending JSON.
+// `serde`'s derive macros will handle the conversion automatically.
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct Task {
+    id: u64,
+    description: String,
+    completed: bool,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct CreateTask {
+    description: String,
+}
+
+// --- HANDLER FUNCTIONS ---
+
+async fn create_task(
+    // This handler will deserialize a JSON request body into a `CreateTask` struct.
+    Json(payload): Json<CreateTask>,
+) -> Json<Task> {
+    println!("Received new task: {:?}", payload);
+    
+    // This is where we would normally save the task to a database and get a real ID.
+    // For now, we'll just create a dummy task.
+    let task = Task {
+        id: 1337, // Dummy ID
+        description: payload.description,
+        completed: false,
+    };
+
+    // Return the created task as JSON. Axum will serialize this for us.
+    Json(task)
+}
+
+async fn list_tasks() -> Json<Vec<Task>> {
+    // In a real app, this would fetch all tasks from the database.
+    let tasks = vec![
+        Task { id: 1, description: "Learn Axum".to_string(), completed: true },
+        Task { id: 2, description: "Master Extractors".to_string(), completed: false },
+    ];
+    
+    // Return the list of tasks as a JSON array.
+    Json(tasks)
+}
+
+async fn get_task(
+    // This handler extracts a parameter from the URL path.
+    // e.g., for a request to `/tasks/42`, `id` will be `42`.
+    Path(id): Path<u64>,
+) -> Json<Task> {
+    // In a real app, we'd look this up in the database.
+    let task = Task {
+        id,
+        description: format!("Details for task {}", id),
+        completed: false,
+    };
+    
+    Json(task)
+}
+</code></pre>
+
+                <h4>The API in Action:</h4>
+                <ul>
+                    <li><strong><code>Json<CreateTask></code></strong>: In `create_task`, this argument is an extractor. Axum will try to parse the HTTP request body as JSON into our `CreateTask` struct. If it succeeds, our handler runs. If it fails, Axum sends an error automatically.</li>
+                    <li><strong><code>-> Json<Task></code></strong>: The return type of `create_task`. Axum sees this, takes our `Task` struct, serializes it to a JSON string, and sends it as the HTTP response.</li>
+                    <li><strong><code>Path<u64></code></strong>: In `get_task`, this extractor looks at the dynamic part of the route (`:id`) and tries to parse it into a `u64`. A request to `/tasks/abc` would fail to parse, and Axum would automatically return a `404 Not Found` or `400 Bad Request` error.</li>
+                </ul>
+
+                <h3>Step 3: Test Your API!</h3>
+                <p>Run your server with <code>cargo run</code>. Now, use `curl` to interact with your new API.</p>
+                <pre><code># 1. List all tasks (GET request)
+curl http://127.0.0.1:3000/tasks
+
+# 2. Get a specific task (GET with path parameter)
+curl http://127.0.0.1:3000/tasks/99
+
+# 3. Create a new task (POST with a JSON body)
+curl -X POST \
+  -H "Content-Type: application/json" \
+  -d '{"description": "Read the module on Axum state management"}' \
+  http://127.0.0.1:3000/tasks
+</code></pre>
+                <p>You have successfully built a functioning JSON API. You can now accept structured data from clients and respond with structured data, forming the backbone of any modern web service.</p>
+
+                <a href="../index.html" class="back-link">&larr; Back to Curriculum Map</a>
+            </article>
+        </div>
+    </main>
+    
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 The Rust Adventure.</p>
+        </div>
+    </footer>
+
+</body>
+</html>

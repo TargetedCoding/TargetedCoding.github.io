@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 10: Cleaner Error Handling & Custom Errors - The Rust Adventure</title>
+    <link rel="stylesheet" href="../style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <img src="https://www.rust-lang.org/static/images/rust-logo-blk.svg" alt="Rust Logo" class="logo">
+            <h1>Module 10: Cleaner Error Handling & Custom Errors</h1>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <article class="module-content">
+                <h2>Objective: To move beyond simple `match` statements and panics to the idiomatic, professional way to handle errors in Rust.</h2>
+                <p>In the last module, we used <code>.expect()</code>, which crashes our program on failure. This is fine for quick examples, but bad for a real application. A user should never be able to crash your program! It's time to handle errors gracefully using Rust's powerful error handling features.</p>
+                
+                <hr>
+
+                <h3>Step 1: The Question Mark (<code>?</code>) Operator</h3>
+                <p>Writing <code>match</code> blocks for every single error can be very repetitive. Rust provides the question mark (<code>?</code>) operator as a beautiful shortcut.</p>
+                <p>When you place a <code>?</code> after a function call that returns a <code>Result</code>:</p>
+                <ul>
+                    <li>If the result is <code>Ok(value)</code>, it unwraps the value and the program continues.</li>
+                    <li>If the result is <code>Err(error)</code>, it <strong>immediately returns</strong> from the current function, passing the error up to the code that called it.</li>
+                </ul>
+                <p><strong>Crucial Rule:</strong> You can only use the <code>?</code> operator inside a function that itself returns a <code>Result</code> or an <code>Option</code>.</p>
+
+                <h3>Step 2: Creating a Custom Error Type</h3>
+                <p>Our application can fail in several ways: reading input (an I/O error), parsing a number (a parse error), or finding a task (a logic error). To handle this, we can create a single, custom <code>enum</code> that represents all possible errors in our application.</p>
+                <p>We'll also implement the <code>From</code> trait. This is a bit of Rust magic that tells the <code>?</code> operator how to automatically convert a standard error (like <code>std::io::Error</code>) into our custom <code>AppError</code> type.</p>
+
+                <h3>Let's Build Our Todo App (Part 9)</h3>
+                <p>We will now refactor our app's architecture. The <code>main</code> function will become very simple. It will call a new <code>run()</code> function that contains all our application logic and returns a <code>Result</code>. This separates the successful execution of our app from the final handling of any errors.</p>
+                <p>Replace all the code in <code>src/main.rs</code> with this. Read the comments carefully!</p>
+                <pre><code>use std::collections::HashMap;
+use std::io;
+
+// Our Task struct is unchanged.
+struct Task {
+    description: String,
+    completed: bool,
+}
+
+// --- NEW: Our Custom Error Type ---
+// The `#[derive(Debug)]` lets us print the error for debugging.
+#[derive(Debug)]
+enum AppError {
+    IoError(io::Error),
+    ParseError(String),
+    NotFound(String),
+}
+
+// --- NEW: The Magic `From` Trait Implementations ---
+// This allows `?` to automatically convert `io::Error` into our `AppError`.
+impl From<io::Error> for AppError {
+    fn from(error: io::Error) -> Self {
+        AppError::IoError(error)
+    }
+}
+
+// All our application logic now lives in a function that can return an error.
+fn run() -> Result<(), AppError> {
+    let mut tasks = HashMap::new();
+    let mut next_id: u32 = 1;
+
+    println!("Welcome to your Rust-powered Todo List!");
+
+    loop {
+        println!("\n> Enter a command: add [desc], complete [id], list, or quit");
+        
+        let mut input = String::new();
+        io::stdin().read_line(&mut input)?; // The `?` propagates any io::Error!
+
+        let mut parts = input.trim().split_whitespace();
+        let command = parts.next().unwrap_or("");
+        
+        match command {
+            "add" => {
+                let description = parts.collect::<Vec<&str>>().join(" ");
+                if description.is_empty() {
+                    // Instead of printing, we return a descriptive error.
+                    return Err(AppError::ParseError("'add' command requires a description.".to_string()));
+                }
+
+                let new_task = Task { description, completed: false };
+                tasks.insert(next_id, new_task);
+                // We can still safely unwrap here, as we just inserted it.
+                println!("Added task {}: '{}'", next_id, tasks.get(&next_id).unwrap().description);
+                next_id += 1;
+            },
+            "list" => {
+                println!("\n--- TODO LIST ---");
+                for (id, task) in &tasks {
+                    let status = if task.completed { "[x]" } else { "[ ]" };
+                    println!("{}: {} {}", id, status, task.description);
+                }
+                println!("-----------------");
+            },
+            "complete" => {
+                let id_str = parts.next().ok_or_else(|| AppError::ParseError("'complete' command requires an ID.".to_string()))?;
+                let id: u32 = id_str.parse().map_err(|_| AppError::ParseError(format!("'{}' is not a valid ID.", id_str)))?;
+
+                let task = tasks.get_mut(&id).ok_or_else(|| AppError::NotFound(format!("Task with ID {} not found.", id)))?;
+                
+                task.completed = true;
+                println!("Completed task {}: '{}'", id, task.description);
+            },
+            "quit" => {
+                println!("Goodbye!");
+                break;
+            },
+            "" => {},
+            _ => println!("Error: Unknown command '{}'", command),
+        }
+    }
+    // If the loop exits cleanly, we return Ok.
+    Ok(())
+}
+
+// The main function is now clean and simple!
+fn main() {
+    // We call run() and if it returns an Err, we print it.
+    if let Err(e) = run() {
+        eprintln!("Application error: {:?}", e);
+    }
+}</code></pre>
+
+                <h4>The Professional Architecture:</h4>
+                <ul>
+                    <li><strong><code>run() -> Result<(), AppError></code></strong>: All logic is now contained. It either succeeds (returning `Ok(())`) or fails with one of our defined `AppError` variants.</li>
+                    <li><strong><code>io::stdin().read_line(&mut input)?</code></strong>: Our first use of `?`. If reading the line fails, `run()` will immediately stop and return an `AppError::IoError`.</li>
+                    <li><strong><code>return Err(...)</code></strong>: When we detect a logical error (like a missing description), we now return a proper `Err` variant instead of just printing a message and continuing.</li>
+                    <li><strong><code>.ok_or_else(...)</code> & <code>.map_err(...)</code></strong>: These are handy functions on `Option` and `Result` that let us convert them into the specific error types we need for our function, making them work beautifully with `?`.</li>
+                    <li><strong><code>main()</code></strong>: The `main` function's only job is to run the app and handle the final result. If an error occurred at any point, it's printed to the standard error stream (`eprintln!`).</li>
+                </ul>
+                <p>Run <code>cargo run</code>. The app functions as before, but its internal structure is now far more robust and professional. Try triggering errors: type `complete` without an ID, or `complete abc`. You'll see your custom error messages being handled by `main`!</p>
+
+                <a href="../index.html" class="back-link">&larr; Back to Curriculum Map</a>
+            </article>
+        </div>
+    </main>
+    
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 The Rust Adventure.</p>
+        </div>
+    </footer>
+
+</body>
+</html>

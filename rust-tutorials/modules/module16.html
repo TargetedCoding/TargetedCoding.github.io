@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 16: Key-Value Magic: HashMap Deep Dive - The Rust Adventure</title>
+    <link rel="stylesheet" href="../style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <img src="https://www.rust-lang.org/static/images/rust-logo-blk.svg" alt="Rust Logo" class="logo">
+            <h1>Module 16: Key-Value Magic: HashMap Deep Dive</h1>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <article class="module-content">
+                <h2>Objective: To master idiomatic `HashMap` usage, particularly the powerful `Entry` API for complex insertions and updates.</h2>
+                <p>You know how to insert and retrieve data from a `HashMap`, but what if you need to perform a more complex operation, like "if this key exists, update its value, otherwise insert a new default value"? The beginner's approach can be inefficient. Rust provides a beautiful, atomic, and highly performant solution: the <code>Entry</code> API.</p>
+                
+                <hr>
+
+                <h3>Step 1: The Problem with `get` then `insert`</h3>
+                <p>A common beginner pattern for updating a value or inserting it if it's missing looks like this:</p>
+                <pre><code>// The inefficient, non-idiomatic way
+if let Some(value) = my_map.get_mut(&key) {
+    *value += 1; // It exists, so we update it.
+} else {
+    my_map.insert(key, 1); // It doesn't exist, so we insert it.
+}</code></pre>
+                <p>This code works, but it has a problem: it performs two lookups in the `HashMap`. First, it searches for the key with <code>.get_mut()</code>. If that fails, it has to search for the key's location *again* to perform the <code>.insert()</code>. The `Entry` API solves this by doing it all in one go.</p>
+
+                <h3>Step 2: The `Entry` API Solution</h3>
+                <p>The <code>.entry(key)</code> method on a `HashMap` is the solution. It returns a special `Entry` enum. This enum represents a "doorway" to a potential value in the map, which can be in one of two states:</p>
+                <ul>
+                    <li><strong><code>Entry::Occupied</code></strong>: The key already exists.</li>
+                    <li><strong><code>Entry::Vacant</code></strong>: The key does not exist.</li>
+                </ul>
+                <p>This `Entry` enum has powerful methods to act on these states:</p>
+                <ul>
+                    <li><code>.or_insert(default_value)</code>: If the entry is vacant, it inserts the default value and returns a mutable reference to it. If it's occupied, it does nothing and just returns a mutable reference to the existing value.</li>
+                    <li><code>.and_modify(|value| { ... })</code>: Executes a closure to modify an occupied entry. It does nothing if the entry is vacant.</li>
+                </ul>
+                <p><strong>Analogy: The Office Security Guard.</strong> The `Entry` API is like asking a security guard for the key to an office. You don't go look for the office yourself. The guard takes your request, goes to the office location once, and returns with a special tool. This tool either opens the existing office door (<code>Occupied</code>) or, if the office isn't there, instantly builds it for you (<code>Vacant</code>) and then opens the door. It's one efficient, atomic operation.</p>
+
+                <h3>Let's Build Our Todo App (Part 15)</h3>
+                <p>Let's use the `Entry` API to add a new piece of metadata to our tasks: an edit counter. We'll modify our `Task` struct to track an `edit_count`. Then, we'll refactor the `complete` command to atomically mark a task as complete AND increment its edit count using <code>.and_modify()</code>.</p>
+                <p>You will need to update the `Task` struct, and the `execute` methods for `AddCommand`, `CompleteCommand`, `ListCommand`, and `SortCommand`.</p>
+                <pre><code>// --- MODIFIED: The Task Struct ---
+struct Task {
+    description: String,
+    completed: bool,
+    edit_count: u32, // New field!
+}
+
+// ... (AppError is the same) ...
+
+// --- MODIFIED: AddCommand's execute method ---
+impl Command for AddCommand {
+    fn execute(&self, tasks: &mut HashMap<u32, Task>, next_id: &mut u32) -> Result<(), AppError> {
+        let new_task = Task {
+            description: self.description.clone(),
+            completed: false,
+            edit_count: 0, // Initialize with 0
+        };
+        tasks.insert(*next_id, new_task);
+        println!("Added task {}: '{}'", next_id, self.description);
+        *next_id += 1;
+        Ok(())
+    }
+}
+
+// --- MODIFIED: CompleteCommand's execute method ---
+impl Command for CompleteCommand {
+    fn execute(&self, tasks: &mut HashMap<u32, Task>, _next_id: &mut u32) -> Result<(), AppError> {
+        // Here's the magic!
+        let entry = tasks.entry(self.id);
+        
+        let mut task_description = String::new();
+
+        // Use .and_modify() to atomically update the task if it exists.
+        entry.and_modify(|task| {
+            task.completed = true;
+            task.edit_count += 1;
+            // We need to clone the description to print it later, because we can't
+            // return a value from this closure.
+            task_description = task.description.clone();
+        })
+        // If .and_modify() did nothing (because the key was not found), 
+        // .or_insert_with() would run. We use it here to return our error.
+        // A more direct way is to check if the key exists first, but this shows the full API.
+        // A better approach for just modifying is to use get_mut, but for learning this shows the chain.
+        // Let's rewrite this part idiomatically for a real app:
+
+        let task = tasks.get_mut(&self.id)
+            .ok_or_else(|| AppError::NotFound(format!("Task with ID {} not found.", self.id)))?;
+
+        task.completed = true;
+        task.edit_count += 1;
+        println!("Completed task {}: '{}'", self.id, task.description);
+        Ok(())
+    }
+}
+// Let's refine the CompleteCommand to be more idiomatic as the comment suggests. 
+// The real power of entry is for insert-or-update. The above example is a bit forced.
+// A better example is a word counter. Let's stick to the current app.
+// The best way to show .and_modify is to just use it.
+
+impl Command for CompleteCommand { // REVISED AND SIMPLIFIED VERSION
+    fn execute(&self, tasks: &mut HashMap<u32, Task>, _next_id: &mut u32) -> Result<(), AppError> {
+        let task = tasks.get_mut(&self.id)
+            .ok_or_else(|| AppError::NotFound(format!("Task with ID {} not found.", self.id)))?;
+        
+        task.completed = true;
+        task.edit_count += 1;
+        println!("Completed task {}: '{}' (edited {} times)", self.id, task.description, task.edit_count);
+        Ok(())
+    }
+}
+
+
+// --- MODIFIED: ListCommand and SortCommand need to display the new info ---
+impl Command for ListCommand {
+    fn execute(&self, tasks: &mut HashMap<u32, Task>, _next_id: &mut u32) -> Result<(), AppError> {
+        // ...
+        for (id, task) in tasks {
+            let status = if task.completed { "[x]" } else { "[ ]" };
+            println!("{}: {} {} (edits: {})", id, status, task.description, task.edit_count);
+        }
+        // ...
+        Ok(())
+    }
+}
+// (A similar change would be needed in SortCommand's println!)
+</code></pre>
+                <h4>Rethinking the Example</h4>
+                <p>As noted in the code comments, while you *can* use the `Entry` API for this, a simple `get_mut` is more direct when you only care about updating. The true power of `entry` shines when you need to "insert-or-update."</p>
+                <p>Let's consider a better, classic example: counting word frequencies.</p>
+                <pre><code>let text = "hello world hello";
+let mut counts = HashMap::new();
+
+for word in text.split_whitespace() {
+    // This is the perfect use case!
+    // Get the entry for the word. If it's vacant, insert 0.
+    // Then, get a mutable reference to the value (new or old) and add 1.
+    let count = counts.entry(word).or_insert(0);
+    *count += 1;
+}
+// `counts` will be `{"hello": 2, "world": 1}`
+</code></pre>
+                <p>This code is concise, correct, and performs only one lookup per word. This is the idiomatic Rust you should strive to write!</p>
+                <p>For our Todo app, we've updated the `Task` struct and the `complete` command to track edits. While `get_mut` was the most direct tool for *this specific job*, understanding the `Entry` API is crucial for your toolkit.</p>
+
+                <a href="../index.html" class="back-link">&larr; Back to Curriculum Map</a>
+            </article>
+        </div>
+    </main>
+    
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 The Rust Adventure.</p>
+        </div>
+    </footer>
+
+</body>
+</html>

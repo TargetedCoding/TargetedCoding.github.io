@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 37: Spawning Threads for Parallel Execution - The Rust Adventure</title>
+    <link rel="stylesheet" href="../style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <img src="https://www.rust-lang.org/static/images/rust-logo-blk.svg" alt="Rust Logo" class="logo">
+            <h1>Module 37: Spawning Threads for Parallel Execution</h1>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <article class="module-content">
+                <h2>Objective: To learn the basics of creating and managing threads using `std::thread`.</h2>
+                <p>Welcome to the final day of our programming bootcamp! Today, we tackle one of Rust's most celebrated features: <strong>Fearless Concurrency</strong>. Most modern computers have CPUs with multiple cores, allowing them to do several things at once. We can take advantage of this by splitting our work across multiple <strong>threads</strong>.</p>
+                
+                <hr>
+
+                <h3>Step 1: What is a Thread?</h3>
+                <p>A thread is like an independent program running within your main program. The operating system can schedule threads to run on different CPU cores simultaneously, or in parallel. This can make programs that have a lot of work to do finish much, much faster.</p>
+                <p><strong>Analogy: Hiring a New Worker.</strong> A single-threaded program is like a single person trying to do all the jobs in a workshop one by one. Spawning a new thread is like hiring a new, independent worker. You can give them a task to do, and they will work on it at the same time as you, dramatically increasing the workshop's total output.</p>
+
+                <h3>Step 2: Spawning and Joining Threads</h3>
+                <p>Rust's standard library provides the <code>std::thread</code> module for working with threads. The key function is <code>thread::spawn</code>.</p>
+                <ul>
+                    <li><strong><code>thread::spawn(closure)</code></strong>: This creates a new thread and immediately executes the provided closure within it.</li>
+                    <li><strong>The `move` Keyword:</strong> The closure you pass to `spawn` *must* be a `move` closure. This is because the new thread might outlive the function that spawned it. To ensure this is safe, the new thread must take ownership of any data it needs from the parent thread's environment.</li>
+                    <li><strong><code>JoinHandle</code></strong>: `thread::spawn` returns a `JoinHandle`. This is an owned value that, when its <code>.join()</code> method is called, will cause the current thread to wait until the spawned thread has finished its execution.</li>
+                </ul>
+
+                <h3>Practical Application: A Standalone Parallel Printer</h3>
+                <p>We'll start with a simple, self-contained example to see threads in action. This program will spawn several threads, and each one will do a little work and print a message. We'll see how their outputs interleave, proving they are running concurrently.</p>
+                <p>Create a new project with <code>cargo new parallel_printer</code> or just replace your Todo app's <code>main.rs</code> temporarily to run this exercise.</p>
+                <pre><code>// In a new main.rs
+use std::thread;
+use std::time::Duration;
+
+fn main() {
+    println!("Program starting on the main thread.");
+    
+    // A vector to hold the handles of the threads we spawn.
+    let mut handles = vec![];
+
+    // Spawn 5 threads.
+    for i in 0..5 {
+        // `thread::spawn` creates and runs a new thread.
+        // The `move` keyword is crucial here! It moves ownership of `i` into the closure.
+        let handle = thread::spawn(move || {
+            println!("Thread {} has started.", i);
+            // Simulate some "work" being done.
+            thread::sleep(Duration::from_millis(500));
+            println!("Thread {} has finished.", i);
+        });
+        // Store the handle so we can wait for the thread later.
+        handles.push(handle);
+    }
+    
+    // The main thread can continue doing its own work here while the others run.
+    println!("Main thread is doing some work while waiting...");
+    thread::sleep(Duration::from_millis(200));
+
+    // Wait for all the spawned threads to finish.
+    // This is called "joining" the threads.
+    for handle in handles {
+        // .join() blocks the current thread (main) until the thread
+        // associated with this handle has completed.
+        handle.join().unwrap();
+    }
+
+    println!("All threads have finished. Program ending.");
+}
+</code></pre>
+
+                <h4>Concepts in Action:</h4>
+                <ul>
+                    <li><strong><code>thread::spawn(move || { ... })</code></strong>: We create five new threads. Each thread gets its own copy of the loop variable `i` because of the `move` keyword.</li>
+                    <li><strong>Concurrent Execution</strong>: When you run this, you'll see the "has started" messages print in a jumbled order. This is the operating system scheduling your threads to run concurrently. The main thread's "doing some work" message will appear while the other threads are still "working."</li>
+                    <li><strong><code>handle.join().unwrap()</code></strong>: The final `for` loop is critical. Without it, the `main` function would exit immediately after spawning the threads, and the operating system would likely kill the spawned threads before they could finish. The `.join()` call ensures that our program waits for all the hired "workers" to complete their jobs before closing the workshop.</li>
+                </ul>
+                <p>You have just written your first multi-threaded Rust program! You've learned how to spawn threads to perform work in parallel and how to wait for them to complete. This is the foundation for all high-performance, concurrent applications in Rust.</p>
+
+                <a href="../index.html" class="back-link">&larr; Back to Curriculum Map</a>
+            </article>
+        </div>
+    </main>
+    
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 The Rust Adventure.</p>
+        </div>
+    </footer>
+
+</body>
+</html>

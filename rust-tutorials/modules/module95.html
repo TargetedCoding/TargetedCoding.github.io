@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 95: `no_std` and the Embedded Toolchain - The Rust Adventure</title>
+    <link rel="stylesheet" href="../style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <img src="https://www.rust-lang.org/static/images/rust-logo-blk.svg" alt="Rust Logo" class="logo">
+            <h1>Module 95: `no_std` and the Embedded Toolchain</h1>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <article class="module-content">
+                <h2>Objective: To understand the concept of `no_std` development and to set up the necessary toolchain for cross-compiling Rust code to run on a bare-metal microcontroller.</h2>
+                <p>Welcome to Day 28! We are now venturing into the world of embedded systems—programming tiny computers like microcontrollers that power everything from smart watches to industrial sensors. Rust is exceptionally well-suited for this domain because of its performance, memory safety, and ability to run without a traditional operating system.</p>
+                
+                <hr>
+
+                <h3>Step 1: What is `no_std`?</h3>
+                <p>All the Rust code you've written so far has implicitly depended on the Rust <strong>standard library (<code>std</code>)</strong>. The standard library provides essential features like `Vec`, `HashMap`, `String`, networking, file I/O, and threads. To provide these, `std` makes a critical assumption: your program is running on an operating system (like Linux, Windows, or macOS).</p>
+                <p>A tiny microcontroller doesn't have an OS. It's "bare metal." Therefore, we cannot use `std`. Instead, we write <strong><code>#![no_std]</code></strong> at the top of our crate. This tells the compiler not to link the standard library. Instead, it links the much smaller <strong>core library (<code>core</code>)</strong>.</p>
+                <ul>
+                    <li><strong><code>core</code></strong>: Contains the absolute fundamentals of the language, like `Option`, `Result`, iterators, and fundamental traits. It contains nothing that requires an OS or heap memory allocation.</li>
+                    <li><strong><code>alloc</code></strong>: An optional library you can link to get heap-allocated types like `Box`, `Vec`, and `String`, but you must provide your own memory allocator.</li>
+                </ul>
+                <p><strong>Analogy: The Backpacker vs. The Car Camper.</strong> A `std` program is a car camper. You have a car (the OS) that allows you to bring lots of luxuries: a big tent (`Vec`), a cooler (`HashMap`), a generator (`threads`). A `no_std` program is a backpacker. You have no car. You can only carry the absolute essentials that fit in your backpack (`core`). Everything must be lightweight and self-sufficient.</p>
+
+                <h3>Step 2: Cross-Compilation</h3>
+                <p>Your computer (likely an `x86_64` architecture) cannot produce code that runs on a microcontroller (which is likely an `ARM Cortex-M` architecture). The process of compiling code on one architecture (the "host") to run on a different architecture (the "target") is called <strong>cross-compilation</strong>. `rustup` makes this easy by allowing us to install different "targets."</p>
+                
+                <h3>Practical Application: Setting up the Embedded Environment</h3>
+                <p>Let's set up all the tools we need to start embedded development. We will target the popular Raspberry Pi Pico, which uses an `ARM Cortex-M0+` processor. Its target triple is <strong><code>thumbv6m-none-eabi</code></strong>.</p>
+
+                <h4>1. Install the Cross-Compilation Target</h4>
+                <p>Use `rustup` to install the target for the Cortex-M0+.</p>
+                <pre><code>rustup target add thumbv6m-none-eabi</code></pre>
+                
+                <h4>2. Install Essential Tooling</h4>
+                <p>We need a few extra command-line tools:</p>
+                <ul>
+                    <li><strong><code>cargo-generate</code></strong>: To clone project templates (we used this for Yew).</li>
+                    <li><strong><code>flip-link</code></strong>: A special linker that helps resolve some issues on embedded platforms.</li>
+                    <li><strong><code>elf2uf2-rs</code></strong>: A tool to convert the final compiled file (an ELF file) into the `UF2` format that the Raspberry Pi Pico understands.</li>
+                </ul>
+                <pre><code>cargo install cargo-generate
+cargo install flip-link
+cargo install elf2uf2-rs
+</code></pre>
+
+                <h4>3. Generate a Project from a Template</h4>
+                <p>The Rust embedded community provides fantastic project templates. We'll use one specifically for the Raspberry Pi Pico.</p>
+                <pre><code>cargo generate --git https://github.com/rp-rs/rp-pico-project-template.git --name pico_blinky
+cd pico_blinky
+</code></pre>
+                
+                <h4>4. Explore the New Project</h4>
+                <p>This new project looks different from our standard ones:</p>
+                <ul>
+                    <li><strong><code>.cargo/config.toml</code></strong>: This file is crucial. It tells Cargo how to build for our embedded target. It specifies the target triple (`thumbv6m-none-eabi`) and the "runner" (a tool to flash the code to the device).</li>
+                    <li><strong><code>src/main.rs</code></strong>: Open this file. You'll see <code>#![no_std]</code> and <code>#![no_main]</code> at the top. Instead of a standard `main` function, it uses an <code>#[entry]</code> attribute from the `cortex-m-rt` crate to define the program's starting point.</li>
+                    <li><strong><code>memory.x</code></strong>: A "linker script." This is a special file that tells the linker exactly how to arrange the code and data in the microcontroller's limited memory (Flash and RAM).</li>
+                </ul>
+                
+                <h4>5. Build the Project</h4>
+                <p>You don't need a physical device to compile the code. Just run the standard build command:</p>
+                <pre><code>cargo build</code></pre>
+                <p>Cargo will read the configuration in <code>.cargo/config.toml</code> and automatically cross-compile your code for the ARM target. If the build succeeds, you have successfully configured your entire development environment for embedded Rust!</p>
+
+                <p>You now have a solid understanding of the fundamental differences between standard and `no_std` development. You've set up the cross-compilation toolchain and generated a working project template. This is the essential groundwork required before you can write a single line of code to control a real piece of hardware. In the next modules, we'll explore what's inside this template and make an LED blink.</p>
+
+                <a href="../index.html" class="back-link">&larr; Back to Curriculum Map</a>
+            </article>
+        </div>
+    </main>
+    
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 The Rust Adventure.</p>
+        </div>
+    </footer>
+
+</body>
+</html>

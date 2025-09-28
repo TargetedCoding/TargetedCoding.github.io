@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 33: Tying it all Together: The Professional CLI Tool - The Rust Adventure</title>
+    <link rel="stylesheet" href="../style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <img src="https://www.rust-lang.org/static/images/rust-logo-blk.svg" alt="Rust Logo" class="logo">
+            <h1>Module 33: Tying it all Together: The Professional CLI Tool</h1>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <article class="module-content">
+                <h2>Objective: To integrate all of Day 7's concepts into a final, professional command-line application.</h2>
+                <p>Congratulations on making it to the end of Day 7! You have learned the three pillars of a professional command-line application: argument parsing with <code>clap</code>, generic I/O with <code>Read</code>/<code>Write</code>, and data persistence with <code>serde</code>. Now, let's assemble all these pieces into our final application.</p>
+                
+                <hr>
+
+                <h3>Step 1: The Final Architecture</h3>
+                <p>The program flow is now that of a standard CLI tool:</p>
+                <ol>
+                    <li>The program starts.</li>
+                    <li><strong>`clap`</strong> parses the command-line arguments.</li>
+                    <li>The application <strong>loads</strong> its state (the `HashMap` of tasks) from <code>tasks.json</code> using our generic `storage` module.</li>
+                    <li>The specific command (add, list, complete, etc.) is executed, modifying the in-memory state.</li>
+                    <li>The application <strong>saves</strong> the new state back to <code>tasks.json</code>.</li>
+                    <li>The program exits.</li>
+                </ol>
+                <p>This is a robust, non-interactive, and stateless model that is perfect for command-line utilities.</p>
+                
+                <h3>Step 2: The Complete Code for Day 7</h3>
+                <p>Here is the final, complete code for both <code>main.rs</code> and <code>storage.rs</code>. It includes the full implementation for all commands. This is the culmination of all your work this week.</p>
+
+                <h4>File: `src/main.rs`</h4>
+                <pre><code>use std::collections::HashMap;
+use std::fs::File;
+use std::io::{BufReader, BufWriter};
+use clap::{Parser, Subcommand};
+use serde::{Serialize, Deserialize};
+use storage::StorageError;
+
+mod storage;
+
+// --- DATA STRUCTURES ---
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+enum Priority { Low, Medium, High }
+
+impl Priority {
+    fn from_str(s: &str) -> Option<Priority> { /* same as before */ }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct Task {
+    description: String,
+    completed: bool,
+    priority: Priority,
+}
+
+// --- CLI DEFINITION with clap ---
+#[derive(Parser, Debug)]
+#[command(author, version, about, long_about = None)]
+struct Cli {
+    #[command(subcommand)]
+    command: Commands,
+}
+
+#[derive(Subcommand, Debug)]
+enum Commands {
+    /// Add a new task
+    Add {
+        description: String,
+        #[arg(short, long, default_value = "medium")]
+        priority: String,
+    },
+    /// List all tasks
+    List,
+    /// Mark a task as complete
+    Complete { id: u32 },
+    /// Delete a task
+    Delete { id: u32 },
+}
+
+// --- MAIN APPLICATION LOGIC ---
+fn main() -> Result<(), StorageError> {
+    let cli = Cli::parse();
+    let filename = "tasks.json";
+
+    // 1. LOAD
+    let file = File::open(filename).unwrap_or_else(|_| File::create(filename).unwrap());
+    let reader = BufReader::new(file);
+    let mut tasks = storage::load_tasks(reader)?;
+
+    // 2. EXECUTE
+    let next_id = tasks.keys().max().unwrap_or(&0) + 1;
+
+    match cli.command {
+        Commands::Add { description, priority } => {
+            let priority = Priority::from_str(&priority)
+                .ok_or_else(|| StorageError::Custom("Invalid priority".to_string()))?;
+            
+            let new_task = Task { description, completed: false, priority };
+            tasks.insert(next_id, new_task);
+            println!("Added task {}.", next_id);
+        },
+        Commands::List => {
+            if tasks.is_empty() {
+                println!("No tasks yet!");
+            } else {
+                println!("ID | Priority | Status  | Description");
+                println!("---|----------|---------|--------------------");
+                for (id, task) in &tasks {
+                    let status = if task.completed { "Done" } else { "Pending" };
+                    println!("{:>2} | {:<8?} | {:<7} | {}", id, task.priority, status, task.description);
+                }
+            }
+        },
+        Commands::Complete { id } => {
+            if let Some(task) = tasks.get_mut(&id) {
+                task.completed = true;
+                println!("Completed task {}: '{}'", id, task.description);
+            } else {
+                println!("Error: Task with ID {} not found.", id);
+            }
+        },
+        Commands::Delete { id } => {
+            if tasks.remove(&id).is_some() {
+                println!("Deleted task {}.", id);
+            } else {
+                println!("Error: Task with ID {} not found.", id);
+            }
+        },
+    }
+
+    // 3. SAVE
+    let file = File::create(filename).map_err(StorageError::Io)?;
+    let writer = BufWriter::new(file);
+    storage::save_tasks(writer, &tasks)?;
+    
+    Ok(())
+}
+</code></pre>
+
+                <h4>File: `src/storage.rs`</h4>
+                <p>(This file also needs a small update to handle a custom error type for clap parsing)</p>
+                <pre><code>// In src/storage.rs
+use std::io::{Read, Write};
+use std::collections::HashMap;
+use crate::Task;
+use serde_json;
+
+#[derive(Debug)]
+pub enum StorageError {
+    Io(std::io::Error),
+    Json(serde_json::Error),
+    Custom(String), // For custom app errors
+}
+impl From<std::io::Error> for StorageError { fn from(e: std::io::Error) -> Self { StorageError::Io(e) } }
+impl From<serde_json::Error> for StorageError { fn from(e: serde_json::Error) -> Self { StorageError::Json(e) } }
+
+pub fn save_tasks<W: Write>(writer: W, tasks: &HashMap<u32, Task>) -> Result<(), StorageError> {
+    serde_json::to_writer_pretty(writer, tasks)?;
+    Ok(())
+}
+
+pub fn load_tasks<R: Read>(reader: R) -> Result<HashMap<u32, Task>, StorageError> {
+    match serde_json::from_reader(reader) {
+        Ok(tasks) => Ok(tasks),
+        Err(e) if e.is_eof() => Ok(HashMap::new()),
+        Err(e) => Err(StorageError::Json(e)),
+    }
+}
+</code></pre>
+
+                <h3>Final Step: Run Your Professional Tool!</h3>
+                <p>Your journey for the week is complete. You now have a real tool. Try it out!</p>
+                <ol>
+                    <li>Run <strong><code>cargo run -- --help</code></strong> to see your beautiful help message.</li>
+                    <li>Add a few tasks: <strong><code>cargo run -- add "Finish the Rust Adventure" -p high</code></strong></li>
+                    <li>Add another: <strong><code>cargo run -- add "Take a break"</code></strong> (it will default to medium priority).</li>
+                    <li>List them: <strong><code>cargo run -- list</code></strong></li>
+                    <li>Check your <code>tasks.json</code> file. See how the data is stored cleanly.</li>
+                    <li>Complete a task: <strong><code>cargo run -- complete 1</code></strong></li>
+                    <li>List them again to see the change.</li>
+                </ol>
+                <p>You have successfully built a robust, professional, and useful command-line application in Rust. You have mastered the core concepts of interacting with the outside world, from parsing arguments to persisting data in a standard format.</p>
+
+                <a href="../index.html" class="back-link">&larr; Back to Curriculum Map</a>
+            </article>
+        </div>
+    </main>
+    
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 The Rust Adventure.</p>
+        </div>
+    </footer>
+
+</body>
+</html>

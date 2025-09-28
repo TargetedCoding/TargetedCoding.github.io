@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 61: Writing a Custom `#[derive]` Macro - The Rust Adventure</title>
+    <link rel="stylesheet" href="../style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <img src="https://www.rust-lang.org/static/images/rust-logo-blk.svg" alt="Rust Logo" class="logo">
+            <h1>Module 61: Writing a Custom `#[derive]` Macro</h1>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <article class="module-content">
+                <h2>Objective: To put the theory of procedural macros into practice by building a complete, working custom `#[derive]` macro from scratch.</h2>
+                <p>This is the final challenge for Day 16. You've seen the theory behind procedural macros; now it's time to build one. We will create a workspace with two crates: a "proc-macro" crate that defines our custom derive, and a regular crate that uses it. This is the standard setup for proc-macro development.</p>
+                
+                <hr>
+
+                <h3>The Project: A `Getters` Derive Macro</h3>
+                <p>Our goal is to create a `#[derive(Getters)]` macro. When applied to a struct, it will automatically generate a public "getter" method for each field in the struct.</p>
+                <h4>The Goal:</h4>
+                <p>We want to be able to write this:</p>
+                <pre><code>#[derive(Getters)]
+pub struct ServerConfig {
+    host: String,
+    port: u16,
+}
+</code></pre>
+                <p>And have our macro generate this code for us:</p>
+                <pre><code>impl ServerConfig {
+    pub fn host(&self) -> &String {
+        &self.host
+    }
+    pub fn port(&self) -> &u16 {
+        &self.port
+    }
+}
+</code></pre>
+
+                <h3>Step 1: Setting up the Workspace</h3>
+                <p>A proc-macro must be in its own crate. The easiest way to manage this is with a Cargo workspace.</p>
+                <pre><code># In a new directory
+cargo new --lib getters_macro
+cargo new getters_user
+
+# Create a Cargo.toml in the root directory with this content:
+# [workspace]
+# members = ["getters_macro", "getters_user"]
+</code></pre>
+
+                <h3>Step 2: Building the Proc-Macro Crate (`getters_macro`)</h3>
+                
+                <h4>1. Update `getters_macro/Cargo.toml`</h4>
+                <p>We need to declare it as a proc-macro crate and add our dependencies.</p>
+                <pre><code>[lib]
+proc-macro = true
+
+[dependencies]
+syn = { version = "1.0", features = ["full"] } # "full" feature for parsing fields
+quote = "1.0"
+</code></pre>
+                
+                <h4>2. Write the Macro in `getters_macro/src/lib.rs`</h4>
+                <pre><code>extern crate proc_macro;
+
+use proc_macro::TokenStream;
+use quote::quote;
+use syn::{parse_macro_input, Data, DeriveInput, Fields};
+
+#[proc_macro_derive(Getters)]
+pub fn getters_derive(input: TokenStream) -> TokenStream {
+    // 1. Parse the input tokens into a syntax tree.
+    let ast = parse_macro_input!(input as DeriveInput);
+    
+    // Get the name of the struct.
+    let name = &ast.ident;
+
+    // 2. Iterate over the fields of the struct.
+    let fields = match &ast.data {
+        Data::Struct(s) => {
+            if let Fields::Named(fields) = &s.fields {
+                &fields.named
+            } else {
+                panic!("Getters macro only works on structs with named fields.");
+            }
+        }
+        _ => panic!("Getters macro can only be used on structs."),
+    };
+
+    // 3. For each field, generate a getter method.
+    let getters = fields.iter().map(|field| {
+        let field_name = field.ident.as_ref().unwrap(); // Get the identifier of the field
+        let field_ty = &field.ty; // Get the type of the field
+
+        // Use `quote` to generate the code for one getter method.
+        quote! {
+            pub fn #field_name(&self) -> &#field_ty {
+                &self.#field_name
+            }
+        }
+    });
+
+    // 4. Combine the generated getters into a single `impl` block.
+    let gen = quote! {
+        impl #name {
+            // The `#(...)*` syntax "unpacks" the iterator of generated methods.
+            #( #getters )*
+        }
+    };
+
+    gen.into()
+}
+</code></pre>
+
+                <h3>Step 3: Using the Macro in the User Crate (`getters_user`)</h3>
+                
+                <h4>1. Update `getters_user/Cargo.toml`</h4>
+                <p>We need to add our new proc-macro crate as a dependency.</p>
+                <pre><code>[dependencies]
+getters_macro = { path = "../getters_macro" }
+</code></pre>
+
+                <h4>2. Use the Macro in `getters_user/src/main.rs`</h4>
+                <pre><code>use getters_macro::Getters;
+
+// Apply our custom derive macro to a struct.
+#[derive(Getters)]
+pub struct AppConfig {
+    version: String,
+    port: u16,
+    is_https_enabled: bool,
+}
+
+fn main() {
+    let config = AppConfig {
+        version: "v1.2.3".to_string(),
+        port: 8080,
+        is_https_enabled: true,
+    };
+
+    // Thanks to our macro, these getter methods exist!
+    let version: &String = config.version();
+    let port: &u16 = config.port();
+    let https_status: &bool = config.is_https_enabled();
+
+    println!("Configuration loaded:");
+    println!("  Version: {}", version);
+    println!("  Port: {}", port);
+    println!("  HTTPS Enabled: {}", https_status);
+
+    assert_eq!(*port, 8080);
+}
+</code></pre>
+                
+                <h3>Step 4: Run it!</h3>
+                <p>Navigate to the `getters_user` directory and run the program:</p>
+                <pre><code>cd getters_user
+cargo run
+</code></pre>
+                <p>It works! The `config.version()` and `config.port()` methods don't actually exist in our source code, but our procedural macro generated them for us at compile time.</p>
+
+                <h4>The Procedural Macro Workflow:</h4>
+                <ul>
+                    <li><strong>Parse (`syn`):</strong> We parsed the input `TokenStream` into a `DeriveInput` AST node, which gives us a structured way to inspect the struct's name and fields.</li>
+                    <li><strong>Transform:</strong> We iterated through the named fields of the struct. For each field, we extracted its name and type.</li>
+                    <li><strong>Generate (`quote`):</strong> We used the `quote!` macro in a loop to generate a `TokenStream` for each individual getter method. The `#field_name` and `#field_ty` variables were spliced into the generated code.</li>
+                    <li><strong>Combine:</strong> We used `quote!` one last time with the `#( ... )*` syntax to combine all the individual getter methods into a single `impl` block.</li>
+                </ul>
+                <p>This is a challenging but immensely powerful skill. You now understand how the magic behind crates like `serde` and `clap` works because you have built that same kind of magic yourself. Congratulations on completing Day 16!</p>
+
+                <a href="../index.html" class="back-link">&larr; Back to Curriculum Map</a>
+            </article>
+        </div>
+    </main>
+    
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 The Rust Adventure.</p>
+        </div>
+    </footer>
+
+</body>
+</html>

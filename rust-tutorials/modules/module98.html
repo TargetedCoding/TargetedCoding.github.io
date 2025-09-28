@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 98: Writing Benchmarks with `cargo bench` - The Rust Adventure</title>
+    <link rel="stylesheet" href="../style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <img src="https://www.rust-lang.org/static/images/rust-logo-blk.svg" alt="Rust Logo" class="logo">
+            <h1>Module 98: Writing Benchmarks with `cargo bench`</h1>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <article class="module-content">
+                <h2>Objective: To learn how to use Cargo's built-in benchmarking harness to write scientific, repeatable performance tests for your code.</h2>
+                <p>Welcome to Day 29! A key part of writing high-performance code is being able to *measure* it. Relying on simple timing, like we did in Module 44, is not reliable. The results can be skewed by other processes running on your computer. To get scientific and reproducible results, we need a proper benchmarking harness. Fortunately, Rust and Cargo have one built-in!</p>
+                <p><strong>Note:</strong> The built-in `cargo bench` is only available on the `nightly` Rust toolchain. We will use a popular and powerful alternative called <strong>Criterion</strong> that works on stable Rust and provides more detailed statistical analysis.</p>
+                
+                <hr>
+                
+                <h3>Step 1: The Problem with Naive Timing</h3>
+                <p>Using `std::time::Instant` is fine for a quick, rough estimate. However, a single run can be affected by CPU cache state, background processes, or system interrupts. A real benchmark needs to:</p>
+                <ul>
+                    <li>Run the code many times to average out the noise.</li>
+                    <li>Warm up the CPU and caches before starting measurements.</li>
+                    <li>Analyze the results statistically to detect regressions.</li>
+                </ul>
+
+                <h3>Step 2: Benchmarking with `Criterion`</h3>
+                <p>Criterion is the de-facto standard for benchmarking in the Rust ecosystem. It handles all the statistical complexity for you and produces beautiful, detailed reports.</p>
+                <p>A benchmark with Criterion is structured in a special file in the `benches/` directory. You define a function and use Criterion's `Bencher` object to run your code inside a measured loop.</p>
+
+                <h3>Practical Application: Benchmarking Fibonacci Functions</h3>
+                <p>Let's write two different functions to calculate a Fibonacci number: a simple recursive version (which is elegant but slow) and an iterative version (which is less elegant but fast). We will then use Criterion to scientifically prove which one is faster.</p>
+
+                <h4>1. Create a New Library Project</h4>
+                <p>Benchmarks are often used for libraries, so we'll create one.</p>
+                <pre><code>cargo new fib_bench --lib
+cd fib_bench
+</code></pre>
+                
+                <h4>2. Update `Cargo.toml`</h4>
+                <p>We need to add Criterion as a "dev-dependency" (as it's only for development) and configure the benchmark target.</p>
+                <pre><code># In fib_bench/Cargo.toml
+[dev-dependencies]
+criterion = { version = "0.5", features = ["html_reports"] }
+
+[[bench]]
+name = "fib_benchmark" # The name of our benchmark file
+harness = false       # We are using Criterion's harness, not Rust's built-in one
+</code></pre>
+
+                <h4>3. Write the Functions to be Benchmarked in `src/lib.rs`</h4>
+                <pre><code>// In src/lib.rs
+
+/// Slow, elegant, recursive Fibonacci
+pub fn fib_recursive(n: u64) -> u64 {
+    match n {
+        0 => 0,
+        1 => 1,
+        _ => fib_recursive(n - 1) + fib_recursive(n - 2),
+    }
+}
+
+/// Fast, less elegant, iterative Fibonacci
+pub fn fib_iterative(n: u64) -> u64 {
+    if n == 0 { return 0; }
+    let mut a = 0;
+    let mut b = 1;
+    for _ in 1..n {
+        let next = a + b;
+        a = b;
+        b = next;
+    }
+    b
+}
+</code></pre>
+                
+                <h4>4. Create the Benchmark File: `benches/fib_benchmark.rs`</h4>
+                <p>Create a new directory named `benches` in the root of your project. Inside it, create a file with the name we specified in `Cargo.toml`.</p>
+                <pre><code>// In benches/fib_benchmark.rs
+use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use fib_bench::{fib_recursive, fib_iterative}; // Import our functions
+
+fn fibonacci_benchmark(c: &mut Criterion) {
+    // We create a "group" of benchmarks to compare related functions.
+    let mut group = c.benchmark_group("Fibonacci");
+
+    let n = 20; // A reasonably small number for the slow recursive version
+
+    // Benchmark the recursive function
+    group.bench_function(
+        "Recursive", 
+        |b| b.iter(|| fib_recursive(black_box(n)))
+    );
+    
+    // Benchmark the iterative function
+    group.bench_function(
+        "Iterative",
+        |b| b.iter(|| fib_iterative(black_box(n)))
+    );
+
+    group.finish();
+}
+
+// These two macros generate the necessary main function to run the benchmarks.
+criterion_group!(benches, fibonacci_benchmark);
+criterion_main!(benches);
+</code></pre>
+
+                <h4>5. Run the Benchmark!</h4>
+                <p>Now, run the `cargo bench` command:</p>
+                <pre><code>cargo bench</code></pre>
+                <p>Criterion will now take over. It will compile your code in release mode and run each benchmark function many times. You'll see output like this:</p>
+                <pre><code>Fibonacci/Recursive     time:   [11.531 us 11.547 us 11.564 us]
+Fibonacci/Iterative     time:   [10.123 ns 10.131 ns 10.140 ns]
+</code></pre>
+                <p>The results are staggering! The iterative version runs in about 10 <strong>nanoseconds</strong>, while the recursive version takes over 11 <strong>microseconds</strong>—a difference of over 1000x faster!</p>
+
+                <h4>6. View the HTML Report</h4>
+                <p>Because we enabled the `html_reports` feature, Criterion has generated a detailed report. Open the file located at <code>target/criterion/Fibonacci/report/index.html</code> in your web browser. You will see beautiful, interactive graphs showing the performance distribution, allowing you to easily compare the two implementations.</p>
+
+                <h4>The Benchmarking Workflow:</h4>
+                <ul>
+                    <li><strong><code>criterion_group!</code> and <code>criterion_main!</code></strong>: These macros set up the benchmark runner.</li>
+                    <li><strong><code>c.benchmark_group(...)</code></strong>: Grouping related benchmarks makes the reports much easier to read and compare.</li>
+                    <li><strong><code>b.iter(|| ...)</code></strong>: This is the core of the measurement. Criterion's `Bencher` (`b`) will run the closure you provide many thousands or millions of times to get a stable measurement.</li>
+                    <li><strong><code>black_box(...)</code></strong>: This is a crucial function. It's a hint to the compiler that says, "Do not optimize away the code inside here." Without it, the compiler might be smart enough to realize that `fib_recursive(20)` always returns the same value and could replace the entire function call with a constant, leading to a meaningless benchmark.</li>
+                </ul>
+                <p>You have now learned how to scientifically measure the performance of your code. This is an indispensable skill for an systems programmer. You can now make informed, data-driven decisions about which implementation of an algorithm to use, and you can prove that your optimizations are actually making your code faster.</p>
+
+                <a href="../index.html" class="back-link">&larr; Back to Curriculum Map</a>
+            </article>
+        </div>
+    </main>
+    
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 The Rust Adventure.</p>
+        </div>
+    </footer>
+
+</body>
+</html>

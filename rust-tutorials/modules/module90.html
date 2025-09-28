@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 90: Building a Simple Neural Network - The Rust Adventure</title>
+    <link rel="stylesheet" href="../style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <img src="https://www.rust-lang.org/static/images/rust-logo-blk.svg" alt="Rust Logo" class="logo">
+            <h1>Module 90: Building a Simple Neural Network</h1>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <article class="module-content">
+                <h2>Objective: To define the structure of a simple Multi-Layer Perceptron (MLP) neural network using Candle, creating the layers and implementing the "forward pass" logic.</h2>
+                <p>Now that you understand tensors, we can assemble them into a simple neural network. A neural network is essentially a collection of layers, and each layer is just a set of tensors (its "weights" and "biases") and a mathematical operation. We will build a basic Multi-Layer Perceptron (MLP), which is the "Hello, World!" of neural network architectures.</p>
+                
+                <hr>
+
+                <h3>Step 1: The Structure of an MLP</h3>
+                <p>An MLP consists of several "linear" or "fully-connected" layers, usually with an "activation function" between them.</p>
+                <ol>
+                    <li><strong>Input Layer:</strong> Takes the initial data (e.g., a flattened image).</li>
+                    <li><strong>Linear Layer:</strong> Performs a matrix multiplication between the input tensor and the layer's "weight" tensor, then adds a "bias" tensor. The formula is <code>output = input @ weights + bias</code>.</li>
+                    <li><strong>Activation Function:</strong> A non-linear function (like ReLU or Sigmoid) that is applied to the output of a linear layer. This allows the network to learn complex patterns.</li>
+                    <li><strong>Output Layer:</strong> The final linear layer that produces the result (e.g., a probability for each possible class).</li>
+                </ol>
+                
+                <h3>Step 2: Building Layers in Candle</h3>
+                <p>Candle provides a `candle_nn` crate with pre-built modules for common neural network layers. The most important one is <code>candle_nn::Linear</code>.</p>
+                <p>The core of building a network in Candle is defining a struct that holds the layers, and then implementing a <code>forward(&self, input: &Tensor) -> Result<Tensor></code> method. This method defines how data flows through the network from input to output.</p>
+                
+                <h3>Practical Application: Defining an MLP for MNIST</h3>
+                <p>We will build a simple MLP designed to classify handwritten digits from the famous MNIST dataset. An MNIST image is 28x28 pixels, so our input will be a flattened vector of 784 numbers. There are 10 possible digits (0-9), so our output will be a vector of 10 numbers.</p>
+
+                <h4>1. Project Setup</h4>
+                <p>Continue in your `candle_intro` project. We need to add the `candle_nn` crate.</p>
+                
+                <h4>2. Update `Cargo.toml`</h4>
+                <pre><code>[dependencies]
+candle-core = "0.3.0"
+candle-nn = "0.3.0" # Add the neural network crate
+anyhow = "1.0"
+rand = "0.8" # For creating random input data
+</code></pre>
+                
+                <h4>3. The Complete `src/main.rs`</h4>
+                <p>This program will define the network struct, initialize it with random weights, create some dummy input data, and perform a single "forward pass" to get a prediction.</p>
+                <pre><code>use anyhow::Result;
+use candle_core::{Device, Tensor};
+use candle_nn::{Linear, Module, VarBuilder};
+use rand::{thread_rng, Rng};
+
+// --- Define the constants for our network architecture ---
+const IMAGE_DIM: usize = 28 * 28; // 784
+const HIDDEN_SIZE: usize = 100;
+const NUM_CLASSES: usize = 10;
+
+// --- Define the Model Struct ---
+// Our MLP will have two linear layers and a ReLU activation function.
+struct Model {
+    layer1: Linear,
+    layer2: Linear,
+}
+
+impl Model {
+    // The constructor for our model.
+    // `VarBuilder` is a Candle utility for creating and loading variables (weights).
+    fn new(vs: VarBuilder) -> Result<Self> {
+        let layer1 = candle_nn::linear(IMAGE_DIM, HIDDEN_SIZE, vs.pp("layer1"))?;
+        let layer2 = candle_nn::linear(HIDDEN_SIZE, NUM_CLASSES, vs.pp("layer2"))?;
+        Ok(Self { layer1, layer2 })
+    }
+
+    // The forward pass. This defines how data flows through the network.
+    fn forward(&self, xs: &Tensor) -> Result<Tensor> {
+        let xs = self.layer1.forward(xs)?;
+        let xs = xs.relu()?; // Apply the ReLU activation function
+        let xs = self.layer2.forward(&xs)?;
+        Ok(xs)
+    }
+}
+
+fn main() -> Result<()> {
+    let device = Device::Cpu;
+
+    // 1. INITIALIZE THE MODEL
+    // We create a `VarBuilder` which is used to build the layers with their
+    // initial (random) weights and biases.
+    let vb = VarBuilder::zeros(candle_core::DType::F32, &device);
+    let model = Model::new(vb)?;
+    println!("Model created successfully.");
+    
+    // 2. CREATE DUMMY INPUT DATA
+    // We'll create a batch of 3 random "images".
+    // Each image is a flat vector of 784 floating point numbers.
+    let mut rng = thread_rng();
+    let dummy_images_data: Vec<f32> = (0..3 * IMAGE_DIM).map(|_| rng.gen()).collect();
+    
+    // The shape of the input tensor is [batch_size, num_features]
+    let dummy_input = Tensor::from_vec(dummy_images_data, (3, IMAGE_DIM), &device)?;
+    println!("\nInput tensor shape: {:?}", dummy_input.shape());
+
+    // 3. PERFORM THE FORWARD PASS
+    println!("Performing forward pass...");
+    let output = model.forward(&dummy_input)?;
+    
+    println!("\nOutput tensor shape: {:?}", output.shape());
+    println!("Output tensor:\n{}", output);
+    
+    // The output shape is [batch_size, num_classes]. Each row contains the
+    // "logits" for one image. The highest number in a row corresponds to the
+    // model's predicted digit for that image.
+    
+    Ok(())
+}
+</code></pre>
+
+                <h4>The Neural Network Architecture:</h4>
+                <ul>
+                    <li><strong><code>Model</code> Struct</strong>: This struct holds the building blocks of our network. Each `Linear` layer contains its own weight and bias tensors internally.</li>
+                    <li><strong><code>VarBuilder</code></strong>: This is Candle's mechanism for creating the trainable parameters (variables) of a model. When we call `candle_nn::linear(in, out, vb)`, it creates the `weight` (out x in) and `bias` (out) tensors and registers them with the `VarBuilder`. We used `VarBuilder::zeros` here, but in a real scenario, it would use random initialization.</li>
+                    <li><strong><code>.forward(&self, xs: &Tensor)</code></strong>: This method implements the actual computation. The input tensor `xs` is passed through `layer1`, then the result is passed through the `relu()` activation function, and finally, that result is passed through `layer2` to produce the final output.</li>
+                    <li><strong>The Data Flow</strong>: We created a dummy input tensor of shape `[3, 784]`, representing a "batch" of 3 images. After the forward pass, the output tensor has a shape of `[3, 10]`. Each of the 3 rows in the output corresponds to one of the input images, and each of the 10 columns in a row represents the model's "score" for that digit (0 through 9).</li>
+                </ul>
+                <p>Run <strong><code>cargo run</code></strong>. The program will initialize your MLP and perform a single forward pass with random data. The output numbers will be meaningless for now, because the model's weights are just zeros. But you have successfully defined the complete structure and computational flow of a real neural network. In the next and final module of the day, we will learn how to train these weights on real data to make the model produce meaningful predictions.</p>
+
+                <a href="../index.html" class="back-link">&larr; Back to Curriculum Map</a>
+            </article>
+        </div>
+    </main>
+    
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 The Rust Adventure.</p>
+        </div>
+    </footer>
+
+</body>
+</html>

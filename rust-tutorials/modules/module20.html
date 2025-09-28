@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 20: Advanced Loop Control with Labels - The Rust Adventure</title>
+    <link rel="stylesheet" href="../style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <img src="https://www.rust-lang.org/static/images/rust-logo-blk.svg" alt="Rust Logo" class="logo">
+            <h1>Module 20: Advanced Loop Control with Labels</h1>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <article class="module-content">
+                <h2>Objective: To learn how to use loop labels to control `break` and `continue` statements in nested loops.</h2>
+                <p>You're now a master of loops, but what happens when you have loops inside of other loops? Sometimes you need to break out of more than just the inner-most loop. For this, Rust provides a clear and explicit tool: <strong>loop labels</strong>.</p>
+                
+                <hr>
+
+                <h3>Step 1: The Problem with Nested Breaks</h3>
+                <p>By default, a `break` or `continue` statement only applies to the loop it is written in—the innermost loop. This can sometimes lead to behavior you don't expect.</p>
+                <pre><code>for i in 0..3 {
+    println!("Outer loop: {}", i);
+    for j in 0..3 {
+        if i == 1 && j == 1 {
+            println!("Breaking inner loop!");
+            break; // This only breaks from the `j` loop.
+        }
+        println!("  Inner loop: {}", j);
+    }
+}
+// The outer loop will continue for i = 2!</code></pre>
+
+                <h3>Step 2: The Labeled `break` Solution</h3>
+                <p>To solve this, you can put a label on a loop. A label starts with a single quote and is followed by a name (e.g., <code>'outer:</code>). You can then refer to this label in your `break` or `continue` statement to specify exactly which loop you want to control.</p>
+                
+                <p><strong>Analogy: Naming Your Labyrinths.</strong> Imagine you are in a small labyrinth that is itself inside a much larger one. If you find the exit of the small labyrinth, you're still stuck in the big one. A loop label is like naming the labyrinths. From inside the small one, you can shout, "I want to `break` out of the `'outer_labyrinth'`!" and escape completely in one go.</p>
+                
+                <pre><code>'outer: for i in 0..3 { // The 'outer label is attached to this loop
+    println!("Outer loop: {}", i);
+    for j in 0..3 {
+        if i == 1 && j == 1 {
+            println!("Breaking outer loop!");
+            break 'outer; // This breaks the loop labeled 'outer
+        }
+        println!("  Inner loop: {}", j);
+    }
+}
+// The program will stop here and will not print the outer loop for i = 2.
+</code></pre>
+
+                <h3>Practical Application: A Standalone Grid Searcher</h3>
+                <p>Loop labels are a specialized tool, so they don't have a natural fit in our current Todo app. Instead, we'll write a small, focused program to demonstrate a perfect use case: searching for a value in a 2D grid and stopping all work the instant it's found.</p>
+                <p>This is much cleaner than using a boolean "flag" variable to signal when to stop.</p>
+                <p>Create a new project with <code>cargo new grid_searcher</code> or just replace your Todo app's <code>main.rs</code> temporarily to run this exercise.</p>
+                <pre><code>// A standalone program to demonstrate labeled breaks.
+
+fn main() {
+    let grid = vec![
+        vec![1, 2, 3],
+        vec![4, 5, 6],
+        vec![7, 8, 9],
+    ];
+
+    let target = 6;
+    let mut found_at = None;
+
+    println!("Searching for {} in the grid...", target);
+
+    // Label the outer loop so we can break out of it.
+    'search: for (row_idx, row) in grid.iter().enumerate() {
+        for (col_idx, &value) in row.iter().enumerate() {
+            print!("."); // Print a dot to show we are searching
+            if value == target {
+                found_at = Some((row_idx, col_idx));
+                println!("\nFound it!");
+                break 'search; // Break the 'search loop, not just the inner loop.
+            }
+        }
+    }
+
+    match found_at {
+        Some((row, col)) => {
+            println!("The value {} was found at coordinates ({}, {}).", target, row, col);
+        },
+        None => {
+            println!("\nThe value {} was not found in the grid.", target);
+        }
+    }
+}</code></pre>
+
+                <h4>Concepts in Action:</h4>
+                <ul>
+                    <li><strong><code>'search: for ...</code></strong>: We've given a clear, descriptive name to our outer loop.</li>
+                    <li><strong><code>break 'search;</code></strong>: The moment our target is found, this statement immediately exits both the inner and outer loops, transferring control to the code after the `'search` loop.</li>
+                    <li><strong>Efficiency</strong>: This is highly efficient. If the target is in the first row, the program does the absolute minimum work required and doesn't waste time iterating through the rest of the grid.</li>
+                </ul>
+                <p>You have now learned a powerful, if less common, control flow tool. It's perfect for complex, nested logic where you need precise control over which loop to exit.</p>
+
+                <a href="../index.html" class="back-link">&larr; Back to Curriculum Map</a>
+            </article>
+        </div>
+    </main>
+    
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 The Rust Adventure.</p>
+        </div>
+    </footer>
+
+</body>
+</html>

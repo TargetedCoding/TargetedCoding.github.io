@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 96: Hardware Abstraction Layers (HALs) - The Rust Adventure</title>
+    <link rel="stylesheet" href="../style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <img src="https://www.rust-lang.org/static/images/rust-logo-blk.svg" alt="Rust Logo" class="logo">
+            <h1>Module 96: Hardware Abstraction Layers (HALs)</h1>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <article class="module-content">
+                <h2>Objective: To understand the purpose of Hardware Abstraction Layer (HAL) crates and the `embedded-hal` trait ecosystem for writing safe, high-level, and portable drivers for embedded peripherals.</h2>
+                <p>In a <code>no_std</code> environment, you don't have an operating system to manage the hardware for you. How do you talk to a GPIO pin to turn on an LED, or send data over a serial port? You could write to the specific memory addresses of the hardware registers directly, but this is incredibly tedious, error-prone, and not portable at all. The Rust solution to this is the <strong>Hardware Abstraction Layer (HAL)</strong>.</p>
+                
+                <hr>
+
+                <h3>Step 1: The Problem: Bare-Metal Registers</h3>
+                <p>A microcontroller's functionality is controlled by its "peripherals" (like GPIO, SPI, I2C, Timers). To configure a peripheral, you have to write specific bit patterns to specific memory-mapped registers. For example, to set GPIO pin 25 to be an output, you might need to write the value <code>0b00101</code> to the memory address <code>0x40014004</code>.</p>
+                <p>This is obviously terrible because:</p>
+                <ul>
+                    <li>It's cryptic. What does <code>0b00101</code> mean?</li>
+                    <li>It's unsafe. A typo in the address could corrupt the device.</li>
+                    <li>It's not portable. A different microcontroller will have completely different register addresses and bit patterns.</li>
+                </ul>
+
+                <h3>Step 2: The Solution: The HAL Crate Ecosystem</h3>
+                <p>The embedded Rust community has created a beautiful, layered solution to this problem:</p>
+                <ol>
+                    <li><strong>Peripheral Access Crate (PAC):</strong> This is an auto-generated, `unsafe` crate created from the manufacturer's hardware description files. It provides a basic, type-safe API over the raw memory registers. You rarely use this directly, but it's the foundation.</li>
+                    <li><strong>Hardware Abstraction Layer (HAL) Crate:</strong> This is a crate, usually written by the community for a specific chip family (e.g., `rp2040-hal` for the Raspberry Pi Pico), that builds on top of the PAC. It provides a safe, high-level, and ergonomic API for controlling the hardware. It's the main crate you interact with.</li>
+                    <li><strong><code>embedded-hal</code> Traits:</strong> This is the key to portability. <code>embedded-hal</code> is a crate that defines a set of generic traits for common peripherals (like `OutputPin`, `SerialWrite`, `DelayMs`). The chip-specific HAL crate (like `rp2040-hal`) implements these traits.</li>
+                </ol>
+                <p><strong>Analogy: The Car's Dashboard.</strong> Writing to registers directly is like manually connecting wires in the engine bay to turn on the headlights. The HAL crate is the car's dashboard. It gives you a safe, high-level interface: a steering wheel, pedals, and buttons. The `embedded-hal` traits are the *standard* for what a dashboard should have. Every car, whether it's a Ford or a Honda, has a steering wheel that works the same way. This means you can write a "driver" (your application logic) that knows how to use a standard steering wheel, and it will work in any car that provides one.</p>
+                
+                <h3>Practical Application: Exploring the `rp2040-hal`</h3>
+                <p>Let's look at the code in our `pico_blinky` project from the last module to see these concepts in action. We won't run it yet, just analyze it.</p>
+                
+                <h4>Open `pico_blinky/src/main.rs`</h4>
+                <pre><code>// ... (no_std, no_main attributes)
+use rp2040_hal as hal;
+use hal::pac;
+use embedded_hal::digital::v2::OutputPin; // The generic trait!
+
+#[link_section = ".boot2"]
+#[used]
+pub static BOOT2: [u8; 256] = rp2040_boot2::BOOT_LOADER_GENERIC_03H;
+
+#[entry]
+fn main() -> ! {
+    // 1. GETTING THE PERIPHERALS
+    // This is the starting point. We take ownership of the raw hardware peripherals.
+    let mut pac = pac::Peripherals::take().unwrap();
+    let sio = hal::Sio::new(pac.SIO);
+
+    // 2. CONFIGURING PINS
+    // We get a "handle" to the collection of all GPIO pins.
+    let pins = hal::gpio::Pins::new(
+        pac.IO_BANK0,
+        pac.PADS_BANK0,
+        sio.gpio_bank0,
+        &mut pac.RESETS,
+    );
+    
+    // 3. USING THE HAL API
+    // We configure a specific pin (the onboard LED on the Pico is pin 25)
+    // as a push-pull output. This returns a type-safe `Pin` struct.
+    let mut led_pin = pins.gpio25.into_push_pull_output();
+
+    // 4. USING THE `embedded-hal` TRAIT METHOD
+    // The main loop.
+    loop {
+        // `set_high()` and `set_low()` are methods from the `OutputPin` trait.
+        // We can call them because our `led_pin` struct implements that trait.
+        led_pin.set_high().unwrap();
+        // ... delay ...
+        led_pin.set_low().unwrap();
+        // ... delay ...
+    }
+}
+</code></pre>
+
+                <h4>The HAL Architecture in Action:</h4>
+                <ul>
+                    <li><strong><code>rp2040_hal as hal</code></strong>: We import the specific HAL crate for our chip.</li>
+                    <li><strong><code>hal::pac</code></strong>: The HAL is built on top of the lower-level Peripheral Access Crate (PAC).</li>
+                    <li><strong><code>embedded_hal::digital::v2::OutputPin</code></strong>: We import the generic trait that defines the behavior we need ("a pin that can be set high or low").</li>
+                    <li><strong><code>pac::Peripherals::take()</code></strong>: This is a safe way to get a singleton instance representing all the hardware. You can only call this once.</li>
+                    <li><strong><code>pins.gpio25.into_push_pull_output()</code></strong>: This is the high-level HAL API. We take the generic `gpio25` pin and use the type system to turn it into a specifically configured output pin. After this line, you can't accidentally try to use it as an input; the compiler would stop you.</li>
+                    <li><strong><code>led_pin.set_high()</code></strong>: This is the payoff. Our application logic doesn't care about registers or memory addresses. It calls a standard, portable method from `embedded-hal`. If we wanted to run this same blinking logic on a different microcontroller, we would just swap out the `rp2040-hal` crate for that chip's HAL crate. As long as that HAL also implements the `OutputPin` trait for its GPIO pins, this main loop code would not need to change at all!</li>
+                </ul>
+                <p>You now understand the layered architecture that makes embedded Rust so safe and productive. You know how low-level hardware registers are wrapped in safe, high-level HALs, and how the `embedded-hal` traits provide a crucial layer of portability. In the next module, we will finally bring this code to life and see our LED blink.</p>
+
+                <a href="../index.html" class="back-link">&larr; Back to Curriculum Map</a>
+            </article>
+        </div>
+    </main>
+    
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 The Rust Adventure.</p>
+        </div>
+    </footer>
+
+</body>
+</html>

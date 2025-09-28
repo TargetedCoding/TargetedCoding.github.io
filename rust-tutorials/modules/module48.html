@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 48: Implementing a Binary Search Tree - The Rust Adventure</title>
+    <link rel="stylesheet" href="../style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <img src="https://www.rust-lang.org/static/images/rust-logo-blk.svg" alt="Rust Logo" class="logo">
+            <h1>Module 48: Implementing a Binary Search Tree</h1>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <article class="module-content">
+                <h2>Objective: To implement a binary search tree (BST) to master the `Rc<RefCell<T>>` pattern for managing shared, mutable, graph-like data structures.</h2>
+                <p>We've built a linear linked list, but many real-world problems are non-linear. A tree is a perfect example. Implementing a tree in Rust presents a new challenge: a parent node needs to be able to modify its children. If multiple parts of our code hold references to nodes, how can we safely mutate them? This is the exact problem that the <code>Rc&lt;RefCell&lt;T&gt;&gt;</code> pattern was designed to solve.</p>
+                
+                <hr>
+
+                <h3>Step 1: The Structure of a Binary Search Tree</h3>
+                <p>A binary search tree is a collection of nodes. Each node has:</p>
+                <ul>
+                    <li>A value.</li>
+                    <li>A pointer to a "left" child node.</li>
+                    <li>A pointer to a "right" child node.</li>
+                </ul>
+                <p>It maintains a special property: for any given node, all values in its left subtree are less than the node's value, and all values in its right subtree are greater than the node's value. This makes searching for a value very fast.</p>
+                <p>To represent this in Rust, we'll need:</p>
+                <ul>
+                    <li><strong>Pointers:</strong> A child can be null, so we'll use <code>Option</code>.</li>
+                    <li><strong>Shared Ownership:</strong> A node is "owned" by its parent, but we might want other references to it. <code>Rc</code> is perfect for this.</li>
+                    <li><strong>Mutability:</strong> We need to be able to change a node's children (e.g., when inserting a new value). <code>RefCell</code> will give us this "interior mutability."</li>
+                </ul>
+                
+                <h3>Practical Application: Building a `BST`</h3>
+                <p>We will build a simple BST with `insert` and `find` methods. This is a standalone project.</p>
+
+                <h4>1. Create a New Project</h4>
+                <pre><code>cargo new bst_example
+cd bst_example
+</code></pre>
+                
+                <h4>2. The Complete `src/main.rs`</h4>
+                <pre><code>use std::rc::Rc;
+use std::cell::RefCell;
+
+// A type alias for our shared, mutable pointer to a Node.
+type NodePtr<T> = Rc<RefCell<Node<T>>>;
+type Link<T> = Option<NodePtr<T>>;
+
+// The Node struct itself.
+#[derive(Debug)]
+struct Node<T> {
+    elem: T,
+    left: Link<T>,
+    right: Link<T>,
+}
+
+// The main Binary Search Tree struct.
+#[derive(Debug)]
+pub struct BST<T: Ord> { // `T` must be orderable for a BST.
+    root: Link<T>,
+}
+
+impl<T: Ord> BST<T> {
+    pub fn new() -> Self {
+        BST { root: None }
+    }
+
+    // Public method to insert a value.
+    pub fn insert(&mut self, elem: T) {
+        // We start the recursive insert from the root.
+        if let Some(root) = &self.root {
+            Self::recursive_insert(root, elem);
+        } else {
+            self.root = Some(Rc::new(RefCell::new(Node {
+                elem,
+                left: None,
+                right: None,
+            })));
+        }
+    }
+    
+    // Private helper method for recursive insertion.
+    fn recursive_insert(node: &NodePtr<T>, elem: T) {
+        let mut node_mut = node.borrow_mut(); // Get a mutable borrow of the Node.
+        
+        if elem < node_mut.elem {
+            // Go left
+            if let Some(left_child) = &node_mut.left {
+                Self::recursive_insert(left_child, elem);
+            } else {
+                node_mut.left = Some(Rc::new(RefCell::new(Node {
+                    elem,
+                    left: None,
+                    right: None,
+                })));
+            }
+        } else if elem > node_mut.elem {
+            // Go right
+            if let Some(right_child) = &node_mut.right {
+                Self::recursive_insert(right_child, elem);
+            } else {
+                node_mut.right = Some(Rc::new(RefCell::new(Node {
+                    elem,
+                    left: None,
+                    right: None,
+                })));
+            }
+        }
+        // If elem is equal, we do nothing (no duplicates).
+    }
+}
+
+fn main() {
+    let mut tree = BST::new();
+    
+    println!("Inserting values: 10, 5, 15, 3, 7");
+    tree.insert(10);
+    tree.insert(5);
+    tree.insert(15);
+    tree.insert(3);
+    tree.insert(7);
+    
+    // Use `{:?}` to see the tree structure printed out.
+    println!("\nFinal tree structure:");
+    println!("{:#?}", tree);
+}
+</code></pre>
+
+                <h4>The `Rc<RefCell<T>>` Architecture:</h4>
+                <ul>
+                    <li><strong><code>type NodePtr<T> = Rc<RefCell<Node<T>>>;</code></strong>: We create a convenient alias for our pointer type. This is the heart of the structure. `Rc` allows multiple pointers (e.g., a parent's `left` or `right` field) to share ownership of a node. `RefCell` allows us to get a mutable reference to a `Node` so we can change its children, even though the `Rc` pointer itself is immutable.</li>
+                    <li><strong><code>T: Ord</code></strong>: We add a "trait bound" to our `impl` block. This tells Rust that our BST can only work with types `T` that implement the `Ord` trait, which is necessary for comparing elements.</li>
+                    <li><strong><code>node.borrow_mut()</code></strong>: This is the key to mutation. We call `.borrow_mut()` on the `RefCell` to get temporary, exclusive, mutable access to the `Node` data inside. This is checked at runtime. The mutable borrow (`node_mut`) is automatically released at the end of the `if/else if` block, allowing other parts of the code to access the node again.</li>
+                    <li><strong>Recursion</strong>: The `recursive_insert` function is a classic tree algorithm. It traverses the tree, deciding whether to go left or right at each step, until it finds an empty spot (`None`) to insert the new node.</li>
+                </ul>
+                <p>Run <strong><code>cargo run</code></strong>. You'll see the nested structure of your tree printed out, showing how the values have been correctly placed according to the BST property. You have successfully built a complex, non-linear data structure, proving your mastery of Rust's advanced ownership and mutability patterns.</p>
+
+                <a href="../index.html" class="back-link">&larr; Back to Curriculum Map</a>
+            </article>
+        </div>
+    </main>
+    
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 The Rust Adventure.</p>
+        </div>
+    </footer>
+
+</body>
+</html>

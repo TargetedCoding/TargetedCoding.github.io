@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 34: Writing and Running Tests - The Rust Adventure</title>
+    <link rel="stylesheet" href="../style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <img src="https://www.rust-lang.org/static/images/rust-logo-blk.svg" alt="Rust Logo" class="logo">
+            <h1>Module 34: Writing and Running Tests</h1>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <article class="module-content">
+                <h2>Objective: To learn how to use Rust's built-in testing framework to write unit tests and integration tests.</h2>
+                <p>Welcome to Day 8! Today, we shift our focus from adding features to ensuring quality. A professional developer writes tests to prove their code works and to prevent future changes from breaking existing functionality. Rust makes testing a first-class citizen with a framework built directly into the language and Cargo.</p>
+                
+                <hr>
+
+                <h3>Step 1: The Basics of Testing in Rust</h3>
+                <p>Testing in Rust is simple: any function annotated with the <code>#[test]</code> attribute is a test function. You run all tests in your project with one command: <strong><code>cargo test</code></strong>. Inside a test, you use assertion macros like <code>assert!</code>, <code>assert_eq!</code> (assert equal), and <code>assert_ne!</code> (assert not equal) to check for correct behavior.</p>
+                <p><strong>Analogy: The Quality Assurance Team.</strong> Your main code is the factory floor. Your tests are a dedicated QA team. **Unit tests** check individual components on the assembly line. **Integration tests** check the final, assembled product.</p>
+
+                <h3>Step 2: Unit Tests</h3>
+                <p>Unit tests are for testing a small, isolated piece of logic, like a single function. By convention, they live in the same file as the code they are testing, inside a special module that only gets compiled when you run <code>cargo test</code>.</p>
+                <pre><code>// In any of your .rs files
+
+pub fn add(left: usize, right: usize) -> usize {
+    left + right
+}
+
+// This block is only included during `cargo test`
+#[cfg(test)]
+mod tests {
+    use super::*; // Bring the outer module's functions into scope
+
+    #[test]
+    fn it_works() {
+        let result = add(2, 2);
+        assert_eq!(result, 4);
+    }
+}</code></pre>
+                
+                <h3>Let's Build Our Todo App (Part 27) - Writing a Unit Test</h3>
+                <p>Our `storage.rs` module is perfect for a unit test. Its `save_tasks` and `load_tasks` functions are generic, so we can test them with an in-memory buffer instead of a real file. This makes the test fast and self-contained.</p>
+                
+                <h4>1. Add a test module to `src/storage.rs`</h4>
+                <p>Open `src/storage.rs` and add this code at the bottom.</p>
+                <pre><code>// In src/storage.rs
+
+// ... (your existing save_tasks, load_tasks, and StorageError code) ...
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{Task, Priority}; // Use the structs from main.rs
+    use std::collections::HashMap;
+
+    #[test]
+    fn test_save_and_load_cycle() {
+        // 1. SETUP: Create some sample data.
+        let mut tasks = HashMap::new();
+        tasks.insert(1, Task {
+            description: "Learn unit testing".to_string(),
+            completed: true,
+            priority: Priority::High,
+        });
+
+        // 2. ACTION: Save the data to an in-memory buffer.
+        let mut buffer: Vec<u8> = Vec::new();
+        save_tasks(&mut buffer, &tasks).unwrap();
+
+        // Convert buffer back into something readable.
+        let cursor = std::io::Cursor::new(buffer);
+        
+        // 3. ACTION: Load the data back from the buffer.
+        let loaded_tasks = load_tasks(cursor).unwrap();
+
+        // 4. ASSERT: Check that the loaded data is identical to the original.
+        assert_eq!(tasks.len(), loaded_tasks.len());
+        assert_eq!(tasks.get(&1), loaded_tasks.get(&1));
+    }
+}
+</code></pre>
+
+                <h3>Step 3: Integration Tests</h3>
+                <p>Integration tests are for testing the application as a whole. They live in a special top-level directory called <code>tests/</code>. Each file in this directory is compiled as its own separate crate.</p>
+                <p>For a CLI app, a great way to write integration tests is to actually run the compiled binary and check its output. The <code>assert_cmd</code> crate is perfect for this.</p>
+
+                <h4>1. Add dev-dependencies to `Cargo.toml`</h4>
+                <p>Dev-dependencies are only used for testing and examples.</p>
+                <pre><code>[dev-dependencies]
+assert_cmd = "2.0"
+predicates = "2.1"
+</code></pre>
+                
+                <h4>2. Create the integration test file: `tests/cli.rs`</h4>
+                <p>Create a new folder named `tests` in the root of your project. Inside it, create a file named `cli.rs`.</p>
+                <pre><code>// In tests/cli.rs
+use assert_cmd::prelude::*; // Add methods on commands
+use predicates::prelude::*; // Used for writing assertions
+use std::process::Command; // Used for running commands
+
+#[test]
+fn test_add_and_list() {
+    let mut cmd = Command::cargo_bin("todo-app").unwrap();
+    
+    // Run `todo-app add "test task"`
+    cmd.arg("add").arg("test task");
+    cmd.assert().success();
+
+    // Run `todo-app list` and check the output
+    let mut cmd2 = Command::cargo_bin("todo-app").unwrap();
+    cmd2.arg("list");
+    cmd2.assert()
+       .success()
+       .stdout(predicate::str::contains("test task"));
+    
+    // Cleanup: we need to delete the tasks.json file after this test.
+    // We will cover a better way to handle this (temp files) later.
+    std::fs::remove_file("tasks.json").unwrap();
+}
+</code></pre>
+                
+                <h3>Step 4: Run the Tests!</h3>
+                <p>Go to your terminal and run the test command:</p>
+                <pre><code>cargo test</code></pre>
+                <p>Cargo will find and run all your tests—the unit test in `storage.rs` and the integration test in `tests/cli.rs`. You'll see a summary of the results. If everything passes, you can have confidence that your core logic and your application's CLI are working correctly!</p>
+                <p>You have just added a professional-grade safety net to your project. These tests will protect you from regressions and give you the confidence to refactor and add new features in the future.</p>
+
+                <a href="../index.html" class="back-link">&larr; Back to Curriculum Map</a>
+            </article>
+        </div>
+    </main>
+    
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 The Rust Adventure.</p>
+        </div>
+    </footer>
+
+</body>
+</html>

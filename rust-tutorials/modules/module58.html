@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 58: Building an Async TCP Echo Server - The Rust Adventure</title>
+    <link rel="stylesheet" href="../style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <img src="https://www.rust-lang.org/static/images/rust-logo-blk.svg" alt="Rust Logo" class="logo">
+            <h1>Module 58: Building an Async TCP Echo Server</h1>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <article class="module-content">
+                <h2>Objective: To use `tokio`'s asynchronous networking capabilities to build a TCP server that can handle thousands of connections concurrently on a small number of threads.</h2>
+                <p>It's time to put our async knowledge to the test with a real-world project. We will build a TCP "echo server." This is a fundamental networking application that listens for connections, reads any data sent to it, and simply sends ("echoes") that same data back to the client. The magic of `tokio` is that our server will be able to handle a massive number of simultaneous connections without needing a new OS thread for each one.</p>
+                
+                <hr>
+
+                <h3>Step 1: The Logic of a TCP Server</h3>
+                <p>The flow of a basic TCP server is always the same:</p>
+                <ol>
+                    <li><strong>Bind:</strong> The server "binds" to a network address (like <code>127.0.0.1:8080</code>), claiming that port so it can listen for incoming connections.</li>
+                    <li><strong>Listen/Accept Loop:</strong> The server enters an infinite loop, waiting to "accept" new connections. When a client connects, the OS hands the server a new socket for that specific connection.</li>
+                    <li><strong>Handle Connection:</strong> For each new connection, the server spawns a new task to handle all communication with that specific client. This is where our async concurrency happens!</li>
+                    <li><strong>Read/Write Loop:</strong> Inside the connection-handling task, the server enters another loop, reading data from the client's socket and writing it back.</li>
+                </ol>
+                
+                <h3>Step 2: Tokio's Networking Primitives</h3>
+                <p>`tokio` provides asynchronous versions of the standard networking types:</p>
+                <ul>
+                    <li><strong><code>tokio::net::TcpListener</code></strong>: The async equivalent of the standard library's listener, used to accept incoming connections. Its <code>.accept()</code> method is an `async` function.</li>
+                    <li><strong><code>tokio::net::TcpStream</code></strong>: The async socket for a specific connection. It provides async methods for reading and writing data, like <code>.read()</code> and <code>.write_all()</code>.</li>
+                    <li><strong><code>tokio::io</code></strong>: This module contains async versions of the `Read` and `Write` traits, which these network types use.</li>
+                </ul>
+
+                <h3>Practical Application: The Echo Server</h3>
+                <p>Let's build the server. This will be a complete, standalone project.</p>
+
+                <h4>1. Create a New Project</h4>
+                <pre><code>cargo new echo_server
+cd echo_server
+</code></pre>
+                
+                <h4>2. Update `Cargo.toml`</h4>
+                <pre><code>[dependencies]
+tokio = { version = "1", features = ["full"] }
+anyhow = "1.0" # For easy error handling
+</code></pre>
+                
+                <h4>3. The Complete `src/main.rs`</h4>
+                <pre><code>use tokio::io::{self, AsyncReadExt, AsyncWriteExt};
+use tokio::net::TcpListener;
+use anyhow::Result;
+
+#[tokio::main]
+async fn main() -> Result<()> {
+    // 1. BIND: Create a TcpListener and bind it to our address.
+    let listener = TcpListener::bind("127.0.0.1:8080").await?;
+    println!("Server listening on: 127.0.0.1:8080");
+
+    // 2. LISTEN/ACCEPT LOOP: Continuously accept new connections.
+    loop {
+        // `.accept()` is an async method. It waits for a new connection without
+        // blocking the thread. It returns the socket and the client's address.
+        let (mut socket, addr) = listener.accept().await?;
+        println!("New connection from: {}", addr);
+
+        // 3. HANDLE CONNECTION: Spawn a new async task for each connection.
+        // The `move` keyword is crucial, as the task needs to take ownership of the `socket`.
+        tokio::spawn(async move {
+            // 4. READ/WRITE LOOP: Handle communication for this specific client.
+            let mut buffer = [0; 1024]; // A 1KB buffer for reading data.
+            
+            loop {
+                // `socket.read()` is an async method. It waits for data to arrive.
+                // It returns the number of bytes read. 0 bytes means the client disconnected.
+                let n = match socket.read(&mut buffer).await {
+                    Ok(n) if n == 0 => {
+                        println!("Client {} disconnected.", addr);
+                        return; // Exit the task.
+                    },
+                    Ok(n) => n,
+                    Err(e) => {
+                        eprintln!("Failed to read from socket for {}: {}", addr, e);
+                        return;
+                    }
+                };
+
+                // `socket.write_all()` is an async method. It writes the data back.
+                // We only write the `n` bytes that we actually read.
+                if let Err(e) = socket.write_all(&buffer[0..n]).await {
+                    eprintln!("Failed to write to socket for {}: {}", addr, e);
+                    return;
+                }
+            }
+        });
+    }
+}
+</code></pre>
+
+                <h4>The Asynchronous Server Architecture:</h4>
+                <ul>
+                    <li><strong><code>listener.accept().await</code></strong>: The main task of our program spends almost all its time paused at this line, waiting for a new client. This is incredibly efficient; it uses almost no CPU while waiting.</li>
+                    <li><strong><code>tokio::spawn(async move { ... })</code></strong>: This is the key to concurrency. As soon as a connection is accepted, we hand it off to a brand-new, lightweight async task. The main loop can then immediately go back to awaiting the *next* connection. This is how a single thread can begin handling thousands of clients. The runtime will manage running all the spawned tasks concurrently.</li>
+                    <li><strong><code>socket.read(&mut buffer).await</code></strong>: Inside the spawned task, it will spend most of its time paused here, waiting for its specific client to send data. While it's waiting, the `tokio` runtime is free to run other tasks that are ready to do work.</li>
+                </ul>
+
+                <h3>Step 4: Test Your Server!</h3>
+                <p>First, run your server:</p>
+                <pre><code>cargo run</code></pre>
+                <p>Now, open a <strong>new, separate terminal window</strong>. You can use a simple tool like `netcat` (available on Linux/macOS) or `telnet` (on Windows) to connect to your server.</p>
+                <pre><code># In a new terminal
+nc 127.0.0.1 8080
+</code></pre>
+                <p>Your terminal will now be connected! Type a message like "Hello, Rust!" and press Enter. The server will instantly echo it back to you. You can open many terminal windows and connect them all at once; your server will handle them all concurrently.</p>
+                <p>You have successfully built a high-performance, asynchronous network server in Rust, a task that is notoriously difficult in many other languages. This demonstrates the power and elegance of Rust's async ecosystem.</p>
+
+                <a href="../index.html" class="back-link">&larr; Back to Curriculum Map</a>
+            </article>
+        </div>
+    </main>
+    
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 The Rust Adventure.</p>
+        </div>
+    </footer>
+
+</body>
+</html>

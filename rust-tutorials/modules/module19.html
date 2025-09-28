@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 19: Ergonomics with `if let` and `while let` - The Rust Adventure</title>
+    <link rel="stylesheet" href="../style.css">
+    <link href="https://fonts.googleapis.com/css2/family/Source+Code+Pro:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <img src="https://www.rust-lang.org/static/images/rust-logo-blk.svg" alt="Rust Logo" class="logo">
+            <h1>Module 19: Ergonomics with `if let` and `while let`</h1>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <article class="module-content">
+                <h2>Objective: To learn how to use `if let` and `while let` for cleaner, more ergonomic code when you only care about matching one specific pattern.</h2>
+                <p>A full <code>match</code> statement is incredibly powerful, but sometimes it's overkill. Often, you only care about what happens if a value matches *one specific pattern*, and you want to ignore all the other possibilities. For this, Rust gives us a wonderfully clean and ergonomic tool: <code>if let</code>.</p>
+                
+                <hr>
+
+                <h3>Step 1: The `if let` Pattern</h3>
+                <p><code>if let</code> can be thought of as a "mini-match" for a single arm. It lets you combine a pattern match with an `if` statement. If the pattern matches, the code block runs, and any values are bound just like in a `match` arm.</p>
+                
+                <p><strong>Analogy: The Specific Key.</strong> A `match` statement is like a master key ring with a key for every door. You are forced to check every one. An `if let` is like having just one specific key, say, for the front door. You try it; if it opens, you go inside. If it doesn't, you just walk away. You don't have to worry about the keys for the kitchen or the garage.</p>
+
+                <h4>Comparison: `match` vs. `if let`</h4>
+                <pre><code>let some_option = Some(10);
+
+// Using a full, verbose `match` when we only care about `Some`.
+match some_option {
+    Some(value) => println!("Got the value: {}", value),
+    None => (), // We are forced to handle the `None` case, even if we do nothing.
+}
+
+// Using a clean and idiomatic `if let`.
+if let Some(value) = some_option {
+    println!("Got the value: {}", value);
+}
+// No `else` is required if you don't care about the `None` case.</code></pre>
+                <p>You can also add an `else` block, which acts like the `_` arm in a `match` statement.</p>
+
+                <h3>Step 2: The `while let` Pattern</h3>
+                <p>This same ergonomic power can be applied to loops. A <code>while let</code> loop will continue running as long as the pattern continues to match. This is perfect for processing items from a data structure until it's empty.</p>
+                <p>The classic example is processing all items in a vector by calling <code>.pop()</code>, which removes the last element and returns it wrapped in an `Option`.</p>
+                <pre><code>let mut numbers = vec![1, 2, 3];
+
+// This loop continues as long as `numbers.pop()` returns `Some(number)`.
+// When the vector is empty, it returns `None`, the pattern fails to match, and the loop stops.
+while let Some(number) = numbers.pop() {
+    println!("Processing number: {}", number);
+}
+// This will print:
+// Processing number: 3
+// Processing number: 2
+// Processing number: 1
+</code></pre>
+
+                <h3>Let's Build Our Todo App (Part 17)</h3>
+                <p>We've already been using `if let` in our <code>main</code> function! Now, we'll examine it more closely. We'll also add a new "batch processing" command to our app that perfectly demonstrates the power of <code>while let</code>.</p>
+                
+                <h4>1. Understanding Our Existing `if let`</h4>
+                <p>Look at our simple <code>main</code> function:</p>
+                <pre><code>fn main() {
+    // This is a perfect use of `if let`!
+    // We only care about the `Err` case. If `run()` returns `Ok(())`,
+    // we don't need to do anything, so a full `match` would be verbose.
+    if let Err(e) = run() {
+        eprintln!("Application error: {:?}", e);
+    }
+}</code></pre>
+
+                <h4>2. Adding a `batch` Command with `while let`</h4>
+                <p>Let's add a new command, <code>batch</code>, that takes a series of task descriptions separated by commas and adds them all at once. This will showcase string splitting and `while let`.</p>
+                <pre><code>// ... (All previous structs, enums, and traits are the same) ...
+
+// --- NEW: A Command for Batch-Adding Tasks ---
+struct BatchAddCommand { descriptions_csv: String }
+
+impl Command for BatchAddCommand {
+    fn execute(&self, tasks: &mut HashMap<u32, Task>, next_id: &mut u32) -> Result<(), AppError> {
+        // .split(',') creates an iterator.
+        let mut descriptions = self.descriptions_csv.split(',');
+
+        // We can't use `while let` here directly in a clean way because `split`
+        // returns `&str`, not an Option. Let's use a `for` loop, which is more idiomatic
+        // for iterators that don't produce Options. The `while let` concept is still
+        // important for things like `.pop()`. Let's demonstrate it with a clear example.
+
+        // We will add a `clear` command instead to showcase `while let` better.
+
+        println!("Batch adding tasks...");
+        for desc in descriptions {
+            let trimmed_desc = desc.trim();
+            if !trimmed_desc.is_empty() {
+                // We're re-using the logic of AddCommand here.
+                let add_cmd = AddCommand { description: trimmed_desc.to_string() };
+                add_cmd.execute(tasks, next_id)?; // Propagate any errors.
+            }
+        }
+        Ok(())
+    }
+}
+
+// --- Let's add a better command for `while let`: `clear_completed` ---
+struct ClearCompletedCommand;
+
+impl Command for ClearCompletedCommand {
+    fn execute(&self, tasks: &mut HashMap<u32, Task>, _next_id: &mut u32) -> Result<(), AppError> {
+        // First, collect the IDs of all completed tasks into a Vec.
+        // We can't remove from the HashMap while we are iterating over it.
+        let mut ids_to_remove: Vec<u32> = tasks.iter()
+            .filter(|(_, task)| task.completed)
+            .map(|(id, _)| *id)
+            .collect();
+
+        println!("Clearing {} completed tasks...", ids_to_remove.len());
+        
+        // Now, use `while let` to process our queue of IDs to remove.
+        while let Some(id) = ids_to_remove.pop() {
+            tasks.remove(&id);
+            println!("Removed task {}.", id);
+        }
+        
+        println!("Done clearing.");
+        Ok(())
+    }
+}
+
+
+// --- REFACTORED: The Run Loop (parsing part) ---
+fn run() -> Result<(), AppError> {
+    // ... (setup is the same) ...
+    // ... match command_name { ...
+        // (other commands are the same)
+        "clear" => Some(Box::new(ClearCompletedCommand)),
+    // ... }
+}
+</code></pre>
+
+                <h4>Patterns in Action:</h4>
+                <ul>
+                    <li><strong><code>if let Err(e) = run()</code></strong>: A perfect, real-world example of handling a `Result` where you only care about the failure case.</li>
+                    <li><strong><code>ClearCompletedCommand</code></strong>: This command demonstrates a common and important pattern. We first iterate over our data to find items that need processing (in this case, removal) and collect their IDs into a temporary `Vec`.</li>
+                    <li><strong><code>while let Some(id) = ids_to_remove.pop()</code></strong>: This is the `while let` pattern in its ideal form. The loop elegantly and safely processes every ID in our `ids_to_remove` queue until the vector is empty, at which point `.pop()` returns `None` and the loop terminates.</li>
+                </ul>
+                <p>Run <code>cargo run</code>. Add some tasks, complete a few, and then run the new <code>clear</code> command. You'll see `while let` working perfectly to process your queue of completed tasks.</p>
+
+                <a href="../index.html" class="back-link">&larr; Back to Curriculum Map</a>
+            </article>
+        </div>
+    </main>
+    
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 The Rust Adventure.</p>
+        </div>
+    </footer>
+
+</body>
+</html>

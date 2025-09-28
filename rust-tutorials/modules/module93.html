@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 93: DataFrames with `Polars` I - The Rust Adventure</title>
+    <link rel="stylesheet" href="../style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <img src="https://www.rust-lang.org/static/images/rust-logo-blk.svg" alt="Rust Logo" class="logo">
+            <h1>Module 93: DataFrames with `Polars` I</h1>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <article class="module-content">
+                <h2>Objective: To introduce the `Polars` crate for working with tabular data, focusing on reading data from a CSV and performing basic column selection and row filtering operations.</h2>
+                <p>While <code>ndarray</code> is perfect for numerical matrices, much of the world's data comes in tabular form—like spreadsheets or CSV files—with named columns and mixed data types. For this, we need a "DataFrame" library. <strong>Polars</strong> is an incredibly fast, modern DataFrame library written in Rust, designed to be a more performant and ergonomic alternative to Python's Pandas.</p>
+                
+                <hr>
+
+                <h3>Step 1: What is a DataFrame?</h3>
+                <p>A DataFrame is a 2-dimensional, labeled data structure with columns of potentially different types. You can think of it as a spreadsheet or an SQL table in memory. It is the central data structure for data analysis and manipulation.</p>
+                <p>Polars is built on top of Apache Arrow, a columnar memory format. This means that all the data for a single column is stored together contiguously in memory. This is the same principle that makes ECS in Bevy fast, and it allows Polars to perform operations on entire columns at once (using SIMD) with incredible speed.</p>
+                
+                <h3>Step 2: The Core `Polars` API</h3>
+                <p>The `Polars` API is designed around a "lazy" execution model and method chaining, which is very expressive.</p>
+                <ul>
+                    <li><strong><code>DataFrame</code></strong>: The main data structure representing the whole table.</li>
+                    <li><strong><code>Series</code></strong>: A single column of data.</li>
+                    <li><strong><code>CsvReader</code></strong>: A utility for reading CSV files into a DataFrame.</li>
+                    <li><strong><code>.select()</code></strong>: A method to choose which columns you want to keep.</li>
+                    <li><strong><code>.filter()</code></strong>: A method to select rows based on a condition.</li>
+                    <li><strong><code>.column()</code></strong>: A method to grab a single column (a `Series`) from the DataFrame.</li>
+                </ul>
+                
+                <h3>Practical Application: Analyzing a CSV</h3>
+                <p>Let's write a program that reads a CSV file of sample data, selects a few interesting columns, and filters the rows to find specific information.</p>
+
+                <h4>1. Create a Sample CSV File</h4>
+                <p>In the root of a new project, create a file named <code>avengers.csv</code>.</p>
+                <pre><code># In avengers.csv
+name,power,team,years_active
+"Iron Man",Tech,"Avengers",11
+"Captain America",Super Soldier,"Avengers",8
+"Black Widow",Spy,"Avengers",9
+"Hulk",Gamma Radiation,"Avengers",7
+"Doctor Strange",Magic,"",3
+"Spider-Man",Superhuman,"",4
+</code></pre>
+
+                <h4>2. Create a New Project</h4>
+                <pre><code>cargo new polars_intro
+cd polars_intro
+</code></pre>
+                
+                <h4>3. Update `Cargo.toml`</h4>
+                <p>We need `polars` and the `csv-file` feature.</p>
+                <pre><code>[dependencies]
+polars = { version = "0.34", features = ["csv-file", "lazy"] }
+anyhow = "1.0"
+</code></pre>
+                
+                <h4>4. The Complete `src/main.rs`</h4>
+                <pre><code>use anyhow::Result;
+use polars::prelude::*;
+
+fn main() -> Result<()> {
+    // --- 1. READING a CSV into a DataFrame ---
+    let df = CsvReader::from_path("avengers.csv")?
+        .finish()?;
+
+    println!("--- Original DataFrame ---");
+    println!("{}", df);
+
+    // --- 2. SELECTING Columns ---
+    // Select just the 'name' and 'years_active' columns.
+    let selected_df = df.select(["name", "years_active"])?;
+    
+    println!("\n--- Selected Columns ---");
+    println!("{}", selected_df);
+
+    // --- 3. FILTERING Rows ---
+    // We need to create a "boolean mask" to filter rows.
+    
+    // First, get the 'years_active' column as a Series.
+    let years_active_series = df.column("years_active")?.i64()?; // We expect it to be an i64 column.
+
+    // Second, create the boolean mask.
+    // This performs an element-wise comparison and returns a BooleanChunked.
+    let mask = years_active_series.gt(8); // `gt` means "greater than"
+
+    // Third, apply the mask to the DataFrame.
+    let filtered_df = df.filter(&mask)?;
+
+    println!("\n--- Filtered Rows (Years Active > 8) ---");
+    println!("{}", filtered_df);
+    
+    // --- 4. CHAINING operations (the idiomatic way) ---
+    // Polars' "lazy" API lets you chain these operations in a more readable way.
+    let q = df.clone().lazy()
+        .filter(col("team").eq(lit("Avengers")))
+        .filter(col("years_active").lt_eq(8)); // `lt_eq` means "less than or equal"
+
+    let chained_df = q.collect()?;
+    
+    println!("\n--- Chained Filtering (Team == 'Avengers' AND Years Active <= 8) ---");
+    println!("{}", chained_df);
+    
+    Ok(())
+}
+</code></pre>
+
+                <h4>The `Polars` API in Action:</h4>
+                <ul>
+                    <li><strong><code>CsvReader</code></strong>: A simple and powerful way to load a CSV. Polars automatically infers the data types for each column (e.g., `str` for name, `i64` for years).</li>
+                    <li><strong><code>.select([...])</code></strong>: Takes a list of column names and returns a new DataFrame containing only those columns.</li>
+                    <li><strong>Filtering Pattern</strong>: The "eager" (non-lazy) way to filter involves three steps: get the column, create a boolean mask from it (e.g., `column.gt(8)`), and then apply that mask to the original DataFrame with `.filter()`.</li>
+                    <li><strong>Lazy API & Chaining</strong>: The idiomatic way to use Polars is with the lazy API.
+                        <ul>
+                            <li><code>.lazy()</code> converts the DataFrame into a `LazyFrame`, which represents a "plan" of computation.</li>
+                            <li><code>.filter(col("...").eq(lit("...")))</code> lets you build up your plan by adding filtering steps. `col()` refers to a column, and `lit()` refers to a literal value.</li>
+                            <li><code>.collect()?</code> is the final step that executes the plan and gives you back a new `DataFrame`. The Polars query optimizer can analyze this entire plan and find the most efficient way to execute it.</li>
+                        </ul>
+                    </li>
+                </ul>
+                <p>Run <strong><code>cargo run</code></strong>. The program will load the CSV and print the results of your selection and filtering operations. You've just performed a basic data analysis workflow in high-performance, type-safe Rust. In the next module, we'll explore the more advanced capabilities of Polars, like grouping and aggregations.</p>
+
+                <a href="../index.html" class="back-link">&larr; Back to Curriculum Map</a>
+            </article>
+        </div>
+    </main>
+    
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 The Rust Adventure.</p>
+        </div>
+    </footer>
+
+</body>
+</html>

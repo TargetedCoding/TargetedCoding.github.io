@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 27: Shared Ownership with `Rc<T>` - The Rust Adventure</title>
+    <link rel="stylesheet" href="../style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <img src="https://www.rust-lang.org/static/images/rust-logo-blk.svg" alt="Rust Logo" class="logo">
+            <h1>Module 27: Shared Ownership with `Rc<T>`</h1>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <article class="module-content">
+                <h2>Objective: To solve the problem of needing a single piece of data to have multiple owners within a single thread.</h2>
+                <p>So far, we have lived by Rust's primary rule: a value can only have one owner. But what if multiple parts of your program all need to "own" the same piece of data? For these situations, Rust provides the <strong><code>Rc&lt;T&gt;</code></strong> (Reference Counted) smart pointer.</p>
+                
+                <hr>
+
+                <h3>Step 1: The Problem `Rc<T>` Solves</h3>
+                <p>Imagine you have a task that belongs to a "Work" project but also to a "High Priority" list. Who owns the task? Both? The ownership rules we know so far make this impossible. `Rc<T>` is the answer.</p>
+                <p><code>Rc<T></code> allows multiple parts of your code to share ownership of data on the heap. It keeps a "reference count" of how many owners exist. When the last owner goes out of scope, the reference count becomes zero, and the data is automatically deallocated.</p>
+                
+                <p><strong>Analogy: The Library's Most Popular Book.</strong> A popular reference book can't be checked out by just one person. Instead, many people can have a "reference" to it. The library keeps a count of how many people are currently using the book. When you get a copy, the count goes up (this is like <code>Rc::clone(&book)</code>). When you return it, the count goes down. Only when the count reaches zero does the library put the book back into deep storage.</p>
+                
+                <h4>How it Works</h4>
+                <ul>
+                    <li>You create the data with <code>Rc::new(my_data)</code>. The reference count starts at 1.</li>
+                    <li>You create a new reference for another owner with <code>Rc::clone(&my_rc)</code>. This is a cheap operation—it just increases the count and returns a new pointer. It does <strong>not</strong> deep-copy the data.</li>
+                    <li>You can see the count with <code>Rc::strong_count(&my_rc)</code>.</li>
+                </ul>
+                <p><strong>Important Limitation:</strong> `Rc<T>` is for single-threaded scenarios only. It is not thread-safe!</p>
+
+                <h3>Let's Build Our Todo App (Part 22)</h3>
+                <p>Let's add a "Task Groups" feature to our app. A single task will be able to belong to multiple groups. This is a perfect use case for `Rc<T>`.</p>
+                <p>This is a big architectural change. We will modify our main `tasks` storage and introduce a new `TaskGroup` struct.</p>
+                <pre><code>// In src/main.rs
+use std::rc::Rc; // Bring Rc into scope!
+
+// --- We will no longer need the Command trait for this simplified example ---
+// --- We'll add it back later. For now, we focus on the data structures. ---
+// Let's modify the core data structures first.
+
+// The Task struct itself doesn't need to change.
+// ...
+
+// --- NEW: A struct to represent a group of tasks ---
+struct TaskGroup {
+    name: String,
+    tasks: Vec<Rc<Task>>, // A group holds a list of shared pointers to tasks
+}
+
+// Our main application state
+struct AppState {
+    tasks: HashMap<u32, Rc<Task>>, // The "master list" of tasks
+    groups: HashMap<String, TaskGroup>,
+    next_id: u32,
+}
+
+fn main() {
+    let mut state = AppState {
+        tasks: HashMap::new(),
+        groups: HashMap::new(),
+        next_id: 1,
+    };
+    
+    // --- Example Usage ---
+
+    // 1. Create a new task and put it in an Rc.
+    let task1 = Rc::new(Task::new("Learn Rc".to_string()));
+    state.tasks.insert(state.next_id, Rc::clone(&task1));
+    state.next_id += 1;
+
+    let task2 = Rc::new(Task::new("Master shared ownership".to_string()));
+    state.tasks.insert(state.next_id, Rc::clone(&task2));
+    state.next_id += 1;
+
+    // 2. Create a new group.
+    let mut work_group = TaskGroup { name: "Work".to_string(), tasks: Vec::new() };
+
+    // 3. Add both tasks to the group. `Rc::clone` just bumps the reference count.
+    work_group.tasks.push(Rc::clone(&task1));
+    work_group.tasks.push(Rc::clone(&task2));
+    
+    state.groups.insert("Work".to_string(), work_group);
+
+    // --- Let's check the reference counts ---
+    println!("Count for Task 1 ('Learn Rc'): {}", Rc::strong_count(&task1)); // Prints 2
+    println!("Count for Task 2 ('Master...'): {}", Rc::strong_count(&task2)); // Prints 2
+
+    // Now, let's drop the original task1 variable.
+    drop(task1);
+    
+    // We can still access the task through our app state!
+    let task1_from_map = state.tasks.get(&1).unwrap();
+    println!("After drop, count for Task 1: {}", Rc::strong_count(task1_from_map)); // Prints 1
+    
+    println!("\nTasks in 'Work' group:");
+    for task in &state.groups.get("Work").unwrap().tasks {
+        println!("- {}", task.description);
+    }
+}</code></pre>
+
+                <h4>The Shared Ownership Architecture:</h4>
+                <ul>
+                    <li><strong><code>tasks: HashMap<u32, Rc<Task>></code></strong>: Our main storage now holds tasks wrapped in `Rc`. This means the `HashMap` is one of the owners.</li>
+                    <li><strong><code>tasks: Vec<Rc<Task>></code></strong>: Our `TaskGroup` also holds `Rc` pointers to tasks. This means a group can be another owner.</li>
+                    <li><strong><code>Rc::clone()</code></strong>: This is the key. When we add a task to a group, we don't move it. We create another shared owner reference. The data for the task itself exists in only one place on the heap.</li>
+                    <li><strong>Automatic Cleanup</strong>: If we delete a task from the main `tasks` map, its reference count will decrease by one. But if it's still part of a group, the count will be > 0, so the task's data will *not* be deallocated. Only when it's removed from the main list AND all groups it belongs to will the memory be freed.</li>
+                </ul>
+                <p>This module is a big conceptual leap. The code example is simplified to focus on the data structures. You have now broken free from the "one owner" rule in a safe, explicit way, enabling you to model more complex relationships in your data.</p>
+
+                <a href="../index.html" class="back-link">&larr; Back to Curriculum Map</a>
+            </article>
+        </div>
+    </main>
+    
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 The Rust Adventure.</p>
+        </div>
+    </footer>
+
+</body>
+</html>

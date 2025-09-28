@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 43: Parsing with Combinators (`nom`) II - The Rust Adventure</title>
+    <link rel="stylesheet" href="../style.css">
+    <link href="https://fonts.googleapis.com/css2?family+Code+Pro:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <img src="https://www.rust-lang.org/static/images/rust-logo-blk.svg" alt="Rust Logo" class="logo">
+            <h1>Module 43: Parsing with Combinators (`nom`) II</h1>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <article class="module-content">
+                <h2>Objective: To build a complete parser for a multi-part, real-world data format by combining the `nom` techniques from the previous module.</h2>
+                <p>You've learned how to parse a simple, single piece of data. Now, let's apply that knowledge to a more complex, realistic problem. We will build a parser that can read a structured log file line, like <code>[2025-09-24 20:05:10] [INFO] System startup complete.</code>, and turn it into a Rust struct.</p>
+                
+                <hr>
+
+                <h3>Step 1: Deconstructing the Format</h3>
+                <p>Before writing a parser, you must understand the structure of your data. A log line has three parts:</p>
+                <ol>
+                    <li>A timestamp, enclosed in `[` and `]`.</li>
+                    <li>A log level, enclosed in `[` and `]`.</li>
+                    <li>A message, which is the rest of the line.</li>
+                </ol>
+                <p>This structure is perfect for `nom`. We can write a small parser for each part and then combine them in sequence.</p>
+
+                <h3>Step 2: New `nom` Combinators</h3>
+                <p>We'll need a few more "LEGO bricks" for this task:</p>
+                <ul>
+                    <li><strong><code>take_until("]")</code></strong>: A parser that consumes input until it sees the specified string. This is great for content inside delimiters.</li>
+                    <li><strong><code>delimited(start, middle, end)</code></strong>: We saw this before, but now it's key. It will parse the opening `[`, the content, and the closing `]`.</li>
+                    <li><strong><code>alt((parser1, parser2, ...))</code></strong>: The "alternative" combinator. It tries `parser1`. If it fails, it backtracks and tries `parser2`, and so on. Perfect for parsing the log level, which could be "INFO", "WARNING", or "ERROR".</li>
+                    <li><strong><code>rest</code></strong>: A simple parser that consumes the rest of the input and returns it as a `&str`.</li>
+                </ul>
+                
+                <h3>Practical Application: The Full Log Parser</h3>
+                <p>This project will combine `thiserror`, `anyhow`, and `nom` into a single, professional-grade utility. We will reuse the project from Module 41, but with a more robust parser built from combinators.</p>
+                
+                <h4>1. Project Setup</h4>
+                <p>If you don't have it already, create a new project `log_parser` and add `anyhow`, `thiserror`, `nom`, and `chrono` to your `Cargo.toml`.</p>
+                
+                <h4>2. The Complete `src/main.rs`</h4>
+                <p>This code shows the final, complete version of our parser and the application that uses it.</p>
+                <pre><code>use anyhow::{Context, Result};
+use chrono::NaiveDateTime;
+use nom::{
+    branch::alt,
+    bytes::complete::{tag, take_until},
+    character::complete::{char, space1},
+    combinator::{map, map_res, rest},
+    sequence::{delimited, tuple},
+    IResult,
+};
+use std::fs;
+use thiserror::Error;
+
+// --- Data structures and Error Enum (same as Module 41) ---
+#[derive(Debug, PartialEq)]
+pub enum LogLevel { Info, Warning, Error }
+
+#[derive(Debug, PartialEq)]
+pub struct LogEntry {
+    pub timestamp: NaiveDateTime,
+    pub level: LogLevel,
+    pub message: String,
+}
+
+#[derive(Error, Debug)]
+pub enum ParseError<'a> { /* ... same as before ... */ }
+
+// --- NEW: Building the parser with combinators ---
+
+// A small parser for the timestamp part: `[YYYY-MM-DD HH:MM:SS]`
+fn parse_timestamp(input: &str) -> IResult<&str, NaiveDateTime> {
+    map_res(
+        delimited(char('['), take_until("]"), char(']')),
+        |s: &str| NaiveDateTime::parse_from_str(s, "%Y-%m-%d %H:%M:%S")
+    )(input)
+}
+
+// A small parser for the log level part: `[LEVEL]`
+fn parse_level(input: &str) -> IResult<&str, LogLevel> {
+    delimited(
+        char('['),
+        alt((
+            map(tag("INFO"), |_| LogLevel::Info),
+            map(tag("WARNING"), |_| LogLevel::Warning),
+            map(tag("ERROR"), |_| LogLevel::Error),
+        )),
+        char(']'),
+    )(input)
+}
+
+// The main parser that combines the smaller ones.
+fn parse_log_entry(input: &str) -> IResult<&str, LogEntry> {
+    let (input, (timestamp, _, level, _, message)) = tuple((
+        parse_timestamp,
+        space1, // Recognize the space between parts
+        parse_level,
+        space1,
+        map(rest, |s: &str| s.to_string()), // Take the rest of the line as the message
+    ))(input)?;
+
+    Ok((input, LogEntry { timestamp, level, message }))
+}
+
+
+// --- The `main` function (same as Module 41, but now uses our better parser) ---
+fn main() -> Result<()> {
+    // ... (create dummy log file and read its content) ...
+    
+    let log_content = "[2025-09-24 20:05:10] [INFO] System startup complete.\n\
+                     [2025-09-24 20:05:12] [WARNING] Low disk space.\n\
+                     I AM A MALFORMED LINE\n\
+                     [2025-09-24 20:05:15] [ERROR] Failed to connect to database.";
+    fs::write("system.log", log_content).context("Failed to create dummy log file")?;
+    let content = fs::read_to_string("system.log").context("Failed to read system.log")?;
+
+    let mut entries = Vec::new();
+    for line in content.lines() {
+        match parse_log_entry(line) {
+            Ok(("", entry)) => entries.push(entry), // Ensure the whole line was consumed
+            _ => eprintln!("Skipping malformed line: '{}'", line),
+        }
+    }
+    
+    println!("\n--- Parsed Log Entries ---");
+    println!("{:#?}", entries);
+
+    Ok(())
+}
+</code></pre>
+
+                <h4>The Combinator Architecture in Action:</h4>
+                <ul>
+                    <li><strong><code>parse_timestamp</code></strong>: A self-contained parser. It finds the `[...]` block and then uses `map_res` to try and convert the inner string into a `NaiveDateTime`. This is our first "LEGO model."</li>
+                    <li><strong><code>parse_level</code></strong>: Another self-contained parser. It uses `delimited` to find the brackets, but inside, it uses `alt` to try matching "INFO", then "WARNING", then "ERROR". The `map` combinator transforms the matched `&str` into the correct `LogLevel` enum variant.</li>
+                    <li><strong><code>parse_log_entry</code></strong>: The final assembly. We use the `tuple` combinator to say, "I expect to see a timestamp, then a space, then a log level, then a space, then the rest of the line." It calls our smaller parser functions to handle each part.</li>
+                    <li><strong>Clean Application Logic</strong>: Our `main` function is beautifully simple. It doesn't know *how* parsing happens. It just calls `parse_log_entry` on each line and handles the `Ok` or `Err` result. The complexity is perfectly encapsulated in our parser module.</li>
+                </ul>
+                <p>Run <strong><code>cargo run</code></strong>. The program will parse the valid lines and print a clean, structured representation of them, while safely skipping the malformed line. You have now graduated from simple string manipulation to robust, declarative parsing using one of the most powerful techniques in the Rust ecosystem.</p>
+
+                <a href="../index.html" class="back-link">&larr; Back to Curriculum Map</a>
+            </article>
+        </div>
+    </main>
+    
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 The Rust Adventure.</p>
+        </div>
+    </footer>
+
+</body>
+</html>

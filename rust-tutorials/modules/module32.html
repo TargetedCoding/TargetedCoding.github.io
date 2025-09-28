@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 32: Serialization and Deserialization with `serde` - The Rust Adventure</title>
+    <link rel="stylesheet" href="../style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <img src="https://www.rust-lang.org/static/images/rust-logo-blk.svg" alt="Rust Logo" class="logo">
+            <h1>Module 32: Serialization and Deserialization with `serde`</h1>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <article class="module-content">
+                <h2>Objective: To replace our simple, custom text format for saving tasks with a robust, standard format like JSON, using the `serde` crate.</h2>
+                <p>Writing and reading a custom text format is fragile. If we add a new field to our `Task` struct, our old save files become incompatible. The professional solution is to use a standard data format and a library that handles the conversion for us. In the Rust ecosystem, that library is <strong><code>serde</code></strong>.</p>
+                
+                <hr>
+
+                <h3>Step 1: What is `serde`?</h3>
+                <p><code>serde</code> is a framework for <strong>Ser</strong>ializing and <strong>De</strong>serializing Rust data structures to and from various data formats. It's incredibly fast and powerful.</p>
+                <ul>
+                    <li><strong>Serialization:</strong> The process of converting a Rust struct into a stream of bytes (e.g., a JSON string).</li>
+                    <li><strong>Deserialization:</strong> The process of converting a stream of bytes (e.g., a JSON string) back into a Rust struct.</li>
+                </ul>
+                <p><strong>Analogy: The Universal Translator.</strong> `serde` is a universal translator for your Rust structs. You give it your <code>Task</code> struct and tell it you want "JSON," and it produces a perfect JSON translation. You give it some JSON, and it translates it back into a perfect <code>Task</code> struct. The magic is that `serde` itself is just the translator; you plug in different "language packs" (like `serde_json` for JSON, or `serde_yaml` for YAML) to handle different formats.</p>
+                <p>Like `clap`, `serde` works its magic through a `#[derive]` macro.</p>
+
+                <h3>Let's Build Our Todo App (Part 26) - The `serde` Overhaul</h3>
+                <p>We are going to completely replace our persistence layer with `serde_json`. Our app will now save its data to a `tasks.json` file.</p>
+
+                <h4>1. Update `Cargo.toml`</h4>
+                <p>Add `serde` and `serde_json` to your dependencies:</p>
+                <pre><code>[dependencies]
+# ... (clap, etc.)
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"</code></pre>
+                
+                <h4>2. Update Your Data Structures</h4>
+                <p>In `src/main.rs`, we need to tell `serde` that our `Task` struct is serializable.</p>
+                <pre><code>// In src/main.rs
+use serde::{Serialize, Deserialize}; // Import the traits
+
+// Add the derive macro to Task. That's it!
+#[derive(Clone, Serialize, Deserialize)]
+struct Task {
+    description: String,
+    completed: bool,
+}
+</code></pre>
+
+                <h4>3. Overhaul the `storage.rs` Module</h4>
+                <p>Our generic I/O functions are now trivial to implement with `serde_json`.</p>
+                <pre><code>// In src/storage.rs
+use std::io::{Read, Write};
+use std::collections::HashMap;
+use crate::Task; // Make sure this is using the new serde-fied Task
+
+// We need a custom error type to handle both IO and Serde errors.
+#[derive(Debug)]
+pub enum StorageError {
+    Io(std::io::Error),
+    Json(serde_json::Error),
+}
+
+// The new save_tasks function.
+pub fn save_tasks<W: Write>(writer: W, tasks: &HashMap<u32, Task>) -> Result<(), StorageError> {
+    // serde_json can write directly to any `Write` source.
+    serde_json::to_writer_pretty(writer, tasks).map_err(StorageError::Json)
+}
+
+// The new load_tasks function.
+pub fn load_tasks<R: Read>(reader: R) -> Result<HashMap<u32, Task>, StorageError> {
+    // serde_json can read from any `Read` source.
+    // If the file is empty or malformed, it will return an error.
+    match serde_json::from_reader(reader) {
+        Ok(tasks) => Ok(tasks),
+        // If the file is empty, from_reader will give an EOF error. We'll treat this as a new, empty task list.
+        Err(e) if e.is_eof() => Ok(HashMap::new()),
+        Err(e) => Err(StorageError::Json(e)),
+    }
+}
+</code></pre>
+
+                <h4>4. Update `main.rs` to handle the changes</h4>
+                <p>We just need to adjust the filename and error handling.</p>
+                <pre><code>// In src/main.rs
+
+// ... (use statements)
+
+// Tell main about the new error type.
+mod storage;
+use storage::StorageError;
+
+// ... (clap structs and Task struct)
+
+fn main() -> Result<(), StorageError> { // main can return a Result!
+    // ...
+    let filename = "tasks.json"; // New filename!
+    let file = File::open(filename).unwrap_or_else(|_| File::create(filename).unwrap());
+    let reader = BufReader::new(file);
+    let mut tasks = storage::load_tasks(reader)?; // Use `?` for cleaner error handling
+
+    // ... (command execution logic) ...
+
+    let file = File::create(filename).map_err(StorageError::Io)?;
+    let writer = BufWriter::new(file);
+    storage::save_tasks(writer, &tasks)?;
+
+    println!("...App finished successfully.");
+    Ok(())
+}
+</code></pre>
+
+                <h4>The `serde`-Powered Experience:</h4>
+                <ul>
+                    <li><strong><code>#[derive(Serialize, Deserialize)]</code></strong>: With this one line, you've taught Rust how to convert your `Task` struct to and from any format `serde` supports.</li>
+                    <li><strong><code>serde_json::to_writer_pretty</code></strong>: This function handles the entire process of converting your `HashMap` into a nicely formatted JSON string and writing it to our buffered writer.</li>
+                    <li><strong><code>serde_json::from_reader</code></strong>: This handles reading from our buffered reader and parsing the JSON back into a `HashMap<u32, Task>`. It's robust and will return an error if the JSON is malformed.</li>
+                    <li><strong>Extensibility</strong>: If we add a `priority` field back to our `Task` struct later, what do we need to change in our storage code? **Nothing!** We just add the field to the struct, and `serde` will automatically include it in the JSON. Our save/load code is now future-proof.</li>
+                </ul>
+                <p>Run your application. Add a task. Now open the `tasks.json` file that was created. You will see your data in a clean, human-readable format! You have just implemented a professional, robust, and extensible persistence layer for your application.</p>
+
+                <a href="../index.html" class="back-link">&larr; Back to Curriculum Map</a>
+            </article>
+        </div>
+    </main>
+    
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 The Rust Adventure.</p>
+        </div>
+    </footer>
+
+</body>
+</html>

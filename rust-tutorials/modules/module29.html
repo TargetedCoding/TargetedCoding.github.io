@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 29: Thread-Safe Shared Ownership - The Rust Adventure</title>
+    <link rel="stylesheet" href="../style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <img src="https://www.rust-lang.org/static/images/rust-logo-blk.svg" alt="Rust Logo" class="logo">
+            <h1>Module 29: Thread-Safe Shared Ownership with `Arc<T>` and `Mutex<T>`</h1>
+        </div>
+    </header
+
+    <main>
+        <div class="container">
+            <article class="module-content">
+                <h2>Objective: To introduce the thread-safe equivalents of `Rc<T>` and `RefCell<T>` for concurrent programming.</h2>
+                <p>Congratulations on making it to the end of Day 6! So far, our smart pointers <code>Rc&lt;T&gt;</code> and <code>RefCell&lt;T&gt;</code> have a critical limitation: they are <strong>not thread-safe</strong>. If you try to send them across threads, the compiler will stop you. To write concurrent programs, Rust provides two powerful, thread-safe counterparts: <strong><code>Arc&lt;T&gt;</code></strong> and <strong><code>Mutex&lt;T&gt;</code></strong>.</p>
+                
+                <hr>
+
+                <h3>Step 1: `Arc<T>` - Atomic Reference Counting</h3>
+                <p><code>Arc&lt;T&gt;</code> is the thread-safe version of <code>Rc&lt;T&gt;</code>. The name stands for <strong>Atomically Reference Counted</strong>. It works exactly like <code>Rc</code>, allowing multiple owners to share data. The only difference is that it uses "atomic operations" to update its reference count. These operations are slightly slower than `Rc`'s, but they guarantee that the count can't be corrupted if two threads try to update it at the exact same time.</p>
+                <p><strong>Rule of Thumb:</strong> If you need shared ownership in a single thread, use `Rc`. If you need to share ownership across multiple threads, use `Arc`.</p>
+
+                <h3>Step 2: `Mutex<T>` - Mutual Exclusion</h3>
+                <p><code>Mutex&lt;T&gt;</code> is the thread-safe alternative to <code>RefCell&lt;T&gt;</code>. A `Mutex` provides "mutual exclusion," which is a way to ensure that only one thread can access the data inside it at any given time.</p>
+                <p>Instead of <code>.borrow_mut()</code>, you call <code>.lock()</code>. This call will:</p>
+                <ol>
+                    <li>Check if another thread currently has the "lock".</li>
+                    <li>If it does, the current thread will wait (be blocked) until the lock is released.</li>
+                    <li>If the lock is free, the current thread acquires it and gets a mutable reference to the data.</li>
+                </ol>
+                <p>When the mutable reference goes out of scope, the lock is automatically released, allowing another waiting thread to proceed. This mechanism prevents "data races," one of the most dangerous bugs in concurrent programming.</p>
+
+                <p><strong>Analogy: The Master Key to a Secure Room.</strong> A `Mutex` is a secure room containing a valuable document (the data). An `Arc` allows many people in different parts of a building (threads) to have a copy of the key to the room's antechamber. To access the document, a person must use their key to call <code>.lock()</code> on the main door. While they are inside, the door is locked, and no one else can enter. When they leave the room (the reference from `.lock()` goes out of scope), the door automatically unlocks, allowing the next person in line to enter.</p>
+                
+                <h3>Practical Application: A Standalone Concurrent Counter</h3>
+                <p>The combination <strong><code>Arc&lt;Mutex&lt;T&gt;&gt;</code></strong> is the canonical way to share mutable state between threads in Rust. We won't refactor our main app to be multi-threaded today (that's a topic for Day 9!), but we will write a small, standalone program to see these tools in action.</p>
+                <p>Create a new project with <code>cargo new concurrent_counter</code> or just replace your Todo app's <code>main.rs</code> temporarily to run this exercise.</p>
+                <pre><code>// In a new main.rs
+use std::sync::{Arc, Mutex};
+use std::thread;
+
+fn main() {
+    // 1. Create data inside a Mutex, which is then placed in an Arc.
+    // This creates a thread-safe, reference-counted pointer to our counter.
+    let counter = Arc::new(Mutex::new(0));
+    
+    // A vector to hold the handles to the threads we spawn.
+    let mut handles = vec![];
+
+    // 2. Spawn 10 threads.
+    for _ in 0..10 {
+        // `Arc::clone` creates a new pointer to the same Mutex.
+        // It's cheap and safe to send this new pointer to another thread.
+        let counter_clone = Arc::clone(&counter);
+        
+        // `thread::spawn` creates and runs a new thread.
+        let handle = thread::spawn(move || {
+            // Inside the thread, we acquire the lock.
+            // .lock().unwrap() will panic if the mutex is "poisoned" (a thread panicked while holding the lock).
+            let mut num = counter_clone.lock().unwrap();
+            
+            // We now have exclusive, mutable access to the data.
+            *num += 1;
+
+            // The lock is automatically released when `num` goes out of scope here.
+        });
+        handles.push(handle);
+    }
+
+    // 3. Wait for all threads to finish their work.
+    for handle in handles {
+        handle.join().unwrap(); // .join() blocks until the thread has finished.
+    }
+
+    // 4. Print the final result.
+    // At this point, we are the only thread left, so we can safely acquire the lock and read the data.
+    println!("Final result: {}", *counter.lock().unwrap());
+}</code></pre>
+
+                <h4>Concurrency Concepts in Action:</h4>
+                <ul>
+                    <li><strong><code>Arc::new(Mutex::new(0))</code></strong>: We wrap our data `0` first in a `Mutex` to control access, then in an `Arc` to allow shared ownership between threads.</li>
+                    <li><strong><code>Arc::clone(&counter)</code></strong>: Before spawning a thread, we create a new `Arc` pointer. This pointer is what gets `move`d into the new thread.</li>
+                    <li><strong><code>.lock().unwrap()</code></strong>: This is the critical line. Each thread must wait its turn to acquire the lock. Once it has the lock, it is guaranteed to have exclusive access.</li>
+                    <li><strong><code>handle.join()</code></strong>: This ensures our `main` thread doesn't exit and print the result before all the spawned threads have had a chance to run and finish their work.</li>
+                </ul>
+                <p>Run <code>cargo run</code>. The output will be <strong><code>Final result: 10</code></strong>. This proves that even though 10 threads were running concurrently and all trying to modify the same piece of data, the `Mutex` protected it and ensured every operation happened correctly. You now have the foundational knowledge for writing safe, concurrent programs in Rust!</p>
+
+                <a href="../index.html" class="back-link">&larr; Back to Curriculum Map</a>
+            </article>
+        </div>
+    </main>
+    
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 The Rust Adventure.</p>
+        </div>
+    </footer>
+
+</body>
+</html>

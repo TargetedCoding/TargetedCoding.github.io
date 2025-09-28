@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 52: Memory Layout and Management - The Rust Adventure</title>
+    <link rel="stylesheet" href="../style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <img src="https://www.rust-lang.org/static/images/rust-logo-blk.svg" alt="Rust Logo" class="logo">
+            <h1>Module 52: Memory Layout and Management</h1>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <article class="module-content">
+                <h2>Objective: To understand how Rust lays out data structures in memory and how to control that layout for safe FFI and performance-critical work.</h2>
+                <p>In the last module, we passed simple types like integers and pointers to C. But what happens if you need to pass a whole struct? By default, the Rust compiler is free to reorder the fields in your structs to optimize for memory usage. This is great for pure Rust code, but it's a disaster for FFI, as the C compiler won't know about this reordering. We need a way to enforce a consistent memory layout.</p>
+                
+                <hr>
+
+                <h3>Step 1: The `#[repr]` Attribute</h3>
+                <p>The <strong><code>#[repr(...)]</code></strong> attribute is how you tell the compiler to use a specific memory layout representation for a struct or enum.</p>
+                <ul>
+                    <li><strong><code>#[repr(Rust)]</code></strong>: The default. The compiler is free to reorder fields to minimize padding and save space. Enum variants might be optimized in clever ways. You should always use this unless you have a specific reason not to.</li>
+                    <li><strong><code>#[repr(C)]</code></strong>: The most important representation for FFI. This tells the compiler <strong>not</strong> to reorder fields. It guarantees that the struct's layout in memory is compatible with the C ABI. It also forces enums to be represented as a simple C-style integer.</li>
+                    <li><strong>Other representations</strong> like <code>#[repr(transparent)]</code> and <code>#[repr(u8)]</code> exist for more advanced use cases.</li>
+                </ul>
+                <p><strong>Analogy: The Packed Suitcase.</strong> <code>#[repr(Rust)]</code> is like a smart packer who can rearrange your clothes to fit perfectly into the smallest possible suitcase. <code>#[repr(C)]</code> is like a packer who must follow a strict, pre-defined list of where each item must go, even if it leaves some empty space. This is less efficient, but it's predictable, which is what you need when the person unpacking the suitcase (the C code) has the same list.</p>
+
+                <h3>Step 2: Size, Alignment, and the Global Allocator</h3>
+                <p>These are deeper systems concepts that `unsafe` and FFI force you to consider:</p>
+                <ul>
+                    <li><strong>Size:</strong> How many bytes a type takes up in memory. You can get this with <code>std::mem::size_of::<T>()</code>.</li>
+                    <li><strong>Alignment:</strong> The memory address where a value can be stored. For performance, CPUs require data to be "aligned." For example, a <code>u32</code> (4 bytes) must often be stored at an address that is a multiple of 4. This can create "padding" bytes in structs.</li>
+                    <li><strong>The Global Allocator:</strong> When you use `Box`, `Vec`, or `String`, where does the heap memory come from? It comes from the "global allocator." Rust uses the system's default allocator, but you can replace it with other allocators (like `jemalloc` for better performance in some concurrent workloads) using the <code>#[global_allocator]</code> attribute.</li>
+                </ul>
+                
+                <h3>Practical Application: Passing a Struct to C</h3>
+                <p>Let's build on our FFI example from the last module. We'll define a struct in Rust, pass it to a C function that can read its fields, and get a result back.</p>
+
+                <h4>1. Create a C file: `src/my_c_lib.c`</h4>
+                <pre><code>#include <stdint.h> // For standard integer types like int32_t
+
+// Define the struct in C. Its layout must match the Rust struct.
+typedef struct {
+    int32_t x;
+    int32_t y;
+} Point;
+
+// A C function that takes a pointer to a Point and calculates its distance from the origin.
+int32_t calculate_distance(const Point* p) {
+    // A simple Manhattan distance for the example
+    return abs(p->x) + abs(p->y);
+}
+</code></pre>
+                
+                <h4>2. Update `build.rs` to compile the new C code</h4>
+                <p>(This file should be the same as in the previous module).</p>
+                
+                <h4>3. The Complete `src/main.rs`</h4>
+                <pre><code>use std::os::raw::c_int;
+
+// 1. Define the struct in Rust with `#[repr(C)]`.
+// This guarantees its memory layout matches the C version.
+#[repr(C)]
+#[derive(Debug)]
+pub struct Point {
+    pub x: c_int,
+    pub y: c_int,
+}
+
+// 2. Declare the foreign function signature.
+// It takes a constant raw pointer to our Point struct.
+extern "C" {
+    fn calculate_distance(point: *const Point) -> c_int;
+}
+
+fn main() {
+    // 3. Create an instance of our FFI-safe struct.
+    let my_point = Point { x: 3, y: -4 };
+    let distance: c_int;
+
+    println!("Rust Point: {:?}", my_point);
+    println!("Passing this point to C to calculate distance...");
+
+    // 4. Call the C function inside an `unsafe` block.
+    // We pass a reference `&my_point`, which Rust automatically
+    // converts ("coerces") into a raw pointer `*const Point`.
+    unsafe {
+        distance = calculate_distance(&my_point);
+    }
+
+    println!("...C function returned. Distance is: {}", distance);
+    assert_eq!(distance, 7);
+
+    // Let's also inspect the memory layout.
+    println!("\n--- Memory Details ---");
+    println!("Size of Point in Rust: {} bytes", std::mem::size_of::<Point>());
+    println!("Alignment of Point in Rust: {} bytes", std::mem::align_of::<Point>());
+}
+</code></pre>
+
+                <h4>The Interoperability in Action:</h4>
+                <ul>
+                    <li><strong><code>#[repr(C)]</code></strong>: This is the crucial line. It tells Rust: "Lay out the `Point` struct in memory exactly as a C compiler would: first the `x` field, then the `y` field, with any necessary padding." Without this, Rust might reorder them, and the C function would read garbage data.</li>
+                    <li><strong>Passing a Pointer</strong>: When we call <code>calculate_distance(&my_point)</code>, we are passing a pointer to the memory location where our `my_point` struct lives. The C function receives this memory address, and because of `#[repr(C)]`, it knows exactly what the layout of the data at that address will be.</li>
+                    <li><strong><code>std::mem::size_of</code></strong>: This standard library function is a great tool for understanding how your data is represented. You can see exactly how many bytes your structs occupy.</li>
+                </ul>
+                <p>Run <strong><code>cargo run</code></strong>. The program will successfully create a struct in Rust, pass it to C code, have the C code perform a calculation on its fields, and return the result to Rust. You have now mastered the fundamental concepts of controlling memory layout, a critical skill for safe and effective FFI and low-level systems programming.</p>
+
+                <a href="../index.html" class="back-link">&larr; Back to Curriculum Map</a>
+            </article>
+        </div>
+    </main>
+    
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 The Rust Adventure.</p>
+        </div>
+    </footer>
+
+</body>
+</html>

@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 41: Library vs. Application Errors - The Rust Adventure</title>
+    <link rel="stylesheet" href="../style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <img src="https://www.rust-lang.org/static/images/rust-logo-blk.svg" alt="Rust Logo" class="logo">
+            <h1>Module 41: Library vs. Application Errors (`thiserror` & `anyhow`)</h1>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <article class="module-content">
+                <h2>Objective: To understand the two main philosophies of error handling in Rust and learn the canonical crates for each: `thiserror` for libraries and `anyhow` for applications.</h2>
+                <p>Welcome to Day 10! We're kicking off our deep dive by professionalizing our error handling. While our custom `AppError` enum was a good start, the Rust ecosystem has converged on two fantastic crates that make error handling more robust and less boilerplate-heavy.</p>
+                
+                <hr>
+
+                <h3>Step 1: Two Kinds of Errors</h3>
+                <p>When you write code, you generally have two contexts:</p>
+                <ol>
+                    <li><strong>As a Library Author:</strong> You are creating code for *other people* to use. Your users need to be able to react differently to different kinds of errors. For example, a user of an HTTP library needs to be able to tell the difference between a "Network Error" and a "Server Returned 404 Not Found" error. This requires creating specific, well-defined, and structured error types.</li>
+                    <li><strong>As an Application Author:</strong> You are creating a final product. You often don't need to programmatically handle every single error variant. You mostly just care that *an error happened*, want to add context to it (e.g., "Failed *while trying to open config file*"), and then log it or display it to the end-user. This requires a flexible, easy-to-use error type.</li>
+                </ol>
+                <p>These two use cases have led to the two most popular error handling crates in the ecosystem.</p>
+                
+                <h3>Step 2: `thiserror` for Libraries</h3>
+                <p><strong><code>thiserror</code></strong> is a crate that helps you create high-quality, structured error enums. Its primary feature is a <code>#[derive(Error)]</code> procedural macro that automatically implements the standard <code>std::error::Error</code> trait for you. It also makes it easy to "wrap" other error types and generate user-friendly display messages.</p>
+                <pre><code>use thiserror::Error;
+use std::io;
+
+#[derive(Error, Debug)]
+pub enum DataStoreError {
+    #[error("Failed to connect to the database: {0}")]
+    ConnectionFailed(String),
+    
+    #[error("Could not read data from file")]
+    IoError(#[from] io::Error), // Automatically converts io::Error into this variant
+    
+    #[error("Data validation failed: `{0}` is not a valid user ID")]
+    Validation(String),
+}
+</code></pre>
+                <p>This creates a perfect library-grade error that users can `match` on to handle specific failure cases.</p>
+                
+                <h3>Step 3: `anyhow` for Applications</h3>
+                <p><strong><code>anyhow</code></strong> provides a single, universal error type: <code>anyhow::Error</code>. It can hold any error type that implements `std::error::Error`. Its real power comes from the <code>.context()</code> method, which lets you add a chain of human-readable context to an error as it propagates up your call stack.</p>
+                <pre><code>use anyhow::{Context, Result}; // anyhow provides its own `Result` type alias
+use std::fs;
+
+fn read_config(path: &str) -> Result<String> {
+    let content = fs::read_to_string(path)
+        .context(format!("Failed to read config file from '{}'", path))?; // Add context!
+    Ok(content)
+}
+
+fn main() {
+    match read_config("app.conf") {
+        Ok(config) => println!("Config loaded."),
+        Err(e) => {
+            // anyhow prints a beautiful, chained error report.
+            eprintln!("Error: {:?}", e);
+        }
+    }
+}
+</code></pre>
+                <p>If `app.conf` doesn't exist, the output would look something like this:</p>
+                <pre><code>Error: Failed to read config file from 'app.conf'
+
+Caused by:
+    No such file or directory (os error 2)
+</code></pre>
+
+                <h3>Practical Application: A Standalone Example</h3>
+                <p>Let's create a small program that demonstrates both crates working together, which is a very common pattern. We'll have a "library-like" module that uses `thiserror` and an "application" `main` function that uses `anyhow` to call it.</p>
+                
+                <h4>1. Create a New Project</h4>
+                <pre><code>cargo new pro_errors
+cd pro_errors
+</code></pre>
+                
+                <h4>2. Update `Cargo.toml`</h4>
+                <pre><code>[dependencies]
+anyhow = "1.0"
+thiserror = "1.0"
+</code></pre>
+                
+                <h4>3. The Complete `src/main.rs`</h4>
+                <pre><code>use anyhow::{Context, Result};
+use thiserror::Error;
+
+// --- "LIBRARY" CODE using `thiserror` ---
+mod data_layer {
+    use super::thiserror::Error;
+
+    #[derive(Error, Debug)]
+    pub enum DataError {
+        #[error("Database is disconnected")]
+        Disconnected,
+        #[error("Query failed: {query}")]
+        QueryFailed { query: String, details: String },
+    }
+
+    pub fn get_user(id: u32) -> Result<String, DataError> {
+        if id < 100 {
+            Ok(format!("User{}", id))
+        } else {
+            // Pretend this query fails.
+            Err(DataError::QueryFailed {
+                query: "SELECT name FROM users...".to_string(),
+                details: "User ID out of bounds.".to_string(),
+            })
+        }
+    }
+}
+
+// --- "APPLICATION" CODE using `anyhow` ---
+fn process_user_data() -> Result<()> {
+    // We call our library function. The `?` operator works because `anyhow::Error`
+    // can be created `From` any type that implements `std::error::Error`.
+    let user = data_layer::get_user(200)
+        .context("Failed to process user data for ID 200")?;
+    
+    println!("Successfully fetched user: {}", user);
+    Ok(())
+}
+
+fn main() {
+    println!("Running application...");
+    if let Err(e) = process_user_data() {
+        eprintln!("FATAL ERROR: {:?}", e);
+    }
+}
+</code></pre>
+
+                <h4>The Professional Pattern:</h4>
+                <ul>
+                    <li><strong><code>data_layer</code></strong>: This module acts like an external library. It defines its specific, structured `DataError` enum. A user of this library could `match` on `DataError::Disconnected` vs `DataError::QueryFailed` and react differently.</li>
+                    <li><strong><code>process_user_data</code></strong>: This is our application logic. It uses `anyhow::Result` for maximum flexibility. It doesn't care *why* `get_user` failed, it just needs to know that it did. The `?` operator seamlessly converts the specific `DataError` into the generic `anyhow::Error`.</li>
+                    <li><strong><code>.context(...)</code></strong>: The application adds a layer of meaning to the error. The library just says "Query Failed." The application says, "I was *processing data for user 200* when the query failed." This is invaluable for debugging.</li>
+                </ul>
+                <p>This separation is the key to professional error handling in Rust. Use `thiserror` to define specific errors in your core logic and libraries, and use `anyhow` to handle them with context in your final application.</p>
+
+                <a href="../index.html" class="back-link">&larr; Back to Curriculum Map</a>
+            </article>
+        </div>
+    </main>
+    
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 The Rust Adventure.</p>
+        </div>
+    </footer>
+
+</body>
+</html>

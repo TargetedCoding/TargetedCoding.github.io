@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 51: The Foreign Function Interface (FFI) - The Rust Adventure</title>
+    <link rel="stylesheet" href="../style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <img src="https://www.rust-lang.org/static/images/rust-logo-blk.svg" alt="Rust Logo" class="logo">
+            <h1>Module 51: The Foreign Function Interface (FFI)</h1>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <article class="module-content">
+                <h2>Objective: To learn how to use Rust's Foreign Function Interface (FFI) to call functions from a C library, a cornerstone of systems programming.</h2>
+                <p>One of Rust's greatest strengths is its ability to integrate with the vast ecosystem of existing C libraries. You don't have to rewrite everything in Rust! The Foreign Function Interface (FFI) is the mechanism that allows Rust code to call functions written in other languages, and for other languages to call Rust functions.</p>
+                
+                <hr>
+
+                <h3>Step 1: The `extern "C"` Block</h3>
+                <p>To tell Rust about functions in an external C library, you declare them inside an <code>extern "C" { ... }</code> block. This block contains the function signatures as they appear in the C header file, but written with Rust's syntax.</p>
+                <p>The <code>"C"</code> part is the Application Binary Interface (ABI). It tells Rust how to format the function call in memory so that the C code will understand it. The C ABI is the most common standard for interoperability.</p>
+                <p>Crucially, the Rust compiler cannot analyze the C code to guarantee safety. Therefore, any call to a foreign function is inherently <strong><code>unsafe</code></strong>. You are responsible for ensuring you are calling it with the correct arguments and that the C library itself is safe.</p>
+
+                <h3>Step 2: C Types vs. Rust Types</h3>
+                <p>C types don't always map 1-to-1 with Rust types. The <code>libc</code> crate provides Rust type aliases for common C types (like `c_int` for `int`, `c_char` for `char`, etc.) to make this easier.</p>
+                
+                <h3>Practical Application: Calling the C Standard Library</h3>
+                <p>Let's do something amazing: we'll call the `abs` function from the C standard library directly from Rust, without any special crates. This is one of the simplest FFI examples possible.</p>
+
+                <h4>1. Create a New Project</h4>
+                <pre><code>cargo new ffi_demo
+cd ffi_demo
+</code></pre>
+                
+                <h4>2. The Complete `src/main.rs`</h4>
+                <pre><code>// We use the `libc` crate to get the correct C type definitions.
+// Let's add it to Cargo.toml first: `cargo add libc`
+extern crate libc;
+
+// 1. Declare the foreign function signature in an `extern` block.
+// We are telling Rust: "There is a function named `abs` that takes a C `int`
+// and returns a C `int`. Trust me."
+extern "C" {
+    fn abs(input: libc::c_int) -> libc::c_int;
+}
+
+fn main() {
+    let number: libc::c_int = -5;
+    let absolute_number: libc::c_int;
+
+    // 2. Call the foreign function inside an `unsafe` block.
+    // This is required because the Rust compiler cannot guarantee
+    // that the `abs` function is safe or that we are calling it correctly.
+    unsafe {
+        absolute_number = abs(number);
+    }
+    
+    println!("The absolute value of {} is {}.", number, absolute_number);
+    assert_eq!(absolute_number, 5);
+}
+</code></pre>
+
+                <h3>A More Complex Example: Calling a Custom C Function</h3>
+                <p>Let's create our own C library and call it. This demonstrates the full build and link process.</p>
+                
+                <h4>1. Create a C file: `src/my_c_lib.c`</h4>
+                <pre><code>#include <stdio.h>
+
+void hello_from_c(const char* name) {
+    printf("Hello, %s, from your friends in C!\\n", name);
+}
+</code></pre>
+                
+                <h4>2. Create a Build Script: `build.rs`</h4>
+                <p>This is a special script that Cargo runs before compiling your crate. We'll use the `cc` crate to compile our C code.</p>
+                <p>Add to `Cargo.toml`: `[build-dependencies]
+cc = "1.0"`</p>
+                <pre><code>// In build.rs, at the root of your project
+fn main() {
+    // Compile our C file and link it to the Rust binary.
+    cc::Build::new().file("src/my_c_lib.c").compile("my_c_lib");
+}
+</code></pre>
+                
+                <h4>3. Update `src/main.rs` to call our new function</h4>
+                <pre><code>use std::ffi::CString;
+use std::os::raw::c_char;
+
+// Declare the signature of our custom C function.
+extern "C" {
+    fn hello_from_c(name: *const c_char);
+}
+
+fn main() {
+    let rust_name = "Rustacean";
+    // C strings are null-terminated. CString handles this for us.
+    let c_name = CString::new(rust_name).unwrap();
+
+    println!("Calling C from Rust...");
+    unsafe {
+        // We pass a raw pointer to the C function.
+        hello_from_c(c_name.as_ptr());
+    }
+    println!("...C function returned. We are back in Rust!");
+}
+</code></pre>
+
+                <h4>The FFI Workflow:</h4>
+                <ul>
+                    <li><strong>Declare (`extern "C"`):</strong> You tell Rust the "shape" (the signature) of the foreign function.</li>
+                    <li><strong>Build & Link (`build.rs`):</strong> You ensure the external C code is compiled and linked so your Rust program can find it at runtime.</li>
+                    <li><strong>Call (`unsafe`):</strong> You call the function from within an `unsafe` block, carefully converting any Rust types (like `String`) into C-compatible types (like a null-terminated `*const c_char`).</li>
+                </ul>
+                <p>Run <strong><code>cargo run</code></strong>. Cargo will first run `build.rs` to compile the C code, and then it will compile and run your Rust code. You will see the message from the C function printed to your console! You have successfully bridged two different programming languages, a powerful technique for leveraging existing code and writing high-performance systems.</p>
+
+                <a href="../index.html" class="back-link">&larr; Back to Curriculum Map</a>
+            </article>
+        </div>
+    </main>
+    
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 The Rust Adventure.</p>
+        </div>
+    </footer>
+
+</body>
+</html>

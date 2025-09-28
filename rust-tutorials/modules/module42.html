@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 42: Parsing with Combinators (`nom`) I - The Rust Adventure</title>
+    <link rel="stylesheet" href="../style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <img src="https://www.rust-lang.org/static/images/rust-logo-blk.svg" alt="Rust Logo" class="logo">
+            <h1>Module 42: Parsing with Combinators (`nom`) I</h1>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <article class="module-content">
+                <h2>Objective: To introduce the concept of parser combinators and use the `nom` crate to parse a simple, fixed-format string.</h2>
+                <p>Parsing is a fundamental task in programming, but it can be surprisingly difficult. Splitting strings is brittle, and regular expressions can become complex and slow. The Rust ecosystem has embraced a powerful alternative: <strong>parser combinators</strong>, with <strong><code>nom</code></strong> being the most popular library.</p>
+                
+                <hr>
+
+                <h3>Step 1: What is a Parser Combinator?</h3>
+                <p>The core idea is simple and elegant. Instead of writing one giant, monolithic function to parse a string, you build lots of small, simple parser functions and then combine them to create a larger, more complex parser.</p>
+                <p>Every parser function in `nom` has the same signature: it takes an input (like a `&str`) and returns a `Result`. If parsing is successful, it returns <code>Ok((remaining_input, parsed_value))</code>. If it fails, it returns an <code>Err</code>.</p>
+                <p><strong>Analogy: LEGOs for Parsers.</strong> You don't carve a whole spaceship from a single block of wood. You connect small, standard LEGO bricks together. With `nom`, you don't write one giant, complex parser. You use tiny, pre-built parsers (like a parser that only recognizes the letter 'a', or one that only recognizes digits) and combine them into bigger and bigger parsers until you have one that understands your entire data format.</p>
+
+                <h3>Step 2: Core `nom` Parsers</h3>
+                <p>`nom` provides a huge library of these "LEGO brick" parsers. Some of the most basic are:</p>
+                <ul>
+                    <li><strong><code>tag("some_string")</code></strong>: A parser that recognizes an exact literal string.</li>
+                    <li><strong><code>take(n)</code></strong>: A parser that takes exactly `n` characters (or bytes).</li>
+                    <li><strong><code>digit1</code></strong>: A parser that recognizes one or more ASCII digits (`0`-`9`).</li>
+                    <li><strong>Combinators:</strong> Functions that take parsers as input and return a new parser, like:
+                        <ul>
+                            <li><strong><code>separated_pair(first, sep, second)</code></strong>: Parses `first`, then `sep`, then `second`.</li>
+                            <li><strong><code>delimited(start, middle, end)</code></strong>: Parses `start`, then `middle`, then `end`.</li>
+                        </ul>
+                    </li>
+                </ul>
+
+                <h3>Practical Application: Parsing a Hex Color Code</h3>
+                <p>Let's write a parser for a common and simple format: a CSS-style hex color code, like <code>#ff00ff</code>. Our goal is to turn this string into a struct containing the red, green, and blue values.</p>
+
+                <h4>1. Create a New Project</h4>
+                <pre><code>cargo new hex_parser
+cd hex_parser
+</code></pre>
+                
+                <h4>2. Update `Cargo.toml`</h4>
+                <pre><code>[dependencies]
+nom = "7"
+</code></pre>
+                
+                <h4>3. The Complete `src/main.rs`</h4>
+                <pre><code>use nom::{
+    bytes::complete::{tag, take_while_m_n},
+    combinator::{map_res, recognize},
+    sequence::tuple,
+    IResult,
+};
+
+// 1. Define the output data structure.
+#[derive(Debug, PartialEq)]
+pub struct Color {
+    pub red: u8,
+    pub green: u8,
+    pub blue: u8,
+}
+
+// 2. Create a small helper parser for a single hex digit.
+// `take_while_m_n(2, 2, ...)` will take exactly 2 characters.
+// `is_hex_digit` is a helper that returns true for 0-9, a-f, A-F.
+fn hex_primary(input: &str) -> IResult<&str, u8> {
+    map_res(
+        recognize(take_while_m_n(2, 2, |c: char| c.is_ascii_hexdigit())),
+        |out: &str| u8::from_str_radix(out, 16),
+    )(input)
+}
+
+// 3. Combine the small parsers to create the full color parser.
+fn parse_hex_color(input: &str) -> IResult<&str, Color> {
+    // `tuple` is a combinator that applies a sequence of parsers.
+    let (input, (_, red, green, blue)) = tuple((
+        tag("#"),
+        hex_primary,
+        hex_primary,
+        hex_primary,
+    ))(input)?;
+
+    // 4. If everything parsed correctly, build our final struct.
+    Ok((input, Color { red, green, blue }))
+}
+
+// --- Let's test it! ---
+fn main() {
+    let hex_code = "#2F14DF";
+    println!("Parsing '{}'...", hex_code);
+    
+    match parse_hex_color(hex_code) {
+        Ok((remaining_input, color)) => {
+            println!("Successfully parsed color: {:?}", color);
+            println!("Remaining input: '{}'", remaining_input);
+        }
+        Err(e) => {
+            eprintln!("Failed to parse color: {:?}", e);
+        }
+    }
+}
+
+// --- Day 8 Bonus: Unit Tests! ---
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_parser() {
+        assert_eq!(
+            parse_hex_color("#2F14DF"),
+            Ok(("", Color { red: 47, green: 20, blue: 223 }))
+        );
+        assert!(parse_hex_color("not a color").is_err());
+        assert!(parse_hex_color("#12345G").is_err()); // G is not a hex digit
+    }
+}
+</code></pre>
+
+                <h4>The Combinator Architecture:</h4>
+                <ul>
+                    <li><strong><code>hex_primary</code></strong>: This is our first "LEGO brick." It knows how to parse exactly two hex characters and convert them into a `u8` number.
+                        <ul>
+                            <li><code>take_while_m_n</code> finds the 2 hex characters.</li>
+                            <li><code>recognize</code> returns the matched characters as a `&str`.</li>
+                            <li><code>map_res</code> takes the `&str` and tries to map it to a `u8` using `from_str_radix`, handling any potential parsing errors.</li>
+                        </ul>
+                    </li>
+                    <li><strong><code>parse_hex_color</code></strong>: This is our final model, built from smaller bricks. We use the `tuple` combinator to say: "I expect to see a `#` tag, followed by one `hex_primary`, another `hex_primary`, and a final `hex_primary`."</li>
+                    <li><strong><code>Ok((input, Color { ... }))</code></strong>: If the `tuple` parser succeeds, it gives us the remaining input and a tuple of all the parsed values. We then construct our final `Color` struct and return it.</li>
+                </ul>
+                <p>Run <strong><code>cargo run</code></strong> and <strong><code>cargo test</code></strong>. You'll see your parser successfully deconstruct the string into meaningful data. You've just learned the fundamentals of a new, powerful, and safe parsing paradigm that can be scaled up to handle incredibly complex formats, which is exactly what we'll do in the next module.</p>
+
+                <a href="../index.html" class="back-link">&larr; Back to Curriculum Map</a>
+            </article>
+        </div>
+    </main>
+    
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 The Rust Adventure.</p>
+        </div>
+    </footer>
+
+</body>
+</html>

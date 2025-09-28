@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 56: The `Future` Trait and `async/await` - The Rust Adventure</title>
+    <link rel="stylesheet" href="../style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <img src="https://www.rust-lang.org/static/images/rust-logo-blk.svg" alt="Rust Logo" class="logo">
+            <h1>Module 56: The `Future` Trait and `async/await`</h1>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <article class="module-content">
+                <h2>Objective: To understand the core of async Rust—the `Future` trait—and the `async`/`.await` syntax that the compiler uses to transform your code into a pollable state machine.</h2>
+                <p>Welcome to Day 15! We're about to explore a new way of thinking about concurrency. While multithreading is great for CPU-bound tasks, what about I/O-bound tasks, like waiting for a network request? If a thread is just sitting there waiting, it's wasting resources. <strong>Asynchronous programming</strong> solves this by allowing a single thread to manage hundreds or even thousands of tasks, only working on a task when it has something to do.</p>
+                
+                <hr>
+
+                <h3>Step 1: The Problem with Blocking I/O</h3>
+                <p>Imagine a chef in a kitchen (a thread). If they are making soup (a task) and have to wait 10 minutes for it to boil, a "blocking" chef would stand and stare at the pot, doing nothing else. An "asynchronous" chef would put the soup on to boil and immediately start chopping vegetables for the next dish. They would only check on the soup when the timer goes off. This is far more efficient.</p>
+
+                <h3>Step 2: The `Future` Trait</h3>
+                <p>The core of async Rust is the <code>std::future::Future</code> trait. A future is a value that represents a computation that may not be complete yet. It's a "promise" that a value of a certain type will be available *eventually*.</p>
+                <p>The trait has one key method: <code>poll</code>. An async "executor" will repeatedly call <code>poll</code> on a future. The future will do some work and return one of two things:</p>
+                <ul>
+                    <li><strong><code>Poll::Ready(value)</code></strong>: The computation is finished, and here is the final value.</li>
+                    <li><strong><code>Poll::Pending</code></strong>: The computation is not finished yet (e.g., we're still waiting for a network packet). The executor should come back and poll me again later.</li>
+                </ul>
+                <p>You almost never implement this trait by hand. Instead, you use the `async`/`await` syntax.</p>
+
+                <h3>Step 3: `async` and `.await`</h3>
+                <p>This is the ergonomic syntax that makes async programming in Rust a joy.</p>
+                <ul>
+                    <li><strong><code>async fn my_func() -> T</code></strong>: The `async` keyword transforms a regular function into one that returns a `Future`. Instead of blocking, it will yield control back to the executor when it needs to wait.</li>
+                    <li><strong><code>.await</code></strong>: The `.await` keyword is used inside an `async fn`. When you call another async function, you `.await` its result. This is the point where the function can pause. It tells the executor, "I'm waiting for this future to complete. You can go run another task in the meantime. Wake me up when it's ready."</li>
+                </ul>
+                
+                <p><strong>The Compiler's Magic Trick:</strong> When you write an `async fn`, the compiler transforms your beautiful, normal-looking code into a complex, hidden state machine that implements the `Future` trait. Every `.await` call becomes a potential pause point (a state) in that machine.</p>
+
+                <h3>Practical Application: A Conceptual Example</h3>
+                <p>You can't just run an `async` function. It needs an "executor" or "runtime" to `poll` it until it's complete. We'll learn about runtimes like `tokio` in the next module. For now, let's write some async code to see what it looks like.</p>
+
+                <h4>1. Create a New Project</h4>
+                <pre><code>cargo new async_basics
+cd async_basics
+</code></pre>
+                
+                <h4>2. The Complete `src/main.rs`</h4>
+                <p><strong>This code will not compile and run on its own!</strong> It is a conceptual demonstration of the syntax. We need a runtime like `tokio` to actually execute it.</p>
+                <pre><code>use std::time::Duration;
+
+// A regular, blocking function.
+fn get_soup_blocking() {
+    println!("Chef 1: Putting soup on to boil...");
+    std::thread::sleep(Duration::from_secs(2)); // Block the thread for 2 seconds.
+    println!("Chef 1: Soup is ready!");
+}
+
+// An async function. It returns a `Future`.
+// It doesn't block; it yields when it needs to wait.
+async fn get_soup_async() {
+    println!("Chef 2: Putting soup on to boil...");
+    // We would use an async sleep function from a library like `tokio`.
+    // tokio::time::sleep(Duration::from_secs(2)).await;
+    println!("Chef 2: Soup is ready!");
+}
+
+// Another async function.
+async fn chop_vegetables() {
+    println!("Chef 2: Chopping vegetables...");
+    // tokio::time::sleep(Duration::from_secs(1)).await;
+    println!("Chef 2: Vegetables are chopped.");
+}
+
+// The main logic for our async chef.
+async fn run_async_kitchen() {
+    // Start both tasks. The futures are created but do nothing yet.
+    let soup_future = get_soup_async();
+    let veggies_future = chop_vegetables();
+
+    // `join!` is a macro from a library like `futures` or `tokio` that
+    // runs multiple futures concurrently.
+    // futures::join!(soup_future, veggies_future);
+}
+
+fn main() {
+    println!("--- Running the Blocking Kitchen ---");
+    get_soup_blocking();
+    // The chef is blocked, so nothing else happens.
+    println!("Blocking kitchen is done.\n");
+
+    println!("--- Running the Async Kitchen ---");
+    // To run `run_async_kitchen`, we would need a runtime:
+    // #[tokio::main]
+    // async fn main() {
+    //     run_async_kitchen().await;
+    //     println!("Async kitchen is done.");
+    // }
+    println!("To run this for real, we need an async runtime! (Module 57)");
+}
+</code></pre>
+                
+                <h4>The Asynchronous Mindset:</h4>
+                <ul>
+                    <li><strong>Non-Blocking:</strong> The key difference is that `async` functions are non-blocking. When they encounter an `.await`, they can be paused, and the thread is free to do other work.</li>
+                    <li><strong>State Machines:</strong> The compiler turns `run_async_kitchen` into a state machine. The state machine starts, creates the two futures, and then polls them both. When one is `Pending`, the executor can switch to polling the other. This allows the soup to "boil" in the background while the vegetables are being "chopped."</li>
+                    <li><strong>The Need for a Runtime:</strong> A `Future` is lazy. It doesn't do anything on its own. It's just a plan. You need an executor (like a project manager) to take the plan and actually execute it by repeatedly calling `.poll()`.</li>
+                </ul>
+                <p>You have now learned the fundamental theory behind Rust's powerful async programming model. You understand what `Future`s are and how the `async`/`await` syntax provides a beautiful, ergonomic way to write them. In the next module, we will introduce the `tokio` runtime, which will provide the executor we need to bring this code to life.</p>
+
+                <a href="../index.html" class="back-link">&larr; Back to Curriculum Map</a>
+            </article>
+        </div>
+    </main>
+    
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 The Rust Adventure.</p>
+        </div>
+    </footer>
+
+</body>
+</html>

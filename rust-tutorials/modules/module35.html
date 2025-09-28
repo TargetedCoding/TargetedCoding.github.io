@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 35: Generating and Writing Documentation - The Rust Adventure</title>
+    <link rel="stylesheet" href="../style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <img src="https://www.rust-lang.org/static/images/rust-logo-blk.svg" alt="Rust Logo" class="logo">
+            <h1>Module 35: Generating and Writing Documentation</h1>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <article class="module-content">
+                <h2>Objective: To learn how to write effective documentation comments and generate a professional, searchable HTML documentation site for your crate.</h2>
+                <p>Writing code that works is only half the battle. Professional code is also understandable by other humans (including yourself, six months from now!). Rust elevates documentation to a first-class feature of the language, making it easy to write, maintain, and share.</p>
+                
+                <hr>
+
+                <h3>Step 1: The Two Kinds of Doc Comments</h3>
+                <p>Rust has a special comment syntax that is parsed by the <code>cargo doc</code> tool.</p>
+                <ul>
+                    <li><code>///</code> (three slashes): An "outer" doc comment. It documents the item that comes <strong>after</strong> it (like a function, struct, or enum). This is the most common kind.</li>
+                    <li><code>//!</code> (slash, exclamation mark): An "inner" doc comment. It documents the item that <strong>contains</strong> it (like a module or a crate). It's typically used at the top of a file.</li>
+                </ul>
+                <p>These comments are parsed as <strong>Markdown</strong>, so you can use headings, lists, bold text, links, and code blocks to create rich documentation.</p>
+
+                <h3>Step 2: The Killer Feature: Doc Tests</h3>
+                <p>Any code block inside your documentation that is annotated with <code>```rust</code> will be treated as a test by <code>cargo test</code>. This is an incredible feature that ensures your code examples in your documentation will never become outdated or incorrect. If the example code breaks, your tests will fail!</p>
+
+                <h3>Let's Build Our Todo App (Part 28) - Document Everything!</h3>
+                <p>Let's go through our project and add professional documentation to our main structs and functions. This will make our codebase much easier for a newcomer to understand.</p>
+                
+                <h4>1. Add Crate-Level Documentation to `src/main.rs`</h4>
+                <p>Open `src/main.rs` and add an inner doc comment at the very top of the file.</p>
+                <pre><code>// In src/main.rs
+
+//! # Todo App
+//!
+//! A simple, professional command-line todo application written in Rust.
+//! This app is the final project for the Rust Adventure curriculum.
+
+// ... (the rest of your use statements and code)
+</code></pre>
+
+                <h4>2. Document the `Task` and `Priority` Structs</h4>
+                <p>Add outer doc comments to explain the purpose of your main data structures.</p>
+                <pre><code>// In src/main.rs
+
+/// Represents the priority level of a task.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+enum Priority { Low, Medium, High }
+
+/// Represents a single task in the todo list.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+struct Task {
+    /// The description of what needs to be done.
+    description: String,
+    /// Whether the task has been completed.
+    completed: bool,
+    /// The priority level of the task.
+    priority: Priority,
+}</code></pre>
+
+                <h4>3. Document a Function with a Doc Test in `src/storage.rs`</h4>
+                <p>Let's add a great doc comment to our `save_tasks` function, complete with an example that will be tested.</p>
+                <pre><code>// In src/storage.rs
+use std::io::{Read, Write};
+use std::collections::HashMap;
+use crate::{Task, Priority}; // Make sure Task and Priority are public in main.rs or in their own module
+use serde_json;
+
+// ... (StorageError enum) ...
+
+/// Saves a HashMap of tasks to any generic `Write` destination in JSON format.
+///
+/// This function serializes the provided `tasks` HashMap into a pretty-printed
+/// JSON string and writes it to the given writer.
+///
+/// # Examples
+///
+/// ```
+/// # use std::collections::HashMap;
+/// # use todo_app::{Task, Priority, storage}; // Assuming your crate is named todo-app
+/// # let mut tasks = HashMap::new();
+/// # tasks.insert(1, Task { description: "Doc test".to_string(), completed: false, priority: Priority::Medium });
+/// let mut buffer = Vec::new();
+/// storage::save_tasks(&mut buffer, &tasks).unwrap();
+/// // The buffer now contains the JSON representation of the tasks.
+/// assert!(String::from_utf8(buffer).unwrap().contains("Doc test"));
+/// ```
+pub fn save_tasks<W: Write>(writer: W, tasks: &HashMap<u32, Task>) -> Result<(), StorageError> {
+    // ... (function body)
+}
+</code></pre>
+                <p>Note: For the doc test to work, you may need to make `Task` and `Priority` public by adding `pub` before them. We will cover this in detail in the next module on organization!</p>
+
+                <h3>Step 3: Generate and View the Documentation</h3>
+                <p>Now for the magic. Go to your terminal and run:</p>
+                <pre><code>cargo doc --open</code></pre>
+                <p>This command will:</p>
+                <ol>
+                    <li>Scan your entire project for doc comments.</li>
+                    <li>Parse the Markdown.</li>
+                    <li>Generate a beautiful, searchable, hyperlinked HTML documentation site.</li>
+                    <li>Open it in your default web browser.</li>
+                </ol>
+                <p>Click through the site. You'll see the crate-level documentation on the main page. You can click on the `Task` struct to see its documentation and the documentation for each of its fields. You can see the detailed documentation for the `save_tasks` function, including the nicely formatted example code.</p>
+                
+                <h3>Step 4: Run Your Doc Tests</h3>
+                <p>Now, run your test suite again:</p>
+                <pre><code>cargo test</code></pre>
+                <p>In the output, you will see a new line under "Running tests" that says `Doc-tests todo-app`. Cargo found the code block in your `save_tasks` documentation and ran it as a test! This ensures your documentation is always correct.</p>
+                <p>You have just learned a critical skill for writing maintainable and collaborative software. Good documentation is a gift to your users and to your future self.</p>
+
+                <a href="../index.html" class="back-link">&larr; Back to Curriculum Map</a>
+            </article>
+        </div>
+    </main>
+    
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 The Rust Adventure.</p>
+        </div>
+    </footer>
+
+</body>
+</html>

@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 46: Implementing a Stack and Queue - The Rust Adventure</title>
+    <link rel="stylesheet" href="../style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <img src="https://www.rust-lang.org/static/images/rust-logo-blk.svg" alt="Rust Logo" class="logo">
+            <h1>Module 46: Implementing a Stack and Queue</h1>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <article class="module-content">
+                <h2>Objective: To build on the linked list implementation to create two more fundamental data structures: a Stack (LIFO) and a Queue (FIFO).</h2>
+                <p>In the last module, you did the hard work of building a functional linked list. Now, we get to reap the rewards. We'll see how that low-level structure can be used as the foundation for higher-level data structures like stacks and queues, a common practice in software design.</p>
+                
+                <hr>
+
+                <h3>Step 1: The Stack (LIFO - Last-In, First-Out)</h3>
+                <p>A stack is a data structure that follows the "Last-In, First-Out" principle. The last item you add (push) is the first item you remove (pop).</p>
+                <p><strong>Analogy: A Stack of Plates.</strong> You place a clean plate on top of the stack. When you need a plate, you take the one from the top. The plate at the bottom, which was placed first, will be the last one you use.</p>
+                <p>Look at the <code>push</code> and <code>pop</code> methods we wrote for our linked list in the previous module. They add to the front and remove from the front. This is exactly the behavior of a stack! Our list is already a perfectly functional stack.</p>
+                
+                <h3>Step 2: The Queue (FIFO - First-In, First-Out)</h3>
+                <p>A queue is the opposite of a stack. It follows the "First-In, First-Out" principle. The first item you add (enqueue) is the first item you remove (dequeue).</p>
+                <p><strong>Analogy: A Line at a Ticket Counter.</strong> The first person to get in line is the first person to get a ticket. People are added to the back of the line and served from the front.</p>
+                <p>To implement this with a linked list, we need to add a pointer to the *tail* (the end) of the list. This will allow us to add new nodes at the end in efficient O(1) time, while we continue to remove them from the head in O(1) time.</p>
+
+                <h3>Practical Application: Building a `Queue`</h3>
+                <p>We'll modify our linked list code to add a `tail` pointer and implement queueing behavior. This is a standalone project that builds on the code from Module 45.</p>
+
+                <h4>1. Project Setup</h4>
+                <p>You can continue in your `my_list` project. We will modify the `List` struct and its `impl` block.</p>
+                
+                <h4>2. The Complete `src/main.rs` (Refactored for Queue)</h4>
+                <p>This version is more complex because managing both a head and a tail pointer requires careful handling of ownership and raw pointers for the tail, which is a common pattern in unsafe Rust for performance. For simplicity, we'll demonstrate a slightly less performant but fully safe version first.</p>
+                
+                <p><strong>Important Note:</strong> A singly linked list is actually a poor choice for an efficient queue in Rust due to ownership rules. A `VecDeque` is the correct tool. This exercise is for learning purposes to demonstrate the logic. We will show the classic "unsafe" optimization as a comment.</p>
+                
+                <pre><code>// A basic Queue implementation using a singly linked list.
+
+// We need a more advanced Node for the Queue
+// but for simplicity, we'll use the same structure
+// and accept a performance penalty on push_back.
+// The code from Module 45 is our starting point.
+type Link<T> = Option<Box<Node<T>>>;
+struct Node<T> { elem: T, next: Link<T> }
+
+// Let's create a new `Queue` struct that wraps our `List`.
+pub struct Queue<T> {
+    // We will use two stacks (our Lists) to create a queue!
+    // This is a common and clever way to do it in functional programming.
+    inbox: List<T>,
+    outbox: List<T>,
+}
+
+impl<T> Queue<T> {
+    pub fn new() -> Self {
+        Queue { inbox: List::new(), outbox: List::new() }
+    }
+
+    // Add an element to the back of the queue.
+    pub fn enqueue(&mut self, elem: T) {
+        self.inbox.push(elem);
+    }
+
+    // Remove an element from the front of the queue.
+    pub fn dequeue(&mut self) -> Option<T> {
+        // If the outbox is empty, move everything from the inbox over.
+        if self.outbox.peek().is_none() {
+            while let Some(elem) = self.inbox.pop() {
+                self.outbox.push(elem);
+            }
+        }
+        self.outbox.pop()
+    }
+}
+
+// We need the `List` implementation from Module 45 for this to work.
+// We'll also add a `peek` method to `List`.
+pub struct List<T> { head: Link<T> }
+impl<T> List<T> {
+    pub fn new() -> Self { List { head: None } }
+    pub fn push(&mut self, elem: T) { /* ... same as before ... */ }
+    pub fn pop(&mut self) -> Option<T> { /* ... same as before ... */ }
+    
+    // New method: look at the first element without removing it.
+    pub fn peek(&self) -> Option<&T> {
+        self.head.as_ref().map(|node| &node.elem)
+    }
+}
+
+
+// Let's test our Queue!
+fn main() {
+    let mut q = Queue::new();
+    
+    println!("Enqueuing A, B, and C...");
+    q.enqueue('A');
+    q.enqueue('B');
+    q.enqueue('C');
+
+    println!("Dequeuing elements:");
+    println!("Dequeued: {:?}", q.dequeue()); // Should be Some('A')
+    println!("Dequeued: {:?}", q.dequeue()); // Should be Some('B')
+    
+    println!("Enqueuing D...");
+    q.enqueue('D');
+
+    println!("Dequeued: {:?}", q.dequeue()); // Should be Some('C')
+    println!("Dequeued: {:?}", q.dequeue()); // Should be Some('D')
+    println!("Dequeued: {:?}", q.dequeue()); // Should be None
+}
+</code></pre>
+
+                <h4>The Two-Stack Queue:</h4>
+                <p>Instead of managing a tricky tail pointer, we've implemented a queue using a very clever and common functional programming pattern: the two-stack queue.</p>
+                <ul>
+                    <li><strong><code>inbox</code> Stack:</strong> When you `enqueue` an item, you are simply pushing it onto this stack. This is fast.</li>
+                    <li><strong><code>outbox</code> Stack:</strong> When you need to `dequeue` an item, you first check the `outbox`. If it has items, you pop from it. The items in this stack are in the correct (reversed) order for dequeuing.</li>
+                    <li><strong>The Transfer:</strong> If the `outbox` is empty, it means you need to "reverse" all the items currently in the `inbox` to get them in the correct FIFO order. You do this by popping every element from the `inbox` and pushing it onto the `outbox`. This expensive operation only happens occasionally. Over many operations, the cost is "amortized," and the queue is still very efficient.</li>
+                </ul>
+                <p>You have now successfully built a Stack (which our original list already was) and a Queue. You've seen how a simple data structure can be a building block for another, and you've learned a clever, safe, and idiomatic way to build a queue without resorting to complex pointer manipulation.</p>
+
+                <a href="../index.html" class="back-link">&larr; Back to Curriculum Map</a>
+            </article>
+        </div>
+    </main>
+    
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 The Rust Adventure.</p>
+        </div>
+    </footer>
+
+</body>
+</html>

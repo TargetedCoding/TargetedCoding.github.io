@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 14: The Full Story of Rust Strings - The Rust Adventure</title>
+    <link rel="stylesheet" href="../style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <img src="https://www.rust-lang.org/static/images/rust-logo-blk.svg" alt="Rust Logo" class="logo">
+            <h1>Module 14: The Full Story of Rust Strings</h1>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <article class="module-content">
+                <h2>Objective: To understand the critical distinction between `String` and `&str` and master common string manipulation tasks.</h2>
+                <p>Welcome to Day 3! We're kicking off our deep dive into programming concepts with one of the most common data types you'll ever work with. In Rust, strings are a bit different from other languages, because Rust is designed for safety and correctness with text from all around the world.</p>
+                
+                <hr>
+
+                <h3>Step 1: The Two Main String Types</h3>
+                <p>Rust's focus on memory safety and ownership leads to two primary string types:</p>
+                <ul>
+                    <li><strong><code>String</code></strong>: An owned, mutable string. It is allocated on the heap, which means it can grow and shrink in size as you add or remove text. You have a <code>String</code> when you need to own and modify the text data.</li>
+                    <li><strong><code>&str</code> (string slice)</strong>: A borrowed, immutable "view" into a `String` or a string literal. It does not own the data; it just points to it. This is the most common way to pass strings to functions.</li>
+                </ul>
+                <p><strong>Analogy: The Apartment Building vs. The Photograph.</strong> A <code>String</code> is like an apartment building that you own. You can build new floors or tear old ones down. A <code>&str</code> is like a photograph of that building. It's a perfect, lightweight view of the building at a moment in time, but you can't use the photograph to change the building itself.</p>
+
+                <h3>Step 2: Why You Can't Index Strings</h3>
+                <p>A huge "Aha!" moment for new Rustaceans is realizing why this code doesn't work: <code>let letter = my_string[0];</code>. This is intentional!</p>
+                <p>Rust strings are UTF-8 encoded. This means some "characters" take up more than one byte of memory. For example, the letter 'a' is 1 byte, but the letter 'é' is 2 bytes, and an emoji like '🦀' is 4 bytes. If Rust let you access byte `[0]`, you might get half a character, which is almost always a bug. Rust prevents this entirely.</p>
+                <p>The correct way to access characters is to iterate:</p>
+                <pre><code>// This iterates over actual characters, no matter their byte size.
+for c in "नमस्ते".chars() {
+    println!("{}", c);
+}</code></pre>
+
+                <h3>Let's Build Our Todo App (Part 13)</h3>
+                <p>Let's add a useful feature that demonstrates these concepts: a command to find tasks by a keyword. The user will be able to type <code>find rust</code> and see all tasks that contain the word "rust".</p>
+                <p>We'll add a new `FindCommand` struct, implement the `Command` trait for it, and update our parsing logic.</p>
+                <pre><code>// ... (All previous structs, enums, and traits are the same) ...
+
+// --- NEW: A Command for Finding Tasks ---
+struct FindCommand { keyword: String }
+
+impl Command for FindCommand {
+    fn execute(&self, tasks: &mut HashMap<u32, Task>, _next_id: &mut u32) -> Result<(), AppError> {
+        println!("\n--- Finding tasks containing '{}' ---", self.keyword);
+        
+        let mut found = false;
+        for (id, task) in tasks {
+            // The .contains() method takes a `&str`. Our `self.keyword` is a `String`,
+            // but Rust can automatically create a slice from it (this is called a "Deref Coercion").
+            if task.description.contains(&self.keyword) {
+                let status = if task.completed { "[x]" } else { "[ ]" };
+                println!("{}: {} {}", id, status, task.description);
+                found = true;
+            }
+        }
+
+        if !found {
+            println!("No tasks found with that keyword.");
+        }
+        
+        println!("------------------------------------");
+        Ok(())
+    }
+}
+
+// --- REFACTORED: The Run Loop (only the parsing part) ---
+fn run() -> Result<(), AppError> {
+    // ... (setup is the same) ...
+    loop {
+        println!("\n> Enter a command: add, complete, list, find, or quit");
+        // ... (input reading is the same) ...
+        
+        let mut parts = input.trim().split_whitespace();
+        let command_name = parts.next().unwrap_or("");
+
+        let command: Option<Box<dyn Command>> = match command_name {
+            // ... ("add", "complete", "list" arms are the same) ...
+            
+            "find" => {
+                let keyword = parts.collect::<Vec<&str>>().join(" ");
+                if keyword.is_empty() {
+                    eprintln!("Error: 'find' command requires a keyword.");
+                    continue;
+                }
+                Some(Box::new(FindCommand { keyword }))
+            },
+
+            "quit" => break,
+            "" => continue,
+            _ => { /* ... */ }
+        };
+        // ... (command execution is the same) ...
+    }
+    Ok(())
+}
+
+// fn main() { ... } is the same
+</code></pre>
+
+                <h4>String Concepts in Action:</h4>
+                <ul>
+                    <li><strong><code>FindCommand { keyword: String }</code></strong>: Our command needs to *own* the keyword text that the user typed, so we store it in an owned <code>String</code>.</li>
+                    <li><strong><code>task.description.contains(&self.keyword)</code></strong>: The <code>.contains()</code> method is defined on `&str`, not `String`. It's designed to take a borrowed slice as an argument. Rust is smart enough to automatically borrow a `&str` from our `self.keyword` `String` when we pass it. This is a perfect example of the two types working together.</li>
+                </ul>
+                <p>Run <code>cargo run</code>. Add a few tasks, then use your new `find` command to search for them. You've just implemented a feature that correctly and safely handles text, all thanks to Rust's robust string system.</p>
+
+                <a href="../index.html" class="back-link">&larr; Back to Curriculum Map</a>
+            </article>
+        </div>
+    </main>
+    
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 The Rust Adventure.</p>
+        </div>
+    </footer>
+
+</body>
+</html>

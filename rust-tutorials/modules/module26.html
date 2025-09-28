@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 26: The Simplest Smart Pointer: `Box<T>` - The Rust Adventure</title>
+    <link rel="stylesheet" href="../style.css">
+    <link href="https://fonts.googleapis.com/css2?family+Code+Pro:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <img src="https://www.rust-lang.org/static/images/rust-logo-blk.svg" alt="Rust Logo" class="logo">
+            <h1>Module 26: The Simplest Smart Pointer: `Box<T>`</h1>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <article class="module-content">
+                <h2>Objective: To understand the purpose of `Box<T>` for heap allocation and when it's necessary.</h2>
+                <p>Welcome to Day 6! Today we explore "smart pointers"—structs that act like pointers but have extra capabilities, like managing ownership. The most fundamental smart pointer is <strong><code>Box&lt;T&gt;</code></strong>. Its job is simple but crucial: it allows you to store data on the heap instead of the stack.</p>
+                
+                <hr>
+
+                <h3>Step 1: The Stack vs. The Heap (A Quick Review)</h3>
+                <p>Remember from our early lessons:</p>
+                <ul>
+                    <li><strong>The Stack:</strong> Super fast, highly organized. Used for data with a known, fixed size at compile time. Functions, local variables, and pointers live here.</li>
+                    <li><strong>The Heap:</strong> Less organized, but very flexible. Used when you need data whose size might change or is unknown at compile time. Requesting memory here is slower.</li>
+                </ul>
+                <p>By default, Rust tries to put data on the stack. A <code>Box&lt;T&gt;</code> is your explicit instruction to the compiler: "Please put the enclosed data `T` on the heap."</p>
+                
+                <p><strong>Analogy: The Storage Unit.</strong> The stack is like the space in your car—quick to access, but small. The heap is a remote storage unit. A <code>Box&lt;T&gt;</code> is the key to that unit. The key itself is small and easy to carry (it lives on the stack), but it points to a potentially huge amount of stuff in storage (the data on the heap). When you throw away the key (the `Box` goes out of scope), Rust automatically cleans out the unit for you. This is the "smart" part!</p>
+
+                <h3>Step 2: When Do You Need a `Box`?</h3>
+                <p>You don't need to put everything in a `Box`. The compiler will usually tell you when you need one. There are two main scenarios:</p>
+                <ol>
+                    <li><strong>Recursive Types:</strong> If a struct contains a field of its own type, Rust can't know the size at compile time. A classic example is a "cons list" from functional programming.
+                        <pre><code>// This code won't compile without a Box!
+enum List {
+    Cons(i32, List), // A List contains another List, which is infinitely sized.
+    Nil,
+}
+
+// With a Box, it works!
+enum BoxedList {
+    Cons(i32, Box<BoxedList>), // A Box has a known size (it's a pointer).
+    Nil,
+}</code></pre>
+                    </li>
+                    <li><strong>Trait Objects:</strong> When you have different types that all implement the same trait, they can have different sizes. To store them together, you need to put them behind a pointer so the compiler is working with a value of a known, fixed size. We've been doing this all along!</li>
+                </ol>
+                
+                <h3>Let's Re-Examine Our Todo App</h3>
+                <p>Our application has been using `Box` since Module 11, and now you understand exactly why. Let's look at the line in our `run` function's parser:</p>
+                <pre><code>// From our run function's match statement...
+let command: Option<Box<dyn Command>> = match command_name {
+    "add" | "a" => {
+        // ...
+        Some(Box::new(AddCommand { description }))
+    },
+    "list" | "ls" => {
+        // ...
+        Some(Box::new(ListCommand { filter }))
+    },
+    // ... etc ...
+};
+</code></pre>
+
+                <h4>The `Box<dyn Command>` Explained:</h4>
+                <ul>
+                    <li><strong><code>dyn Command</code></strong>: This is a "trait object." It represents "some type that implements the `Command` trait."</li>
+                    <li><strong>The Problem:</strong> An <code>AddCommand</code> struct contains a `String`, while a `ListCommand` contains a `TaskFilter` enum. They are different sizes! The compiler cannot create a variable `command` that could hold either one directly, because it needs to reserve a fixed amount of space for that variable on the stack.</li>
+                    <li><strong>The Solution:</strong> <code>Box::new(...)</code> allocates the specific command struct (<code>AddCommand</code>, etc.) on the heap. It then returns a <code>Box</code>, which is a smart pointer. This pointer *does* have a known, fixed size. So, our `command` variable stores the pointer on the stack, which in turn points to the actual command data on the heap.</li>
+                </ul>
+                <p>This is the primary use case for `Box<T>` you will encounter in everyday Rust programming. It allows for a form of polymorphism by abstracting away the concrete size of different types behind a consistently-sized pointer.</p>
+                <p>This module was mostly about solidifying a concept we've already been using. In the next modules, we'll learn new smart pointers that solve different kinds of ownership problems.</p>
+
+                <a href="../index.html" class="back-link">&larr; Back to Curriculum Map</a>
+            </article>
+        </div>
+    </main>
+    
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 The Rust Adventure.</p>
+        </div>
+    </footer>
+
+</body>
+</html>

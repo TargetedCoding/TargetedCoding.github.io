@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 99: Profiling with `perf` and `flamegraph` - The Rust Adventure</title>
+    <link rel="stylesheet" href="../style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <img src="https://www.rust-lang.org/static/images/rust-logo-blk.svg" alt="Rust Logo" class="logo">
+            <h1>Module 99: Profiling with `perf` and `flamegraph`</h1>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <article class="module-content">
+                <h2>Objective: To use a profiler (`perf`) to gather performance data from a running Rust application and visualize it as a "flame graph" to identify performance bottlenecks or "hot spots."</h2>
+                <p>Benchmarking tells you the total runtime of a function, but it doesn't tell you *which lines of code within that function* are taking up the most time. A <strong>profiler</strong> is a tool that samples a running program to determine where it's spending most of its time. A <strong>flame graph</strong> is a powerful visualization of that profiling data.</p>
+                
+                <hr>
+
+                <h3>Step 1: What is a Flame Graph?</h3>
+                <p>A flame graph is a treemap visualization of a program's call stack. </p>
+                <ul>
+                    <li>The <strong>x-axis</strong> represents the total time spent. Wider bars mean that function (and its children) were on the CPU for a larger percentage of the time.</li>
+                    <li>The <strong>y-axis</strong> represents the call stack depth. A function on top was called by the function below it.</li>
+                </ul>
+                <p>The goal is to find wide bars, especially wide bars at the top of the graph. These are the "hot spots"—the functions where your program is spending the most time and which are the best candidates for optimization.</p>
+                <p><strong>Analogy: The CEO's Time Report.</strong> A flame graph is like a report showing how a company's CEO spends their time. A wide bar for "Meetings" means a lot of time is spent there. If you look at what's "on top" of the "Meetings" bar, you might see smaller bars for "Budget Meeting," "Marketing Meeting," etc. If the "Budget Meeting" bar is the widest of these, you know that's the specific meeting that is consuming the most of the CEO's time.</p>
+
+                <h3>Step 2: The Toolchain (`perf` and `flamegraph`)</h3>
+                <p><strong>This workflow is for Linux.</strong></p>
+                <ol>
+                    <li><strong><code>perf</code></strong>: The standard profiler on Linux. It's an incredibly powerful tool that can sample the CPU's state thousands of times per second to see which function is currently running.</li>
+                    <li><strong><code>flamegraph</code></strong>: A collection of scripts that can take the output from `perf` and turn it into an interactive SVG flame graph file.</li>
+                </ol>
+
+                <h3>Practical Application: Profiling a Text Processor</h3>
+                <p>Let's write a simple program that has an intentionally inefficient part. We'll then use `perf` and `flamegraph` to pinpoint the bottleneck without even needing to read the code closely.</p>
+
+                <h4>1. Install the Tools</h4>
+                <pre><code># On Debian/Ubuntu
+sudo apt-get update
+sudo apt-get install linux-perf flamegraph
+
+# You may also need to allow perf to access kernel symbols
+# sudo sysctl -w kernel.kptr_restrict=0
+</code></pre>
+                
+                <h4>2. Configure `Cargo.toml` to include debug symbols in release</h4>
+                <p>A profiler needs debug symbols to map machine code back to your function names. We can tell Cargo to include them in our optimized release build.</p>
+                <pre><code># In a new project's Cargo.toml
+[profile.release]
+debug = true
+</code></pre>
+
+                <h4>3. Create the Program to Profile (`src/main.rs`)</h4>
+                <pre><code>// A program with a deliberately slow function.
+fn main() {
+    let mut total = 0;
+    for i in 1..=500 {
+        // We are interested in which of these two functions is slower.
+        let a = process_fast(i);
+        let b = process_slow(i);
+        total += a + b;
+    }
+    println!("Total: {}", total);
+}
+
+// A function that does some simple, fast work.
+fn process_fast(n: u32) -> u32 {
+    n * 2
+}
+
+// A function that does some complex, slow work.
+// Let's pretend this is a complex regex or parsing operation.
+fn process_slow(n: u32) -> u32 {
+    let mut sum = 0;
+    for i in 0..n {
+        for j in 0..n {
+            sum += i * j;
+        }
+    }
+    sum % 1000
+}
+</code></pre>
+                
+                <h4>4. The Profiling Workflow</h4>
+                <p>Follow these steps in your terminal, in the project's root directory.</p>
+                <pre><code># 1. Compile the program in release mode (with debug symbols).
+cargo build --release
+
+# 2. Run the program under `perf` to record profiling data.
+#    `perf record` will create a file named `perf.data`.
+perf record -g ./target/release/my_profiling_app
+
+# 3. Use the `flamegraph` script to process the `perf.data` file.
+flamegraph perf.data > profile.svg
+</code></pre>
+
+                <h4>5. Analyze the Flame Graph</h4>
+                <p>Open the newly created <code>profile.svg</code> file in a web browser. It's an interactive SVG! You can hover over the bars to see function names and percentages.</p>
+                <p>You will see a graph that looks something like this:</p>
+                <img src="https://i.imgur.com/uGfJ5yN.png" alt="Example Flame Graph" style="width:100%;">
+                <p>At the very bottom is `main`. On top of `main`, you will see two stacks. One stack, corresponding to the `process_fast` calls, will be very narrow. The other stack, for the <code>process_slow</code> calls, will be extremely wide. The widest bar at the very top of the stack will be the inner-most loop inside `process_slow`.</p>
+                
+                <h4>The Insight:</h4>
+                <p>The flame graph immediately and visually tells you where to focus your optimization efforts. There is no point trying to make `process_fast` any faster; it's barely contributing to the total runtime. The massive, wide "flame" of the `process_slow` function is the clear bottleneck. This allows you to target your work precisely where it will have the most impact.</p>
+                
+                <p>You have now learned how to move beyond just measuring speed to *diagnosing* performance problems. Profiling is an essential skill for any systems programmer, and flame graphs are one of the most intuitive and powerful ways to visualize the performance of a complex application.</p>
+
+                <a href="../index.html" class="back-link">&larr; Back to Curriculum Map</a>
+            </article>
+        </div>
+    </main>
+    
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 The Rust Adventure.</p>
+        </div>
+    </footer>
+
+</body>
+</html>

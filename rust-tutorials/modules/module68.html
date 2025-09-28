@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 68: Middleware for Logging and CORS - The Rust Adventure</title>
+    <link rel="stylesheet" href="../style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <img src="https://www.rust-lang.org/static/images/rust-logo-blk.svg" alt="Rust Logo" class="logo">
+            <h1>Module 68: Middleware for Logging and CORS</h1>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <article class="module-content">
+                <h2>Objective: To understand the middleware pattern and use it to add request logging and Cross-Origin Resource Sharing (CORS) policies to our Axum application.</h2>
+                <p>Welcome to Day 19! Our API is functional, but many real-world applications have "cross-cutting concerns"—logic that needs to apply to many or all endpoints. Examples include logging every request, checking for an authentication token, or adding security headers. The <strong>middleware</strong> pattern is the solution for this.</p>
+                
+                <hr>
+
+                <h3>Step 1: What is Middleware?</h3>
+                <p>Middleware is a layer of logic that sits between the server and your handler. It can inspect an incoming request before it reaches your handler, and it can inspect or modify the response after your handler has finished. You can chain multiple middleware layers together.</p>
+                <p><strong>Analogy: The Security Checkpoint.</strong> Middleware is like a series of security checkpoints at an airport. Every passenger (request) must go through the first checkpoint (e.g., logging middleware), then the second (e.g., authentication middleware), before they can finally get to their gate (the handler). Each checkpoint can log who is passing through, check their credentials, or even turn them away if necessary.</p>
+                <p>In Axum, middleware is implemented as a "Layer". We can add these layers to our router, and they will apply to all the routes defined on it.</p>
+                
+                <h3>Practical Application: Adding Logging and CORS</h3>
+                <p>We'll add two essential pieces of middleware to our `todo_api` project:</p>
+                <ol>
+                    <li><strong>Request Logging:</strong> We'll use the standard <code>tracing</code> library to log every incoming request's method and URI.</li>
+                    <li><strong>CORS:</strong> We'll add a Cross-Origin Resource Sharing layer. This is critical for security and allows a web browser frontend from a different domain to make requests to our API.</li>
+                </ol>
+
+                <h4>1. Update `Cargo.toml`</h4>
+                <p>We need a few new crates for this.</p>
+                <pre><code>[dependencies]
+# ... (axum, serde, tokio, sqlx, dotenvy)
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+tower-http = { version = "0.4", features = ["cors"] } # tower-http provides ready-made middleware
+</code></pre>
+                
+                <h4>2. Update `src/main.rs`</h4>
+                <p>We'll initialize the logger and add the new layers to our router.</p>
+                <pre><code>use axum::{
+    extract::{Path, State},
+    http::Method, // We'll need this for CORS
+    routing::{get, post},
+    Json, Router,
+};
+use serde::{Deserialize, Serialize};
+use std::net::SocketAddr;
+use tower_http::cors::{Any, CorsLayer}; // Import the CorsLayer
+// ... (other use statements for sqlx, dotenvy, etc.)
+
+// ... (Task, CreateTask, AppState structs are the same as before) ...
+
+#[tokio::main]
+async fn main() {
+    // ---- NEW: Initialize Tracing Logger ----
+    tracing_subscriber::fmt()
+        .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
+        .init();
+
+    dotenv().ok();
+    // ... (database pool setup is the same) ...
+
+    // ---- NEW: Create CORS Middleware ----
+    let cors = CorsLayer::new()
+        // allow `GET` and `POST` when accessing the resource
+        .allow_methods([Method::GET, Method::POST])
+        // allow requests from any origin
+        .allow_origin(Any);
+
+    let app = Router::new()
+        .route("/tasks", post(create_task))
+        .route("/tasks", get(list_tasks))
+        .route("/tasks/:id", get(get_task))
+        .with_state(shared_state)
+        // ---- NEW: Add the middleware layers ----
+        // The CORS layer must be added before the routes it applies to.
+        .layer(cors);
+
+    let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
+    tracing::info!("Server listening on {}", addr); // Use the tracing macro
+    
+    axum::Server::bind(&addr)
+        .serve(app.into_make_service())
+        .await
+        .unwrap();
+}
+
+// ... (Handler functions are unchanged) ...
+</code></pre>
+
+                <h4>The Layered Architecture:</h4>
+                <ul>
+                    <li><strong><code>tracing</code> & <code>tracing-subscriber</code></strong>: `tracing` is the modern logging and diagnostics framework for async Rust. The `tracing-subscriber` crate provides a way to collect and display these logs. By calling <code>.init()</code>, we set up a global subscriber that will print formatted logs to the console.</li>
+                    <li><strong><code>tower_http</code></strong>: Axum is built on top of a library of HTTP services called `tower`. `tower-http` provides a collection of pre-built, production-ready middleware for common tasks. We're using its `CorsLayer`.</li>
+                    <li><strong><code>CorsLayer::new()...</code></strong>: We create a new CORS policy. Our policy is permissive for this example: it allows `GET` and `POST` requests from any origin domain. In production, you would restrict this to your specific frontend's domain.</li>
+                    <li><strong><code>.layer(cors)</code></strong>: This is the key method. We add our configured `CorsLayer` to the router. Because Axum's default logging is already quite good with `tracing`, we don't need a custom logging middleware for this simple case, but we could easily add another `.layer()` with our own custom logic if we needed to.</li>
+                    <li><strong><code>tracing::info!</code></strong>: We replace our `println!` macro with the `tracing::info!` macro. This allows our log message to be captured by the `tracing` subscriber and formatted correctly.</li>
+                </ul>
+
+                <h3>Step 3: See Your Middleware in Action!</h3>
+                <p>Run your server with <code>cargo run</code>. You will immediately see the new, structured log message for the server startup.</p>
+                <p>Now, use `curl` to make a request:</p>
+                <pre><code>curl http://127.0.0.1:3000/tasks</code></pre>
+                <p>Look back at your server's terminal. You will see a detailed, structured log line for the request that Axum and `tracing` automatically generated! It will look something like this:</p>
+                <pre><code>INFO todo_api: Server listening on 127.0.0.1:3000
+INFO tower::make::make_service: service construction took ...
+INFO hyper::server::conn::http1: Connection accepted from ...
+INFO tower::-http::trace::on_request: started processing request
+    ...
+INFO tower::-http::trace::on_response: finished processing request
+</code></pre>
+                <p>You have now added professional-grade logging and a critical security layer (CORS) to your application without modifying any of your core handler logic. This demonstrates the power and elegance of the middleware pattern for building clean, maintainable web services.</p>
+
+                <a href="../index.html" class="back-link">&larr; Back to Curriculum Map</a>
+            </article>
+        </div>
+    </main>
+    
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 The Rust Adventure.</p>
+        </div>
+    </footer>
+
+</body>
+</html>
