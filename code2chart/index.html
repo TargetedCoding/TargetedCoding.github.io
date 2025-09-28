@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Flowchart Studio</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link href="styles.css" rel="stylesheet" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%2313161d'/%3E%3Ctext x='50%25' y='55%25' text-anchor='middle' font-size='42' fill='%237dd3fc' font-family='Inter,Arial,sans-serif'%3E%E2%97%87%3C/text%3E%3C/svg%3E">
+
+  <!-- Mermaid (v10+) -->
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark">◇</div>
+      <div class="brand-text">
+        <div class="title">Flowchart Studio</div>
+        <div class="subtitle">Design • Render • Export</div>
+      </div>
+    </div>
+
+    <div class="actions">
+      <div class="palette-group" role="group" aria-label="Theme palettes">
+        <button class="palette active" data-palette="0" title="Aurora"></button>
+        <button class="palette" data-palette="1" title="Sunset"></button>
+        <button class="palette" data-palette="2" title="Neon"></button>
+        <button class="palette" data-palette="3" title="Verdant"></button>
+      </div>
+
+      <div class="separator"></div>
+
+      <label class="toggle">
+        <input id="uiTheme" type="checkbox" />
+        <span>Dark UI</span>
+      </label>
+
+      <button id="renderBtn" class="btn primary" title="Render (Ctrl/Cmd+Enter)">Render</button>
+
+      <div class="export">
+        <select id="exportType" class="select">
+          <option value="svg">Export as SVG</option>
+          <option value="png">Export as PNG</option>
+        </select>
+        <button id="exportBtn" class="btn">Save</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="main">
+    <section class="left">
+      <div class="panel-header">
+        <div>Mermaid Code</div>
+        <div class="small">Ctrl/Cmd+Enter to render</div>
+      </div>
+      <textarea id="editor" spellcheck="false"></textarea>
+
+      <div class="toolbar">
+        <input type="file" id="openFile" accept=".mmd,.mermaid,.txt" class="hidden" />
+        <button id="openBtn" class="btn">Open .mmd</button>
+        <button id="sampleBtn" class="btn ghost">Load Sample</button>
+        <button id="clearBtn" class="btn ghost">Clear</button>
+        <div class="flex-spacer"></div>
+        <label class="toggle">
+          <input id="fitToggle" type="checkbox" checked />
+          <span>Fit to view</span>
+        </label>
+      </div>
+
+      <div id="errorBox" class="error hidden" aria-live="polite"></div>
+    </section>
+
+    <section class="right">
+      <div class="panel-header">
+        <div>Rendered Diagram</div>
+        <div class="small" id="sizeInfo"></div>
+      </div>
+      <div id="stage" class="stage">
+        <!-- Render target -->
+        <div id="diagram" class="diagram"></div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div>Tips: Use <kbd>Ctrl/Cmd</kbd> + <kbd>Enter</kbd> to render • Drag to pan (if diagram overflows) • Use the palette chips to recolor</div>
+  </footer>
+
+  <script src="app.js" type="module"></script>
+</body>
+</html>
