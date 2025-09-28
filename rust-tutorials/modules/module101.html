@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 101: Designing a Library API - The Rust Adventure</title>
+    <link rel="stylesheet" href="../style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <img src="https://www.rust-lang.org/static/images/rust-logo-blk.svg" alt="Rust Logo" class="logo">
+            <h1>Module 101: Designing a Library API</h1>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <article class="module-content">
+                <h2>Objective: To learn the best practices and idiomatic patterns for designing a public Application Programming Interface (API) for a Rust library that is ergonomic, clear, and easy for other developers to use correctly.</h2>
+                <p>Welcome to Day 30! You've learned how to build applications, but now we'll focus on building libraries—the reusable components that power the entire ecosystem. A library's success depends not just on its functionality, but on the quality of its <strong>API</strong>. A great API is a joy to use; a poor one is a source of constant frustration. In this module, we'll cover the official Rust API Guidelines and other best practices.</p>
+                
+                <hr>
+
+                <h3>Core Principles of Good Rust API Design</h3>
+                
+                <h4>1. Be Clear and Explicit</h4>
+                <p>Your API should be easy to understand. Function and type names should be descriptive. Avoid overly clever abbreviations. Rust's strong type system is your best friend here—use it to make invalid states unrepresentable.</p>
+                
+                <h4>2. Be Ergonomic</h4>
+                <p>Make the easiest way to do something also the correct and safest way. This often involves providing sensible defaults and using common Rust patterns.</p>
+                <ul>
+                    <li>Implement the <code>Default</code> trait for your structs.</li>
+                    <li>Use the "builder" pattern for complex object creation.</li>
+                    <li>Use <code>Into<T></code> for flexible function arguments.</li>
+                </ul>
+                
+                <h4>3. Leverage the Trait System</h4>
+                <p>Expose your library's functionality through traits. This allows your users to extend your library in ways you might not have anticipated and makes your code more flexible and testable.</p>
+                
+                <h4>4. Document Everything</h4>
+                <p>As we learned on Day 8, good documentation is non-negotiable. Every public item (`pub struct`, `pub fn`, `pub trait`) should have a clear doc comment explaining what it does. Include examples that double as doc tests.</p>
+                
+                <h3>Practical Application: Designing a `SimpleCache` Library</h3>
+                <p>Let's design a small library for a simple in-memory key-value cache. We'll start with a naive design and then refactor it to be much more ergonomic and idiomatic.</p>
+
+                <h4>1. Create a New Library Project</h4>
+                <pre><code>cargo new simple_cache --lib
+cd simple_cache
+</code></pre>
+                
+                <h4>2. The "Naive" API Design (in `src/lib.rs`)</h4>
+                <pre><code>// ---- Version 1: A naive, less ergonomic API ----
+use std::collections::HashMap;
+use std::hash::Hash;
+
+pub struct NaiveCache<K, V> {
+    data: HashMap<K, V>,
+}
+
+impl<K: Eq + Hash, V> NaiveCache<K, V> {
+    pub fn new() -> Self {
+        NaiveCache { data: HashMap::new() }
+    }
+    
+    pub fn set_item(&mut self, key: K, value: V) {
+        self.data.insert(key, value);
+    }
+    
+    pub fn get_item(&self, key: &K) -> Option<&V> {
+        self.data.get(key)
+    }
+}
+</code></pre>
+                <p>This works, but it has several ergonomic issues. The names are verbose (`set_item`), and creating it isn't as simple as it could be.</p>
+
+                <h4>3. The "Idiomatic" API Design (in `src/lib.rs`)</h4>
+                <p>Let's refactor this to be a high-quality, professional API.</p>
+                <pre><code>use std::collections::HashMap;
+use std::hash::Hash;
+use std::borrow::Borrow;
+
+/// A simple, generic, in-memory key-value cache.
+///
+/// # Examples
+///
+/// ```
+/// use simple_cache::Cache; // Use your crate name
+/// let mut cache = Cache::default();
+/// cache.set("user_id".to_string(), 123);
+/// assert_eq!(cache.get("user_id"), Some(&123));
+/// ```
+#[derive(Debug, Clone)]
+pub struct Cache<K, V> {
+    data: HashMap<K, V>,
+}
+
+// --- Idiomatic Constructors ---
+
+// Implement the `Default` trait for an easy constructor.
+impl<K, V> Default for Cache<K, V> {
+    fn default() -> Self {
+        Cache { data: HashMap::new() }
+    }
+}
+
+// --- Core API ---
+impl<K: Eq + Hash, V> Cache<K, V> {
+    /// Creates a new, empty cache.
+    ///
+    /// It's often idiomatic to provide `new()` even if `Default` is implemented.
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Inserts a key-value pair into the cache.
+    ///
+    /// Uses `Into<K>` and `Into<V>` to be more flexible.
+    pub fn set(&mut self, key: impl Into<K>, value: impl Into<V>) {
+        self.data.insert(key.into(), value.into());
+    }
+
+    /// Retrieves a reference to the value corresponding to the key.
+    ///
+    /// Uses `Borrow<Q>` to allow lookups with borrowed types (e.g., `&str` for `String` keys).
+    pub fn get<Q: ?Sized>(&self, key: &Q) -> Option<&V>
+    where
+        K: Borrow<Q>,
+        Q: Hash + Eq,
+    {
+        self.data.get(key)
+    }
+}
+
+// Let's test our API design in `tests/`
+// (We would create a `tests/cache_test.rs` file for this)
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_ergonomics() {
+        let mut cache = Cache::new(); // `new()` works.
+        let mut cache_default: Cache<String, i32> = Cache::default(); // `default()` works.
+
+        // `set` is more flexible thanks to `impl Into`.
+        // We can pass a `&str` and it will be converted to `String`.
+        cache.set("user_1", 100);
+        cache.set("user_2".to_string(), 200);
+
+        // `get` is more flexible thanks to `Borrow`.
+        // We can look up a `String` key using a `&str`.
+        assert_eq!(cache.get("user_1"), Some(&100));
+        assert_eq!(cache.get(&"user_2".to_string()), Some(&200));
+    }
+}
+</code></pre>
+                
+                <h4>The API Design Improvements:</h4>
+                <ul>
+                    <li><strong>Naming:</strong> The function names are now short, conventional, and clear (`set`, `get`).</li>
+                    <li><strong><code>Default</code> Trait:</strong> Implementing `Default` is a standard pattern for creating a "default" instance of a struct. It's instantly recognizable to other Rust developers.</li>
+                    <li><strong><code>impl Into<T></code> for Arguments:</strong> The `set` method now takes <code>key: impl Into<K></code>. This is a huge ergonomic win. If our cache is a <code>Cache<String, i32></code>, the user can call `set("my_key", 42)`. The `&str` `"my_key"` will be automatically converted into a `String` via its `From` implementation, which `Into` provides.</li>
+                    <li><strong><code>Borrow<Q></code> for Lookups:</strong> The `get` method's signature is more complex, but it mirrors the standard library's `HashMap::get`. It allows a user with a `Cache<String, i32>` to look up a key with a simple `&str` (<code>cache.get("my_key")</code>) instead of having to create a whole new `String` just for the lookup. This is a key performance and ergonomic pattern.</li>
+                    <li><strong>Documentation:</strong> The public-facing struct and methods are now fully documented with examples that will be checked by `cargo test`.</li>
+                </ul>
+                <p>You have now learned to think like a library author. By applying these idiomatic Rust patterns, you have transformed a basic, functional API into one that is ergonomic, flexible, and a pleasure for other developers to use. This focus on API quality is a core part of what makes the Rust ecosystem so strong.</p>
+
+                <a href="../index.html" class="back-link">&larr; Back to Curriculum Map</a>
+            </article>
+        </div>
+    </main>
+    
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 The Rust Adventure.</p>
+        </div>
+    </footer>
+
+</body>
+</html>

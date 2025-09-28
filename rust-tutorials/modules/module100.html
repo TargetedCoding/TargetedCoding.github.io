@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 100: Common Optimization Patterns - The Rust Adventure</title>
+    <link rel="stylesheet" href="../style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <img src="https://www.rust-lang.org/static/images/rust-logo-blk.svg" alt="Rust Logo" class="logo">
+            <h1>Module 100: Common Optimization Patterns</h1>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <article class="module-content">
+                <h2>Objective: To learn and apply common, idiomatic Rust patterns for optimizing code, focusing on reducing allocations and leveraging the power of iterators.</h2>
+                <p>You've learned how to measure performance and find bottlenecks. Now, how do you fix them? This module covers some of the most common and effective optimization techniques in Rust. The key theme is often "zero-cost abstractions": writing high-level, expressive code that the compiler can transform into hyper-efficient machine code.</p>
+                
+                <hr>
+
+                <h3>Pattern 1: Avoid Unnecessary Allocations</h3>
+                <p>Allocating memory on the heap (by creating a `String`, `Vec`, or `Box`) is one of the most expensive operations your program can do. A common performance "hot spot" is creating new strings or vectors inside a tight loop.</p>
+                <ul>
+                    <li><strong>The Problem:</strong> Creating a new `String` in every iteration of a loop.</li>
+                    <li><strong>The Solution:</strong> Create the `String` once outside the loop, and in each iteration, clear it and reuse its allocated capacity.</li>
+                </ul>
+                
+                <h3>Pattern 2: Use Iterators over Manual Indexing</h3>
+                <p>Rust's iterators are a "zero-cost abstraction." A `for` loop over an iterator is not only safer and more expressive than a C-style `for (int i = 0; ...)` loop, it's also often faster! The compiler can optimize iterator chains incredibly well, often removing bounds checks that are necessary with manual indexing (`my_vec[i]`).</p>
+                <ul>
+                    <li><strong>The Problem:</strong> A manual `while` or `for` loop with index variables.</li>
+                    <li><strong>The Solution:</strong> Use iterator methods like <code>.iter()</code>, <code>.map()</code>, <code>.filter()</code>, and <code>.sum()</code>.</li>
+                </ul>
+                
+                <h3>Pattern 3: Pass Slices (`&str`, `&[T]`) instead of Owned Types</h3>
+                <p>When you pass a `String` to a function, you are often moving ownership, which can force the calling function to `.clone()` the data if it needs to use it again. By writing your functions to accept slices (<code>&str</code> instead of `String`, `&[T]` instead of `Vec<T>`), you make them more flexible and avoid unnecessary allocations.</p>
+
+                <h3>Practical Application: Optimizing a Text Processing Function</h3>
+                <p>Let's write a program with a function that processes a large text. We'll write a naive version first, and then refactor it using our optimization patterns. We'll use Criterion to prove the performance difference.</p>
+
+                <h4>1. Project Setup</h4>
+                <p>You can use the `fib_bench` project from Module 98 and just add a new benchmark group, or create a new project.</p>
+                
+                <h4>2. The Code to Optimize (in `src/lib.rs`)</h4>
+                <pre><code>// In `src/lib.rs`
+
+/// Naive version: takes an owned String, allocates a new Vec,
+/// and allocates a new String for every word.
+pub fn process_text_naive(text: String) -> u32 {
+    let mut numbers = Vec::new();
+    for word in text.split_whitespace() {
+        if let Ok(n) = word.parse::<u32>() {
+            numbers.push(n);
+        }
+    }
+    
+    let mut sum = 0;
+    for i in 0..numbers.len() {
+        sum += numbers[i];
+    }
+    sum
+}
+
+/// Optimized version: takes a slice, uses iterators, and avoids allocations.
+pub fn process_text_optimized(text: &str) -> u32 {
+    text.split_whitespace()
+        .filter_map(|word| word.parse::<u32>().ok())
+        .sum()
+}
+</code></pre>
+                
+                <h4>3. The Benchmark (in `benches/my_benchmark.rs`)</h4>
+                <pre><code>use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use optimization_demo::{process_text_naive, process_text_optimized}; // Use your crate name
+
+fn text_processing_benchmark(c: &mut Criterion) {
+    // Create a large block of text to process.
+    let large_text = (1..1000).map(|i| i.to_string()).collect::<Vec<_>>().join(" ");
+
+    let mut group = c.benchmark_group("Text Processing");
+
+    // Benchmark the naive version. Note the `.clone()` required.
+    group.bench_function(
+        "Naive", 
+        |b| b.iter(|| process_text_naive(black_box(large_text.clone())))
+    );
+    
+    // Benchmark the optimized version. We can pass a slice directly.
+    group.bench_function(
+        "Optimized",
+        |b| b.iter(|| process_text_optimized(black_box(&large_text)))
+    );
+
+    group.finish();
+}
+
+criterion_group!(benches, text_processing_benchmark);
+criterion_main!(benches);
+</code></pre>
+
+                <h4>4. Run the Benchmark</h4>
+                <p>Run <strong><code>cargo bench</code></strong>. You will see a significant performance improvement. The optimized version will be much faster because it avoids multiple expensive heap allocations and allows the compiler to perform better optimizations on the iterator chain.</p>
+                
+                <h4>The Optimizations Explained:</h4>
+                <ul>
+                    <li><strong><code>process_text_naive</code></strong>:
+                        <ul>
+                            <li>Takes an owned <code>String</code>, forcing the caller to `clone()` if they want to keep using the string.</li>
+                            <li>Creates a new `Vec` on the heap to store the numbers. This is a big allocation.</li>
+                            <li>Uses a manual `for` loop with indexing, which requires bounds checks on every access to `numbers[i]`.</li>
+                        </ul>
+                    </li>
+                    <li><strong><code>process_text_optimized</code></strong>:
+                        <ul>
+                            <li>Takes a <code>&str</code> slice, which is a cheap, borrowed reference. No cloning needed.</li>
+                            <li>It is a single, beautiful iterator chain. No intermediate `Vec` is ever created.</li>
+                            <li><code>.filter_map()</code> is a powerful combination of `filter` and `map`. It tries to parse each word to a `u32` (which returns a `Result`), converts the `Result` to an `Option` with `.ok()`, and then unwraps the `Some` values while filtering out the `None` values, all in one step.</li>
+                            <li><code>.sum()</code> is a terminal adaptor that iterates through the numbers and sums them up, again without needing an intermediate collection.</li>
+                        </ul>
+                    </li>
+                </ul>
+                <p>This is the essence of idiomatic, high-performance Rust. The "optimized" version is not only faster, it is also shorter, safer (no chance of off-by-one indexing errors), and arguably more readable once you are familiar with the iterator API. You have learned how to transform slow, imperative-style code into a fast, functional-style iterator chain that is a "zero-cost abstraction" over the most efficient possible machine code.</p>
+                
+                <a href="../index.html" class="back-link">&larr; Back to Curriculum Map</a>
+            </article>
+        </div>
+    </main>
+    
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 The Rust Adventure.</p>
+        </div>
+    </footer>
+
+</body>
+</html>
