@@ -124,6 +124,14 @@
             z-index: 100;
             cursor: pointer;
         }
+        .diagramlab-container {
+            position: absolute;
+            top: 60%;
+            left: 10%;
+            transform: translate(-50%, -50%);
+            z-index: 100;
+            cursor: pointer;
+        }
 
         .rust-label {
             position: absolute;
@@ -409,6 +417,9 @@
         </div>
         <div class="codechart-container" id="c2cLogo">
             <div class="rust-label">Code2Chart Tutorials</div>
+        </div>
+        <div class="diagramlab-container" id="dlLogo">
+            <div class="rust-label">Mermaid js Tutorials</div>
         </div>
     </section>
 
@@ -698,6 +709,11 @@
          // Click handler for Code2Chart logo
         document.getElementById('c2cLogo').addEventListener('click', function() {
             window.location.href = 'code2chart/index.html';
+        });
+
+         // Click handler for DiagramLab logo
+        document.getElementById('dlLogo').addEventListener('click', function() {
+            window.location.href = 'DiagramLab/index.html';
         });
 
         // Animation
