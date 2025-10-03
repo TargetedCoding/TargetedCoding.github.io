@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Diagram Lab</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Orbitron', sans-serif;
+            margin: 0;
+            padding: 0;
+            width: 100vw;
+            min-height: 100vh;
+            background: radial-gradient(ellipse at center, #000 60%, #020220 100%);
+            color: #e0e0e0;
+            overflow: auto;
+        }
+
+        body::-webkit-scrollbar {
+            display: none;
+        }
+
+        body {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        warp-drive {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+        }
+
+        warp-drive canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        header {
+            background: linear-gradient(135deg, rgba(26,26,26,0.7), rgba(15,15,15,0.7));
+            color: #00ffcc;
+            text-align: center;
+            padding: 80px 20px;
+            box-shadow: 0 0 20px rgba(0, 255, 204, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+
+        header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(0, 255, 204, 0.1) 0%, transparent 70%);
+            animation: pulse 5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 0.5; }
+            50% { transform: scale(1.2); opacity: 0.2; }
+            100% { transform: scale(1); opacity: 0.5; }
+        }
+
+        header h1 {
+            font-size: 3.5em;
+            margin: 0;
+            text-shadow: 0 0 10px #00ffcc, 0 0 20px #00ffcc;
+            animation: neon-glow 1.5s infinite alternate;
+        }
+
+        @keyframes neon-glow {
+            from { text-shadow: 0 0 5px #00ffcc, 0 0 10px #00ffcc; }
+            to { text-shadow: 0 0 15px #00ffcc, 0 0 30px #00ffcc; }
+        }
+
+        header p {
+            font-size: 1.2em;
+            margin-top: 15px;
+            text-shadow: 0 0 5px #ff00ff;
+        }
+
+        header a {
+            color: #ff00ff;
+            text-decoration: none;
+            text-shadow: 0 0 5px #ff00ff;
+            transition: color 0.3s;
+        }
+
+        header a:hover {
+            color: #ff66ff;
+        }
+
+        nav {
+            display: flex;
+            justify-content: center;
+            padding: 20px;
+            background: linear-gradient(135deg, rgba(26,26,26,0.7), rgba(15,15,15,0.7));
+            box-shadow: 0 0 10px rgba(0, 255, 204, 0.2);
+        }
+
+        #search {
+            width: 60%;
+            max-width: 600px;
+            padding: 12px;
+            font-size: 1em;
+            background-color: rgba(34,34,34,0.7);
+            color: #e0e0e0;
+            border: 1px solid #00ffcc;
+            border-radius: 25px;
+            outline: none;
+            transition: box-shadow 0.3s, border-color 0.3s;
+        }
+
+        #search:focus {
+            border-color: #ff00ff;
+            box-shadow: 0 0 10px #ff00ff;
+        }
+
+        main {
+            padding: 40px 20px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 25px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .card {
+            background: linear-gradient(135deg, rgba(31,31,31,0.7), rgba(20,20,20,0.7));
+            border-radius: 15px;
+            box-shadow: 0 0 15px rgba(0, 255, 204, 0.1);
+            padding: 25px;
+            text-align: center;
+            transition: transform 0.4s, box-shadow 0.4s;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle, rgba(255, 0, 255, 0.05) 0%, transparent 70%);
+            opacity: 0;
+            transition: opacity 0.4s;
+        }
+
+        .card:hover::before {
+            opacity: 1;
+        }
+
+        .card:hover {
+            transform: translateY(-10px) scale(1.05);
+            box-shadow: 0 0 25px rgba(0, 255, 204, 0.4), 0 0 50px rgba(255, 0, 255, 0.2);
+        }
+
+        .card i {
+            font-size: 3.5em;
+            color: #00ffcc;
+            margin-bottom: 15px;
+            text-shadow: 0 0 10px #00ffcc;
+        }
+
+        .card h2 {
+            font-size: 1.6em;
+            margin: 10px 0;
+            color: #ff00ff;
+            text-shadow: 0 0 5px #ff00ff;
+        }
+
+        .card p {
+            font-size: 1em;
+            color: #b0b0b0;
+            margin-bottom: 20px;
+        }
+
+        .card a {
+            text-decoration: none;
+            color: #00ffcc;
+            font-weight: bold;
+            text-shadow: 0 0 5px #00ffcc;
+            transition: color 0.3s;
+        }
+
+        .card a:hover {
+            color: #66ffff;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        footer {
+            text-align: center;
+            padding: 20px;
+            background: linear-gradient(135deg, rgba(26,26,26,0.7), rgba(15,15,15,0.7));
+            color: #00ffcc;
+            margin-top: 40px;
+            box-shadow: 0 0 10px rgba(0, 255, 204, 0.2);
+        }
+
+        footer a {
+            color: #ff00ff;
+            text-decoration: none;
+            text-shadow: 0 0 5px #ff00ff;
+        }
+
+        footer a:hover {
+            color: #ff66ff;
+        }
+
+        @media (max-width: 768px) {
+            header h1 {
+                font-size: 2.8em;
+            }
+
+            .grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <warp-drive>
+        <canvas class="js-canvas"></canvas>
+    </warp-drive>
+
+    <header>
+        <h1>Diagram Lab</h1>
+        <p>Dive into the cyberworld of Mermaid diagrams with detailed syntax explanations, examples, and interactive tools. Export your creations as PNG or SVG using our <a href="https://targetedcoding.github.io/code2chart/index.html">Code2Chart</a> tool.</p>
+    </header>
+
+    <nav>
+        <input type="text" id="search" placeholder="Search for a diagram type...">
+    </nav>
+
+    <main>
+        <div class="grid">
+            <div class="card" data-name="flowchart">
+                <i class="fas fa-sitemap"></i>
+                <h2>Flowchart</h2>
+                <p>Visualize processes and workflows with directed graphs.</p>
+                <a href="flowchart/index.html">Explore</a>
+            </div>
+            <div class="card" data-name="sequence diagram">
+                <i class="fas fa-exchange-alt"></i>
+                <h2>Sequence Diagram</h2>
+                <p>Depict interactions between objects over time.</p>
+                <a href="sequence-diagram/index.html">Explore</a>
+            </div>
+            <div class="card" data-name="class diagram">
+                <i class="fas fa-project-diagram"></i>
+                <h2>Class Diagram</h2>
+                <p>Model the structure of systems using classes and relationships.</p>
+                <a href="class-diagram/index.html">Explore</a>
+            </div>
+            <div class="card" data-name="state diagram">
+                <i class="fas fa-random"></i>
+                <h2>State Diagram</h2>
+                <p>Illustrate the states and transitions of an object.</p>
+                <a href="state-diagram/index.html">Explore</a>
+            </div>
+            <div class="card" data-name="entity relationship diagram">
+                <i class="fas fa-database"></i>
+                <h2>Entity Relationship Diagram</h2>
+                <p>Represent data models and database schemas.</p>
+                <a href="entity-relationship-diagram/index.html">Explore</a>
+            </div>
+            <div class="card" data-name="user journey">
+                <i class="fas fa-map-signs"></i>
+                <h2>User Journey</h2>
+                <p>Map out user experiences and interactions.</p>
+                <a href="user-journey/index.html">Explore</a>
+            </div>
+            <div class="card" data-name="gantt">
+                <i class="fas fa-tasks"></i>
+                <h2>Gantt</h2>
+                <p>Plan and schedule projects with timelines.</p>
+                <a href="gantt/index.html">Explore</a>
+            </div>
+            <div class="card" data-name="pie chart">
+                <i class="fas fa-chart-pie"></i>
+                <h2>Pie Chart</h2>
+                <p>Display proportional data in circular segments.</p>
+                <a href="pie-chart/index.html">Explore</a>
+            </div>
+            <div class="card" data-name="quadrant chart">
+                <i class="fas fa-th"></i>
+                <h2>Quadrant Chart</h2>
+                <p>Categorize items into four quadrants.</p>
+                <a href="quadrant-chart/index.html">Explore</a>
+            </div>
+            <div class="card" data-name="requirement diagram">
+                <i class="fas fa-clipboard-list"></i>
+                <h2>Requirement Diagram</h2>
+                <p>Define and relate system requirements.</p>
+                <a href="requirement-diagram/index.html">Explore</a>
+            </div>
+            <div class="card" data-name="gitgraph (git) diagram">
+                <i class="fas fa-code-branch"></i>
+                <h2>GitGraph (Git) Diagram</h2>
+                <p>Visualize Git repository histories and branches.</p>
+                <a href="gitgraph-git-diagram/index.html">Explore</a>
+            </div>
+            <div class="card" data-name="c4 diagram 🦺⚠️">
+                <i class="fas fa-building"></i>
+                <h2>C4 Diagram 🦺⚠️</h2>
+                <p>Model software architecture at different levels.</p>
+                <a href="c4-diagram/index.html">Explore</a>
+            </div>
+            <div class="card" data-name="mindmaps">
+                <i class="fas fa-brain"></i>
+                <h2>Mindmaps</h2>
+                <p>Organize ideas in a hierarchical, branching structure.</p>
+                <a href="mindmaps/index.html">Explore</a>
+            </div>
+            <div class="card" data-name="timeline">
+                <i class="fas fa-history"></i>
+                <h2>Timeline</h2>
+                <p>Show events in chronological order.</p>
+                <a href="timeline/index.html">Explore</a>
+            </div>
+            <div class="card" data-name="zenuml">
+                <i class="fas fa-code"></i>
+                <h2>ZenUML</h2>
+                <p>Create sequence diagrams with a Zen-like syntax.</p>
+                <a href="zenuml/index.html">Explore</a>
+            </div>
+            <div class="card" data-name="sankey 🔥">
+                <i class="fas fa-stream"></i>
+                <h2>Sankey 🔥</h2>
+                <p>Illustrate flow quantities between nodes.</p>
+                <a href="sankey/index.html">Explore</a>
+            </div>
+            <div class="card" data-name="xy chart 🔥">
+                <i class="fas fa-chart-line"></i>
+                <h2>XY Chart 🔥</h2>
+                <p>Plot data points on X and Y axes.</p>
+                <a href="xy-chart/index.html">Explore</a>
+            </div>
+            <div class="card" data-name="block diagram 🔥">
+                <i class="fas fa-cubes"></i>
+                <h2>Block Diagram 🔥</h2>
+                <p>Represent systems using blocks and connections.</p>
+                <a href="block-diagram/index.html">Explore</a>
+            </div>
+            <div class="card" data-name="packet 🔥">
+                <i class="fas fa-envelope"></i>
+                <h2>Packet 🔥</h2>
+                <p>Visualize network packet structures.</p>
+                <a href="packet/index.html">Explore</a>
+            </div>
+            <div class="card" data-name="kanban 🔥">
+                <i class="fas fa-columns"></i>
+                <h2>Kanban 🔥</h2>
+                <p>Manage workflows with boards and cards.</p>
+                <a href="kanban/index.html">Explore</a>
+            </div>
+            <div class="card" data-name="architecture 🔥">
+                <i class="fas fa-drafting-compass"></i>
+                <h2>Architecture 🔥</h2>
+                <p>Diagram complex system architectures.</p>
+                <a href="architecture/index.html">Explore</a>
+            </div>
+            <div class="card" data-name="radar 🔥">
+                <i class="fas fa-bullseye"></i>
+                <h2>Radar 🔥</h2>
+                <p>Display multivariate data in a radial chart.</p>
+                <a href="radar/index.html">Explore</a>
+            </div>
+            <div class="card" data-name="treemap 🔥">
+                <i class="fas fa-tree"></i>
+                <h2>Treemap 🔥</h2>
+                <p>Show hierarchical data as nested rectangles.</p>
+                <a href="treemap/index.html">Explore</a>
+            </div>
+            <div class="card" data-name="other examples">
+                <i class="fas fa-ellipsis-h"></i>
+                <h2>Other Examples</h2>
+                <p>Miscellaneous diagrams and advanced usages.</p>
+                <a href="other-examples/index.html">Explore</a>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <p>&copy; 2025 <a href="https://TargetedCoding.github.io">Targeted Coding</a> | Powered by HTML, CSS, JS | Inspired by <a href="https://mermaid.js.org/">Mermaid.js</a></p>
+    </footer>
+
+    <script>
+        class WarpDrive extends HTMLElement {
+          connectedCallback() {
+            this.canvas = this.querySelector(".js-canvas");
+            this.ctx = this.canvas.getContext("2d");
+            this.setCanvasSize();
+
+            this.stars = [];
+            this.starCount = 1000;
+            this.populateStars();
+
+            window.addEventListener("resize", () => this.setCanvasSize());
+            requestAnimationFrame(this.tick.bind(this));
+          }
+
+          setCanvasSize() {
+            const rect = this.getBoundingClientRect();
+            this.width = rect.width;
+            this.height = rect.height;
+            this.centerX = this.width / 2;
+            this.centerY = this.height / 2;
+            this.canvas.width = this.width;
+            this.canvas.height = this.height;
+          }
+
+          populateStars() {
+            this.stars.length = 0;
+            for (let i = 0; i < this.starCount; i++) {
+              this.stars.push(this.newStar());
+            }
+          }
+
+          newStar() {
+            return {
+              x: (Math.random() - 0.5) * this.width,
+              y: (Math.random() - 0.5) * this.height,
+              z: Math.random() * this.width
+            };
+          }
+
+          tick() {
+            const { ctx, width, height, centerX, centerY } = this;
+            ctx.fillStyle = "rgba(0,0,20,0.5)";
+            ctx.fillRect(0, 0, width, height);
+
+            ctx.fillStyle = "white";
+
+            for (let star of this.stars) {
+              star.z -= 4;
+              if (star.z <= 0) {
+                Object.assign(star, this.newStar(), { z: this.width });
+              }
+
+              const scale = 300 / star.z;
+              const x = centerX + star.x * scale;
+              const y = centerY + star.y * scale;
+
+              if (x < 0 || x >= width || y < 0 || y >= height) {
+                Object.assign(star, this.newStar(), { z: this.width });
+                continue;
+              }
+
+              const brightness = (1 - star.z / this.width) * 255;
+              ctx.fillStyle = `rgb(${brightness}, ${brightness}, ${brightness})`;
+              ctx.beginPath();
+              ctx.arc(x, y, Math.max(0.5, 2 - star.z / width * 2), 0, Math.PI * 2);
+              ctx.fill();
+            }
+
+            requestAnimationFrame(this.tick.bind(this));
+          }
+        }
+
+        customElements.define("warp-drive", WarpDrive);
+    </script>
+
+    <script>
+        const searchInput = document.getElementById('search');
+        const cards = document.querySelectorAll('.card');
+
+        searchInput.addEventListener('input', (e) => {
+            const searchTerm = e.target.value.toLowerCase();
+            cards.forEach(card => {
+                const name = card.getAttribute('data-name').toLowerCase();
+                if (name.includes(searchTerm)) {
+                    card.classList.remove('hidden');
+                } else {
+                    card.classList.add('hidden');
+                }
+            });
+        });
+    </script>
+</body>
+</html>
