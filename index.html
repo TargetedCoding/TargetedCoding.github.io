@@ -116,6 +116,15 @@
             cursor: pointer;
         }
 
+        .redpill-enforcer {
+            position: absolute;
+            top: 30%;
+            left: 10%;
+            transform: translate(-50%, -50%);
+            z-index: 100;
+            cursor: pointer;
+        }
+
         .codechart-container {
             position: absolute;
             top: 40%;
@@ -412,14 +421,17 @@
     <section id="home" class="hero-section">
         <h1 class="glitch-title">Targeted Coding</h1>
         <p class="tagline">Where Code Gets Surgical</p>
+        <div class="redpill-container" id="rpeLogo">
+            <div class="rust-label">🦀 Redpill Enforcerre</div>
+        </div>
         <div class="rust-container" id="rustLogo">
             <div class="rust-label">🦀 Rust Tutorials</div>
         </div>
         <div class="codechart-container" id="c2cLogo">
-            <div class="rust-label">Code2Chart Tutorials</div>
+            <div class="rust-label">🦀 Code2Chart Tutorials</div>
         </div>
         <div class="diagramlab-container" id="dlLogo">
-            <div class="rust-label">Mermaid js Tutorials</div>
+            <div class="rust-label">🦀 Mermaid js Tutorials</div>
         </div>
     </section>
 
@@ -714,6 +726,11 @@
          // Click handler for DiagramLab logo
         document.getElementById('dlLogo').addEventListener('click', function() {
             window.location.href = 'DiagramLab/index.html';
+        });
+
+        // Click handler for redpill logo
+        document.getElementById('rpeLogo').addEventListener('click', function() {
+            window.location.href = 'redpill-enforcer/index.html';
         });
 
         // Animation
