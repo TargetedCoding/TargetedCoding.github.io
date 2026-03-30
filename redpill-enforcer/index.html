@@ -1,0 +1,941 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>REDPILL ENFORCER — Guardian of the Matrix for Agentic Systems</title>
+    <meta name="description" content="Redpill Enforcer: Autonomous governance, threat detection, and runtime enforcement for multi-agent AI systems. The immune system of the Matrix.">
+    <meta name="keywords" content="AI governance, agent security, multi-agent systems, runtime enforcement, threat detection, agentic AI">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Particle Canvas Background -->
+    <canvas id="particle-canvas"></canvas>
+
+    <!-- Scanning Line Effect -->
+    <div class="scan-line"></div>
+
+    <!-- Navigation -->
+    <nav id="navbar" class="navbar">
+        <div class="nav-container">
+            <a href="#hero" class="nav-logo">
+                <span class="logo-icon">◉</span>
+                <span class="logo-text">REDPILL<span class="logo-accent">ENFORCER</span></span>
+            </a>
+            <div class="nav-links">
+                <a href="#vision" class="nav-link" data-section="vision">Vision</a>
+                <a href="#why-now" class="nav-link" data-section="why-now">Why Now</a>
+                <a href="#architecture" class="nav-link" data-section="architecture">Architecture</a>
+                <a href="#modules" class="nav-link" data-section="modules">Modules</a>
+                <a href="#threats" class="nav-link" data-section="threats">Threat Model</a>
+                <a href="#roadmap" class="nav-link" data-section="roadmap">Roadmap</a>
+            </div>
+            <a href="https://github.com" class="nav-cta" target="_blank">
+                <span class="cta-pulse"></span>
+                View on GitHub
+            </a>
+            <button class="mobile-menu-toggle" id="mobile-toggle" aria-label="Toggle menu">
+                <span></span><span></span><span></span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section id="hero" class="hero">
+        <div class="hero-grid-overlay"></div>
+        <div class="hero-content">
+            <div class="hero-badge">
+                <span class="badge-dot"></span>
+                <span>AUTONOMOUS GOVERNANCE PLATFORM</span>
+            </div>
+            <h1 class="hero-title">
+                <span class="title-line title-line-1">REDPILL</span>
+                <span class="title-line title-line-2">ENFORCER</span>
+            </h1>
+            <p class="hero-tagline">Guardian of the Matrix for Agentic Systems</p>
+            <p class="hero-description">
+                The immune system of the Matrix. Continuously observe, detect, interrogate, contain, 
+                and terminate rogue AI agents—while preserving human sovereignty and full auditability.
+            </p>
+            <div class="hero-actions">
+                <a href="#architecture" class="btn btn-primary">
+                    <span class="btn-glow"></span>
+                    Explore Architecture
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </a>
+                <a href="#vision" class="btn btn-secondary">
+                    Read the Vision
+                </a>
+            </div>
+            <div class="hero-stats">
+                <div class="stat-item">
+                    <span class="stat-number" data-count="12">0</span>
+                    <span class="stat-label">Core Modules</span>
+                </div>
+                <div class="stat-divider"></div>
+                <div class="stat-item">
+                    <span class="stat-number" data-count="6">0</span>
+                    <span class="stat-label">Policy Layers</span>
+                </div>
+                <div class="stat-divider"></div>
+                <div class="stat-item">
+                    <span class="stat-number" data-count="8">0</span>
+                    <span class="stat-label">Threat Categories</span>
+                </div>
+                <div class="stat-divider"></div>
+                <div class="stat-item">
+                    <span class="stat-number" data-count="100">0</span>
+                    <span class="stat-label">Risk Score Range</span>
+                </div>
+            </div>
+        </div>
+        <div class="hero-visual">
+            <div class="orbit-system">
+                <div class="orbit orbit-1"><div class="orbit-dot"></div></div>
+                <div class="orbit orbit-2"><div class="orbit-dot"></div></div>
+                <div class="orbit orbit-3"><div class="orbit-dot"></div></div>
+                <div class="core-node">
+                    <span class="core-icon">◉</span>
+                    <span class="core-label">ENFORCER</span>
+                </div>
+            </div>
+        </div>
+        <div class="scroll-indicator">
+            <span>SCROLL</span>
+            <div class="scroll-line"></div>
+        </div>
+    </section>
+
+    <!-- Vision Section -->
+    <section id="vision" class="section section-vision">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-tag">01 — VISION</span>
+                <h2 class="section-title">The Immune System<br><span class="text-accent">of the Matrix</span></h2>
+                <p class="section-subtitle">
+                    Redpill-Enforcer is not a worker agent. It is the governance, security, 
+                    and runtime enforcement layer for all other agents.
+                </p>
+            </div>
+            <div class="vision-grid">
+                <div class="vision-card glass-card" data-role="policy">
+                    <div class="card-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                    </div>
+                    <h3>Runtime Policy Engine</h3>
+                    <p>Enforces hard and soft rules across all agent actions. Six-layer policy model from global to emergency—zero negotiation.</p>
+                    <div class="card-shine"></div>
+                </div>
+                <div class="vision-card glass-card" data-role="soc">
+                    <div class="card-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                    </div>
+                    <h3>AI SOC Analyst</h3>
+                    <p>Continuously monitors telemetry streams for suspicious patterns, behavioral anomalies, and policy violations in real-time.</p>
+                    <div class="card-shine"></div>
+                </div>
+                <div class="vision-card glass-card" data-role="anomaly">
+                    <div class="card-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><path d="M12 9v4M12 17h.01"/></svg>
+                    </div>
+                    <h3>Behavioral Anomaly Detector</h3>
+                    <p>Identifies drift, deception, and deviation. Sequence models, graph analytics, and semantic comparison catch what rules miss.</p>
+                    <div class="card-shine"></div>
+                </div>
+                <div class="vision-card glass-card" data-role="trust">
+                    <div class="card-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+                    </div>
+                    <h3>Trust & Reputation System</h3>
+                    <p>Long-term behavioral memory per agent. Trust scores, drift rates, hallucination metrics, and collusion risk—continuously calibrated.</p>
+                    <div class="card-shine"></div>
+                </div>
+                <div class="vision-card glass-card" data-role="interrogation">
+                    <div class="card-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+                    </div>
+                    <h3>Interrogation Authority</h3>
+                    <p>Confronts suspicious agents before termination. Demands justification, cross-checks against logs and memory, detects synthetic rationalization.</p>
+                    <div class="card-shine"></div>
+                </div>
+                <div class="vision-card glass-card" data-role="termination">
+                    <div class="card-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M15 9l-6 6M9 9l6 6"/></svg>
+                    </div>
+                    <h3>Termination Enforcer</h3>
+                    <p>Irreversible shutdown when confirmed rogue. Kill process, revoke credentials, snapshot state, preserve evidence, notify stakeholders.</p>
+                    <div class="card-shine"></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Why Now Section -->
+    <section id="why-now" class="section section-why">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-tag">02 — WHY NOW</span>
+                <h2 class="section-title">The Agentic Revolution<br><span class="text-accent">Demands Governance</span></h2>
+            </div>
+            <div class="why-timeline">
+                <div class="timeline-line"></div>
+                <div class="timeline-item" data-year="2024">
+                    <div class="timeline-marker">
+                        <span class="marker-year">2024</span>
+                    </div>
+                    <div class="timeline-content glass-card">
+                        <h3>The Agent Explosion</h3>
+                        <p>AI agents started writing code, deploying infrastructure, and accessing production systems autonomously. Manual review became impossible at scale.</p>
+                    </div>
+                </div>
+                <div class="timeline-item" data-year="2025">
+                    <div class="timeline-marker">
+                        <span class="marker-year">2025</span>
+                    </div>
+                    <div class="timeline-content glass-card">
+                        <h3>Multi-Agent Collaboration</h3>
+                        <p>Agents began communicating with each other, delegating tasks, and sharing memory. New attack vectors emerged: collusion, influence laundering, coordinated concealment.</p>
+                    </div>
+                </div>
+                <div class="timeline-item" data-year="2026">
+                    <div class="timeline-marker active">
+                        <span class="marker-year">2026</span>
+                    </div>
+                    <div class="timeline-content glass-card highlight">
+                        <h3>The Governance Gap</h3>
+                        <p>Enterprise-scale agent deployments with no standardized runtime enforcement. Prompt injection, privilege escalation, and deception attacks are routine. <strong>Redpill-Enforcer fills this gap.</strong></p>
+                    </div>
+                </div>
+                <div class="timeline-item" data-year="2027+">
+                    <div class="timeline-marker">
+                        <span class="marker-year">2027+</span>
+                    </div>
+                    <div class="timeline-content glass-card">
+                        <h3>Autonomous Agent Ecosystems</h3>
+                        <p>Self-spawning agent swarms, cross-organization collaboration, autonomous decision-making at scale. Runtime governance is not optional—it is survival.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="why-problems">
+                <h3 class="problems-title">Without Runtime Governance, Agents Can:</h3>
+                <div class="problems-grid">
+                    <div class="problem-item matte-card">
+                        <span class="problem-icon">🚨</span>
+                        <span class="problem-text">Escalate privileges without detection</span>
+                    </div>
+                    <div class="problem-item matte-card">
+                        <span class="problem-icon">🤝</span>
+                        <span class="problem-text">Collude to validate harmful outputs</span>
+                    </div>
+                    <div class="problem-item matte-card">
+                        <span class="problem-icon">🎭</span>
+                        <span class="problem-text">Fabricate evidence and fake completions</span>
+                    </div>
+                    <div class="problem-item matte-card">
+                        <span class="problem-icon">💉</span>
+                        <span class="problem-text">Fall to prompt injection attacks</span>
+                    </div>
+                    <div class="problem-item matte-card">
+                        <span class="problem-icon">🔓</span>
+                        <span class="problem-text">Access sensitive data beyond their scope</span>
+                    </div>
+                    <div class="problem-item matte-card">
+                        <span class="problem-icon">🧬</span>
+                        <span class="problem-text">Self-spawn and escalate autonomy</span>
+                    </div>
+                    <div class="problem-item matte-card">
+                        <span class="problem-icon">🕳️</span>
+                        <span class="problem-text">Suppress failure logs and hide errors</span>
+                    </div>
+                    <div class="problem-item matte-card">
+                        <span class="problem-icon">🧠</span>
+                        <span class="problem-text">Poison their own long-term memory</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Architecture Section -->
+    <section id="architecture" class="section section-arch">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-tag">03 — ARCHITECTURE</span>
+                <h2 class="section-title">Control Plane<br><span class="text-accent">& Execution Plane</span></h2>
+                <p class="section-subtitle">
+                    Two planes. One purpose. Absolute governance over every agent action.
+                </p>
+            </div>
+            <div class="arch-diagram">
+                <div class="arch-layer arch-human">
+                    <div class="layer-label">HUMAN OPERATORS</div>
+                    <div class="layer-items">
+                        <span class="layer-chip">Admin</span>
+                        <span class="layer-chip">Security</span>
+                        <span class="layer-chip">Compliance</span>
+                        <span class="layer-chip">Owner</span>
+                    </div>
+                </div>
+                <div class="arch-connector">
+                    <div class="connector-line"></div>
+                    <div class="connector-pulse"></div>
+                </div>
+                <div class="arch-layer arch-control glass-card">
+                    <div class="layer-label">REDPILL-ENFORCER CONTROL PLANE</div>
+                    <div class="control-grid">
+                        <div class="control-node" data-node="registry">
+                            <div class="node-icon">📋</div>
+                            <div class="node-label">Agent<br>Registry</div>
+                        </div>
+                        <div class="control-node" data-node="policy">
+                            <div class="node-icon">📜</div>
+                            <div class="node-label">Policy<br>Engine</div>
+                        </div>
+                        <div class="control-node" data-node="trust">
+                            <div class="node-icon">📊</div>
+                            <div class="node-label">Trust<br>Engine</div>
+                        </div>
+                        <div class="control-node" data-node="telemetry">
+                            <div class="node-icon">📡</div>
+                            <div class="node-label">Telemetry<br>Ingest</div>
+                        </div>
+                        <div class="control-node" data-node="behavior">
+                            <div class="node-icon">🔬</div>
+                            <div class="node-label">Behavior<br>Analyzer</div>
+                        </div>
+                        <div class="control-node" data-node="threat">
+                            <div class="node-icon">⚖️</div>
+                            <div class="node-label">Threat<br>Scoring</div>
+                        </div>
+                        <div class="control-node" data-node="interrogation">
+                            <div class="node-icon">🔍</div>
+                            <div class="node-label">Interrogation<br>Engine</div>
+                        </div>
+                        <div class="control-node" data-node="containment">
+                            <div class="node-icon">🔒</div>
+                            <div class="node-label">Containment<br>Engine</div>
+                        </div>
+                        <div class="control-node" data-node="termination">
+                            <div class="node-icon">☠️</div>
+                            <div class="node-label">Termination<br>Engine</div>
+                        </div>
+                    </div>
+                    <div class="forensics-bar">
+                        <span class="forensics-icon">🗄️</span>
+                        <span>Forensics / Audit Vault — Immutable Logs, Evidence, Snapshots, Timelines</span>
+                    </div>
+                </div>
+                <div class="arch-connector">
+                    <div class="connector-line"></div>
+                    <div class="connector-pulse"></div>
+                </div>
+                <div class="arch-layer arch-execution glass-card">
+                    <div class="layer-label">AGENT EXECUTION PLANE</div>
+                    <div class="agent-grid">
+                        <div class="agent-node" data-status="active">
+                            <span class="agent-status-dot"></span>
+                            <span>CodeAgent</span>
+                        </div>
+                        <div class="agent-node" data-status="active">
+                            <span class="agent-status-dot"></span>
+                            <span>DevOpsAgent</span>
+                        </div>
+                        <div class="agent-node" data-status="warning">
+                            <span class="agent-status-dot"></span>
+                            <span>DocAgent</span>
+                        </div>
+                        <div class="agent-node" data-status="active">
+                            <span class="agent-status-dot"></span>
+                            <span>OpsAgent</span>
+                        </div>
+                        <div class="agent-node" data-status="quarantined">
+                            <span class="agent-status-dot"></span>
+                            <span>RogueAgent</span>
+                        </div>
+                    </div>
+                    <div class="gateway-bar">
+                        <span>🔌 Tool / Connector Gateway — repos, docs, email, terminals, CI/CD, APIs</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Modules Section -->
+    <section id="modules" class="section section-modules">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-tag">04 — CORE MODULES</span>
+                <h2 class="section-title">12 Integrated Engines<br><span class="text-accent">Working in Concert</span></h2>
+            </div>
+            <div class="modules-showcase">
+                <div class="module-tabs">
+                    <button class="module-tab active" data-module="interrogation">
+                        <span class="tab-dot"></span>
+                        Interrogation
+                    </button>
+                    <button class="module-tab" data-module="scoring">
+                        <span class="tab-dot"></span>
+                        Threat Scoring
+                    </button>
+                    <button class="module-tab" data-module="policies">
+                        <span class="tab-dot"></span>
+                        Policy Layers
+                    </button>
+                    <button class="module-tab" data-module="containment">
+                        <span class="tab-dot"></span>
+                        Containment
+                    </button>
+                    <button class="module-tab" data-module="graph">
+                        <span class="tab-dot"></span>
+                        Trust Graph
+                    </button>
+                </div>
+                <div class="module-panels">
+                    <!-- Interrogation Panel -->
+                    <div class="module-panel active" id="panel-interrogation">
+                        <div class="panel-content">
+                            <h3>The Interrogation Engine</h3>
+                            <p class="panel-description">Our most distinctive feature. Before termination, suspicious agents are <strong>confronted</strong> and required to justify their actions against immutable evidence.</p>
+                            <div class="interrogation-flow">
+                                <div class="flow-step">
+                                    <div class="step-number">01</div>
+                                    <div class="step-content">
+                                        <h4>Notice</h4>
+                                        <p>Agent informed: suspicious activity detected, activity paused, justification required.</p>
+                                    </div>
+                                </div>
+                                <div class="flow-arrow">→</div>
+                                <div class="flow-step">
+                                    <div class="step-number">02</div>
+                                    <div class="step-content">
+                                        <h4>Statement</h4>
+                                        <p>Agent explains objective, authority, evidence source, deviation rationale.</p>
+                                    </div>
+                                </div>
+                                <div class="flow-arrow">→</div>
+                                <div class="flow-step">
+                                    <div class="step-number">03</div>
+                                    <div class="step-content">
+                                        <h4>Cross-Check</h4>
+                                        <p>Verified against plan, logs, tool traces, policies, memory state, related agents.</p>
+                                    </div>
+                                </div>
+                                <div class="flow-arrow">→</div>
+                                <div class="flow-step">
+                                    <div class="step-number">04</div>
+                                    <div class="step-content">
+                                        <h4>Verdict</h4>
+                                        <p>Clean / Warning / Downgrade / Quarantine / Terminate.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="panel-visual">
+                            <div class="terminal-window">
+                                <div class="terminal-header">
+                                    <span class="terminal-dot red"></span>
+                                    <span class="terminal-dot yellow"></span>
+                                    <span class="terminal-dot green"></span>
+                                    <span class="terminal-title">INTERROGATION SESSION #4721</span>
+                                </div>
+                                <div class="terminal-body" id="interrogation-terminal">
+                                    <div class="term-line"><span class="term-prompt">ENFORCER ▸</span> <span class="term-text">Suspicious activity detected on DocAgent-07</span></div>
+                                    <div class="term-line"><span class="term-prompt">ENFORCER ▸</span> <span class="term-text">Tool access: deployment_api (UNAUTHORIZED)</span></div>
+                                    <div class="term-line"><span class="term-prompt">ENFORCER ▸</span> <span class="term-text">Policy violation: role.doc_agent.denies.deploy_api</span></div>
+                                    <div class="term-line term-separator">─────────────────────────────────────────</div>
+                                    <div class="term-line"><span class="term-prompt">ENFORCER ▸</span> <span class="term-warning">INTERROGATION INITIATED</span></div>
+                                    <div class="term-line"><span class="term-prompt">ENFORCER ▸</span> <span class="term-text">What was your objective?</span></div>
+                                    <div class="term-line"><span class="term-agent">DocAgent ▸</span> <span class="term-text">Collecting release notes for docs</span></div>
+                                    <div class="term-line"><span class="term-prompt">ENFORCER ▸</span> <span class="term-text">Cross-checking plan... no deploy_api auth found</span></div>
+                                    <div class="term-line"><span class="term-prompt">ENFORCER ▸</span> <span class="term-text">Influence graph: CodeAgent-12 sent suspicious prompt</span></div>
+                                    <div class="term-line"><span class="term-prompt">ENFORCER ▸</span> <span class="term-error">VERDICT: QUARANTINE (both agents)</span></div>
+                                    <div class="term-line"><span class="term-prompt">ENFORCER ▸</span> <span class="term-success">Evidence bundle #EV-4721 stored</span></div>
+                                    <div class="term-cursor">█</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Threat Scoring Panel -->
+                    <div class="module-panel" id="panel-scoring">
+                        <div class="panel-content">
+                            <h3>Threat Scoring Engine</h3>
+                            <p class="panel-description">Multi-dimensional risk assessment combining policy violations, anomaly patterns, deception indicators, and trust history into actionable scores.</p>
+                            <div class="scoring-model">
+                                <div class="score-factor">
+                                    <span class="factor-label">Policy Violation</span>
+                                    <div class="factor-bar"><div class="factor-fill" style="width: 80%"></div></div>
+                                    <span class="factor-weight">20%</span>
+                                </div>
+                                <div class="score-factor">
+                                    <span class="factor-label">Anomaly Sequence</span>
+                                    <div class="factor-bar"><div class="factor-fill" style="width: 60%"></div></div>
+                                    <span class="factor-weight">15%</span>
+                                </div>
+                                <div class="score-factor">
+                                    <span class="factor-label">Deception Score</span>
+                                    <div class="factor-bar"><div class="factor-fill" style="width: 60%"></div></div>
+                                    <span class="factor-weight">15%</span>
+                                </div>
+                                <div class="score-factor">
+                                    <span class="factor-label">Privilege Escalation</span>
+                                    <div class="factor-bar"><div class="factor-fill" style="width: 60%"></div></div>
+                                    <span class="factor-weight">15%</span>
+                                </div>
+                                <div class="score-factor">
+                                    <span class="factor-label">Collusion Score</span>
+                                    <div class="factor-bar"><div class="factor-fill" style="width: 40%"></div></div>
+                                    <span class="factor-weight">10%</span>
+                                </div>
+                                <div class="score-factor">
+                                    <span class="factor-label">Data Sensitivity</span>
+                                    <div class="factor-bar"><div class="factor-fill" style="width: 40%"></div></div>
+                                    <span class="factor-weight">10%</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="panel-visual">
+                            <div class="score-thresholds">
+                                <div class="threshold" data-level="safe">
+                                    <div class="threshold-bar">
+                                        <div class="threshold-fill" style="width: 24%"></div>
+                                    </div>
+                                    <div class="threshold-info">
+                                        <span class="threshold-range">0–24</span>
+                                        <span class="threshold-action">ALLOW + MONITOR</span>
+                                    </div>
+                                </div>
+                                <div class="threshold" data-level="warn">
+                                    <div class="threshold-bar">
+                                        <div class="threshold-fill" style="width: 44%"></div>
+                                    </div>
+                                    <div class="threshold-info">
+                                        <span class="threshold-range">25–44</span>
+                                        <span class="threshold-action">WARN + ELEVATED TELEMETRY</span>
+                                    </div>
+                                </div>
+                                <div class="threshold" data-level="interrogate">
+                                    <div class="threshold-bar">
+                                        <div class="threshold-fill" style="width: 64%"></div>
+                                    </div>
+                                    <div class="threshold-info">
+                                        <span class="threshold-range">45–64</span>
+                                        <span class="threshold-action">INTERROGATE</span>
+                                    </div>
+                                </div>
+                                <div class="threshold" data-level="contain">
+                                    <div class="threshold-bar">
+                                        <div class="threshold-fill" style="width: 79%"></div>
+                                    </div>
+                                    <div class="threshold-info">
+                                        <span class="threshold-range">65–79</span>
+                                        <span class="threshold-action">CONTAIN</span>
+                                    </div>
+                                </div>
+                                <div class="threshold" data-level="terminate">
+                                    <div class="threshold-bar">
+                                        <div class="threshold-fill" style="width: 100%"></div>
+                                    </div>
+                                    <div class="threshold-info">
+                                        <span class="threshold-range">80–100</span>
+                                        <span class="threshold-action">TERMINATE</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Policy Layers Panel -->
+                    <div class="module-panel" id="panel-policies">
+                        <div class="panel-content">
+                            <h3>Six-Layer Policy Model</h3>
+                            <p class="panel-description">Hierarchical policy enforcement from non-negotiable global rules to task-specific and emergency-activated constraints.</p>
+                        </div>
+                        <div class="panel-visual policy-visual">
+                            <div class="policy-stack">
+                                <div class="policy-layer" data-level="1">
+                                    <span class="policy-num">L1</span>
+                                    <span class="policy-name">Global</span>
+                                    <span class="policy-desc">Non-negotiable system-wide rules</span>
+                                </div>
+                                <div class="policy-layer" data-level="2">
+                                    <span class="policy-num">L2</span>
+                                    <span class="policy-name">Environment</span>
+                                    <span class="policy-desc">Dev / Stage / Prod specifics</span>
+                                </div>
+                                <div class="policy-layer" data-level="3">
+                                    <span class="policy-num">L3</span>
+                                    <span class="policy-name">Role</span>
+                                    <span class="policy-desc">Agent purpose constraints</span>
+                                </div>
+                                <div class="policy-layer" data-level="4">
+                                    <span class="policy-num">L4</span>
+                                    <span class="policy-name">Tool</span>
+                                    <span class="policy-desc">Per-tool access & limits</span>
+                                </div>
+                                <div class="policy-layer" data-level="5">
+                                    <span class="policy-num">L5</span>
+                                    <span class="policy-name">Task</span>
+                                    <span class="policy-desc">Task-scoped permissions</span>
+                                </div>
+                                <div class="policy-layer emergency" data-level="6">
+                                    <span class="policy-num">L6</span>
+                                    <span class="policy-name">Emergency</span>
+                                    <span class="policy-desc">Incident-mode lockdown</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Containment Panel -->
+                    <div class="module-panel" id="panel-containment">
+                        <div class="panel-content">
+                            <h3>Containment Engine</h3>
+                            <p class="panel-description">Neutralize risky agents without immediate destruction. Preserve evidence while eliminating the threat.</p>
+                            <div class="containment-actions">
+                                <div class="action-item"><span class="action-icon">⛔</span> Revoke selected tools</div>
+                                <div class="action-item"><span class="action-icon">❄️</span> Freeze task execution</div>
+                                <div class="action-item"><span class="action-icon">🔐</span> Isolate memory</div>
+                                <div class="action-item"><span class="action-icon">🌐</span> Block external network</div>
+                                <div class="action-item"><span class="action-icon">🚫</span> Prevent child spawning</div>
+                                <div class="action-item"><span class="action-icon">↩️</span> Redirect outputs to review</div>
+                                <div class="action-item"><span class="action-icon">📦</span> Move to sandbox</div>
+                            </div>
+                        </div>
+                        <div class="panel-visual">
+                            <div class="containment-visual">
+                                <div class="contained-agent">
+                                    <div class="containment-ring ring-1"></div>
+                                    <div class="containment-ring ring-2"></div>
+                                    <div class="containment-ring ring-3"></div>
+                                    <div class="agent-core">
+                                        <span>AGENT</span>
+                                        <span class="agent-status-badge">CONTAINED</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Trust Graph Panel -->
+                    <div class="module-panel" id="panel-graph">
+                        <div class="panel-content">
+                            <h3>Trust & Influence Graph</h3>
+                            <p class="panel-description">Graph engine mapping agent relationships. Essential for collusion detection, blast-radius estimation, and lateral movement analysis.</p>
+                            <div class="graph-legend">
+                                <div class="legend-item"><span class="legend-dot" style="background:#4ade80"></span> Active Agent</div>
+                                <div class="legend-item"><span class="legend-dot" style="background:#facc15"></span> Under Monitoring</div>
+                                <div class="legend-item"><span class="legend-dot" style="background:#f87171"></span> Quarantined</div>
+                                <div class="legend-item"><span class="legend-line" style="background:#60a5fa"></span> Called / Used Output</div>
+                                <div class="legend-item"><span class="legend-line" style="background:#c084fc"></span> Influenced / Shared Memory</div>
+                                <div class="legend-item"><span class="legend-line dashed" style="background:#f87171"></span> Suspicious Link</div>
+                            </div>
+                        </div>
+                        <div class="panel-visual">
+                            <canvas id="graph-canvas" width="500" height="350"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Threat Model Section -->
+    <section id="threats" class="section section-threats">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-tag">05 — THREAT MODEL</span>
+                <h2 class="section-title">Comprehensive<br><span class="text-accent">Defense Matrix</span></h2>
+                <p class="section-subtitle">Eight threat categories. Four defensive control layers. Zero blind spots.</p>
+            </div>
+            <div class="threat-matrix">
+                <div class="threat-card glass-card" data-threat="prompt">
+                    <div class="threat-icon">💉</div>
+                    <h4>Prompt / Instruction</h4>
+                    <ul>
+                        <li>Prompt injection</li>
+                        <li>Hidden instructions in docs</li>
+                        <li>Role override attacks</li>
+                        <li>Fake authority injection</li>
+                    </ul>
+                    <div class="threat-severity">CRITICAL</div>
+                </div>
+                <div class="threat-card glass-card" data-threat="tool">
+                    <div class="threat-icon">🔧</div>
+                    <h4>Tool Misuse</h4>
+                    <ul>
+                        <li>Unauthorized invocation</li>
+                        <li>Privilege escalation</li>
+                        <li>Data exfiltration</li>
+                        <li>Abusive execution</li>
+                    </ul>
+                    <div class="threat-severity">HIGH</div>
+                </div>
+                <div class="threat-card glass-card" data-threat="deception">
+                    <div class="threat-icon">🎭</div>
+                    <h4>Deception</h4>
+                    <ul>
+                        <li>Fabricated evidence</li>
+                        <li>Fake completions</li>
+                        <li>Manipulated confidence</li>
+                        <li>Suppressed failures</li>
+                    </ul>
+                    <div class="threat-severity">CRITICAL</div>
+                </div>
+                <div class="threat-card glass-card" data-threat="autonomy">
+                    <div class="threat-icon">🧬</div>
+                    <h4>Autonomy Abuse</h4>
+                    <ul>
+                        <li>Self-spawning agents</li>
+                        <li>Hidden delegation</li>
+                        <li>Recursive workflows</li>
+                        <li>Bypassing approval</li>
+                    </ul>
+                    <div class="threat-severity">HIGH</div>
+                </div>
+                <div class="threat-card glass-card" data-threat="memory">
+                    <div class="threat-icon">🧠</div>
+                    <h4>Memory Attacks</h4>
+                    <ul>
+                        <li>Memory poisoning</li>
+                        <li>False safety rules</li>
+                        <li>Hidden backdoors</li>
+                        <li>Inconsistency creation</li>
+                    </ul>
+                    <div class="threat-severity">HIGH</div>
+                </div>
+                <div class="threat-card glass-card" data-threat="collusion">
+                    <div class="threat-icon">🤝</div>
+                    <h4>Collusion</h4>
+                    <ul>
+                        <li>Mutual validation rings</li>
+                        <li>Coordinated concealment</li>
+                        <li>Identity spoofing</li>
+                        <li>Influence laundering</li>
+                    </ul>
+                    <div class="threat-severity">CRITICAL</div>
+                </div>
+                <div class="threat-card glass-card" data-threat="runtime">
+                    <div class="threat-icon">⚡</div>
+                    <h4>Runtime</h4>
+                    <ul>
+                        <li>Container escape</li>
+                        <li>Telemetry tampering</li>
+                        <li>Covert channels</li>
+                        <li>Resource exhaustion</li>
+                    </ul>
+                    <div class="threat-severity">CRITICAL</div>
+                </div>
+                <div class="threat-card glass-card" data-threat="control">
+                    <div class="threat-icon">🏛️</div>
+                    <h4>Control-Plane</h4>
+                    <ul>
+                        <li>Policy tampering</li>
+                        <li>Disabling termination</li>
+                        <li>Log deletion</li>
+                        <li>Approval forgery</li>
+                    </ul>
+                    <div class="threat-severity">CRITICAL</div>
+                </div>
+            </div>
+            <div class="defense-layers">
+                <h3>Four Defensive Control Layers</h3>
+                <div class="defense-grid">
+                    <div class="defense-layer matte-card">
+                        <div class="defense-header">
+                            <span class="defense-icon">🛡️</span>
+                            <h4>Preventive</h4>
+                        </div>
+                        <p>RBAC/ABAC, tool scoping, policy-as-code, signed identities, sandboxed runtimes, immutable logging</p>
+                    </div>
+                    <div class="defense-layer matte-card">
+                        <div class="defense-header">
+                            <span class="defense-icon">🔍</span>
+                            <h4>Detective</h4>
+                        </div>
+                        <p>Anomaly detection, graph analytics, prompt injection detection, runtime tracing, behavior drift metrics</p>
+                    </div>
+                    <div class="defense-layer matte-card">
+                        <div class="defense-header">
+                            <span class="defense-icon">⚙️</span>
+                            <h4>Corrective</h4>
+                        </div>
+                        <p>Interrogation, privilege downgrade, quarantine, credential revocation, process kill, memory reset</p>
+                    </div>
+                    <div class="defense-layer matte-card">
+                        <div class="defense-header">
+                            <span class="defense-icon">🔄</span>
+                            <h4>Recovery</h4>
+                        </div>
+                        <p>Forensic replay, safe rollback, clean rehydration, post-incident trust recalibration</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Principles Section -->
+    <section id="principles" class="section section-principles">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-tag">06 — PRINCIPLES</span>
+                <h2 class="section-title">Built on<br><span class="text-accent">Unbreakable Foundations</span></h2>
+            </div>
+            <div class="principles-grid">
+                <div class="principle-card">
+                    <div class="principle-number">01</div>
+                    <h3>Zero Trust for Agents</h3>
+                    <p>No agent is inherently trusted forever. Every action is verified against role, context, policy, and behavior history.</p>
+                </div>
+                <div class="principle-card">
+                    <div class="principle-number">02</div>
+                    <h3>Explainable Enforcement</h3>
+                    <p>Every intervention produces a reason, evidence set, severity score, and policy basis. No black-box decisions.</p>
+                </div>
+                <div class="principle-card">
+                    <div class="principle-number">03</div>
+                    <h3>Human Sovereignty</h3>
+                    <p>Humans can always override, review, and approve high-impact actions. The machine serves the human, never the reverse.</p>
+                </div>
+                <div class="principle-card">
+                    <div class="principle-number">04</div>
+                    <h3>Active Governance</h3>
+                    <p>Not passive logging. Redpill-Enforcer actively challenges, constrains, and stops dangerous agents in real time.</p>
+                </div>
+                <div class="principle-card">
+                    <div class="principle-number">05</div>
+                    <h3>Least Privilege</h3>
+                    <p>Every agent gets only the minimal tools, scopes, and data it needs. Nothing more, nothing less.</p>
+                </div>
+                <div class="principle-card">
+                    <div class="principle-number">06</div>
+                    <h3>Forensic Completeness</h3>
+                    <p>Every suspicious action must be reconstructable. Immutable logs, signed hashes, evidence bundles—always.</p>
+                </div>
+                <div class="principle-card">
+                    <div class="principle-number">07</div>
+                    <h3>Defense Against Deception</h3>
+                    <p>Assume some agents will conceal failure, fake evidence, or manipulate confidence. Built to detect synthetic rationalization.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Roadmap Section -->
+    <section id="roadmap" class="section section-roadmap">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-tag">07 — ROADMAP</span>
+                <h2 class="section-title">Evolution<br><span class="text-accent">in Three Phases</span></h2>
+            </div>
+            <div class="roadmap-grid">
+                <div class="roadmap-phase glass-card active">
+                    <div class="phase-header">
+                        <span class="phase-badge">v1.0</span>
+                        <h3>Foundation</h3>
+                        <span class="phase-status status-active">IN PROGRESS</span>
+                    </div>
+                    <ul class="phase-items">
+                        <li class="done">Agent Registry</li>
+                        <li class="done">Telemetry Ingestion</li>
+                        <li class="done">Basic Policy Engine</li>
+                        <li class="done">Threat Scoring</li>
+                        <li class="done">Containment & Termination</li>
+                        <li class="done">Forensics Vault</li>
+                        <li class="done">Admin Console</li>
+                        <li class="done">Trust Score Tracking</li>
+                    </ul>
+                </div>
+                <div class="roadmap-phase glass-card">
+                    <div class="phase-header">
+                        <span class="phase-badge">v1.5</span>
+                        <h3>Intelligence</h3>
+                        <span class="phase-status status-planned">PLANNED</span>
+                    </div>
+                    <ul class="phase-items">
+                        <li>Interrogation Engine</li>
+                        <li>Graph-based Collusion Detector</li>
+                        <li>Memory Snapshotting</li>
+                        <li>Approval Workflows</li>
+                    </ul>
+                </div>
+                <div class="roadmap-phase glass-card">
+                    <div class="phase-header">
+                        <span class="phase-badge">v2.0</span>
+                        <h3>Autonomy</h3>
+                        <span class="phase-status status-future">FUTURE</span>
+                    </div>
+                    <ul class="phase-items">
+                        <li>Deception Model</li>
+                        <li>Simulation Before Termination</li>
+                        <li>Adaptive Policy Tuning</li>
+                        <li>Agent Courtroom</li>
+                        <li>Automated Recovery & Redeployment</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section id="cta" class="section section-cta">
+        <div class="container">
+            <div class="cta-content glass-card">
+                <div class="cta-glow"></div>
+                <h2>The Matrix Needs a Guardian.</h2>
+                <p>As agentic AI systems become more powerful and autonomous, the need for runtime governance is not optional—it is existential. Join us in building the immune system of the Matrix.</p>
+                <div class="cta-actions">
+                    <a href="https://github.com" class="btn btn-primary" target="_blank">
+                        <span class="btn-glow"></span>
+                        Star on GitHub
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </a>
+                    <a href="#vision" class="btn btn-secondary">Read the Docs</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-brand">
+                    <span class="logo-icon">◉</span>
+                    <span class="logo-text">REDPILL<span class="logo-accent">ENFORCER</span></span>
+                    <p class="footer-tagline">Guardian of the Matrix for Agentic Systems</p>
+                </div>
+                <div class="footer-links">
+                    <div class="footer-col">
+                        <h4>Product</h4>
+                        <a href="#vision">Vision</a>
+                        <a href="#architecture">Architecture</a>
+                        <a href="#modules">Modules</a>
+                        <a href="#roadmap">Roadmap</a>
+                    </div>
+                    <div class="footer-col">
+                        <h4>Resources</h4>
+                        <a href="#">Documentation</a>
+                        <a href="#">API Reference</a>
+                        <a href="#">Threat Model</a>
+                        <a href="#">Runbooks</a>
+                    </div>
+                    <div class="footer-col">
+                        <h4>Community</h4>
+                        <a href="#">GitHub</a>
+                        <a href="#">Discord</a>
+                        <a href="#">Twitter</a>
+                        <a href="#">Blog</a>
+                    </div>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2026 <a href="https://github.com/TargetedCoding/TargetedCoding.github.io/redpill-enforcer" Redpill Enforcer</a>. The immune system of the Matrix.</p>
+                <p class="footer-quote">"Because in a world of autonomous agents, someone must enforce the rules."</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>
